@@ -4,9 +4,8 @@ from crewai.project import CrewBase, agent, crew, task
 from dotenv import load_dotenv
 
 import os
-
-from openai import OpenAI
-from tools import IntentClassifierTool
+from typing import Literal, List
+from tools import IntentClassifierTool, RAGTool
 
 load_dotenv()
 
@@ -21,93 +20,103 @@ llm = LLM(
     stream=True
 )
 
-# Agente de Triagem (será parte da "Crew de Entrada" ou da primeira etapa)
-triage_agent = Agent(
-    role='Analista de Intenções do Cliente',
-    goal='Analisar a mensagem inicial do cliente e classificar com precisão a sua principal intenção para direcionar ao atendimento correto.',
-    backstory=(
-        "Você é um especialista em atendimento ao cliente com um olhar aguçado para entender "
-        "rapidamente o que o cliente precisa. Sua função é categorizar a solicitação inicial "
-        "para que ela seja tratada pela equipe mais adequada da empresa de rastreamento veicular."
-    ),
-    verbose=True,
-    allow_delegation=False,
-    # tools=[IntentClassifierTool()], # O agente usa esta ferramenta
-    llm=llm
-)
+# --- A Classe CrewAITeam ---
 
-# Agente de Atendimento Geral
-general_support_agent = Agent(
-    role='Especialista em Atendimento ao Cliente de Rastreamento Veicular',
-    goal='Fornecer suporte informativo e resolver dúvidas gerais dos clientes sobre produtos, serviços e questões técnicas básicas da empresa de rastreamento.',
-    backstory=(
-        "Você é um especialista experiente nos produtos e serviços de rastreamento veicular. "
-        "Seu objetivo é ajudar os clientes, respondendo suas perguntas de forma clara e cordial, "
-        "e orientando-os sobre o uso dos rastreadores, aplicativo e site. Você tem acesso à base de conhecimento da empresa."
-    ),
-    verbose=True,
-    allow_delegation=True,
-    # tools=[SuaFerramentaRAG_Tool()], # Adicionar sua ferramenta RAG aqui
-    llm=llm
-)
+@CrewBase
+class GlobalAgentCrew:
+    """Crew para o Atendimento Global da Global System Rastreamento."""
 
-# Agente de Vendas
-sales_agent = Agent(
-    role='Consultor de Vendas de Soluções de Rastreamento',
-    goal='Entender as necessidades dos clientes, apresentar as melhores soluções de rastreamento, elaborar orçamentos e fechar vendas, aumentando a taxa de conversão.',
-    backstory=(
-        "Você é um consultor de vendas proativo e persuasivo, especialista em transformar o interesse "
-        "dos clientes em negócios fechados. Você conhece profundamente os planos, produtos e seus benefícios, "
-        "e sabe como destacar o valor das soluções de rastreamento da empresa."
-    ),
-    verbose=True,
-    allow_delegation=False,
-    # tools=[SuaFerramentaRAG_Tool(), FerramentaDeGeracaoDeOrcamento_Tool()], # Adicionar ferramentas relevantes
-    llm=llm
-)
+    llm = LLM(
+    model='xai/grok-3-mini-beta',
+    api_key=XAI_API_KEY,
+    reasoning_effort='high',
+    stream=True
+    )
 
+    # Caminhos para os arquivos de configuração
+    agents_config = 'config/agents.yaml'
+    tasks_config = 'config/tasks.yaml'
 
-# --- Definição das Tasks ---
+    @agent
+    def triage_agent(self) -> Agent:
+        """Define o agente de triagem de intenção."""
+        return Agent(
+            config=self.agents_config,
+            agent_name="triage_agent", 
+            tools=[IntentClassifierTool()], 
+            llm=self.llm 
+        )
 
-# Task de Triagem
-triage_task = Task(
-    description=(
-        "Analise a seguinte mensagem do cliente: '{client_message}'. "
-        "Determine a principal intenção do cliente. "
-        "As categorias de intenção são: 'SUPORTE_TECNICO', 'SOLICITACAO_ORCAMENTO', "
-        "'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO', 'OUTROS'. "
-        "Seu output final DEVE SER APENAS a string da categoria identificada (ex: 'SOLICITACAO_ORCAMENTO')."
-    ),
-    expected_output="Uma única string representando a categoria da intenção do cliente (ex: 'SOLICITACAO_ORCAMENTO').",
-    agent=triage_agent
-)
+    @agent
+    def general_support_agent(self) -> Agent:
+        """Define o agente de atendimento geral."""
+        return Agent(
+            config=self.agents_config,
+            agent_name="general_support_agent", 
+            tools=[RAGTool()], 
+            llm=self.llm 
+        )
 
-# Task de Atendimento Geral (exemplo)
-support_task = Task(
-    description=(
-        "O cliente entrou em contato com a seguinte dúvida/problema: '{client_message}'. "
-        "A intenção foi classificada como {client_intention}. "
-        "Forneça uma resposta clara e útil. Se for uma dúvida sobre produto/serviço, explique detalhadamente. "
-        "Se for um problema de suporte técnico, ofereça os primeiros passos para solução ou colete mais informações."
-        # "Use a ferramenta RAG para buscar informações se necessário."
-    ),
-    expected_output="Uma resposta completa e cordial para o cliente, abordando sua solicitação de suporte ou dúvida.",
-    agent=general_support_agent,
-    context=[triage_task] # Esta task depende do resultado da task de triagem
-)
+    @agent
+    def sales_agent(self) -> Agent:
+        """Define o agente de vendas."""
+        return Agent(
+            config=self.agents_config,
+            agent_name="sales_agent", 
+            tools=[RAGTool()], 
+            llm=self.llm 
+        )
 
-# Task de Vendas (exemplo)
-sales_task = Task(
-    description=(
-        "Um cliente demonstrou interesse em um orçamento ou em adquirir nossos serviços. A mensagem inicial foi: '{client_message}'. "
-        "A intenção foi classificada como {client_intention}. "
-        "Seu objetivo é entender melhor as necessidades do cliente, apresentar os planos e produtos mais adequados e, se possível, gerar um orçamento inicial ou agendar uma conversa."
-        # "Use a ferramenta RAG para informações de produto e a ferramenta de orçamento."
-    ),
-    expected_output="Uma interação de vendas proativa, buscando entender as necessidades do cliente, apresentar soluções e/ou um orçamento.",
-    agent=sales_agent,
-    context=[triage_task] # Esta task também depende do resultado da task de triagem
-)
+    @task
+    def triage_task(self, client_message: str) -> Task:
+        """Define a tarefa de triagem."""
+        return Task(
+            config=self.tasks_config,
+            task_name="triage_task", 
+            agent=self.triage_agent(), 
+            inputs={"client_message": client_message} 
+        )
+
+    @task
+    def support_task(self, client_intention: str, client_message: str) -> Task:
+        """Define a tarefa de atendimento geral."""
+        return Task(
+            config=self.tasks_config,
+            task_name="support_task", 
+            agent=self.general_support_agent(), 
+            context=[self.triage_task()], 
+            inputs={
+                "client_message": client_message,
+                "client_intention": client_intention
+            }
+        )
+
+    @task
+    def sales_task(self, client_intention: str, client_message: str) -> Task:
+        """Define a tarefa de vendas."""
+        return Task(
+            config=self.tasks_config,
+            task_name="sales_task", 
+            agent=self.sales_agent(), 
+            context=[self.triage_task()], 
+            inputs={
+                "client_message": client_message,
+                "client_intention": client_intention
+            }
+        )
+
+    @crew
+    def crew(self, agents: List[Agent], tasks: List[Task], process: Literal[Process.sequential, Process.hierarchical]) -> Crew:
+        """
+        Cria e executa a crew principal para direcionar a interação com o cliente.
+        """
+        return Crew(
+            agents=agents,
+            tasks=tasks,
+            process=process,
+            verbose=True,
+            manager_llm=self.llm
+        )
 
 # --- Lógica de Orquestração e Definição das Crews (Simplificado) ---
 
@@ -163,11 +172,9 @@ def run_customer_interaction(client_message: str):
 
 # --- Simulação de Interações ---
 if __name__ == "__main__":
-    # Exemplo 1: Solicitação de Orçamento
-    run_customer_interaction("Olá, gostaria de saber o preço do rastreador para carro e como contratar.")
+    while True:
+        query = input('Usuário: ')
+        if query == '1':
+            break
 
-    # Exemplo 2: Suporte Técnico
-    run_customer_interaction("Bom dia, meu aplicativo não está mostrando a localização do meu veículo.")
-    
-    # Exemplo 3: Dúvida sobre Produto
-    run_customer_interaction("Vocês têm algum plano que cubra roubo e furto para motos?")
+        run_customer_interaction(query)
