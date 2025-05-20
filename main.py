@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from sentence-transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer
 import os
 
 from tools import IntentClassifierTool

@@ -1,3 +1,5 @@
+from crewai.tools import BaseTool
+
 # --- Definição das Ferramentas ---
 class IntentClassifierTool(BaseTool):
     name: str = "Classificador de Intenção do Cliente"
