@@ -1,6 +1,5 @@
 from crewai import Agent, Task, Crew, Process
 from langchain_xai import ChatXAI
-from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 import os
 
