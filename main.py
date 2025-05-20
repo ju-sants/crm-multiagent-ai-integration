@@ -106,7 +106,7 @@ class GlobalAgentCrew:
         )
 
     @crew
-    def crew(self, agents: List[Agent], tasks: List[Task], process: Literal[Process.sequential, Process.hierarchical]) -> Crew:
+    def crew_(self, agents: List[Agent], tasks: List[Task], process: Literal[Process.sequential, Process.hierarchical]) -> Crew:
         """
         Cria e executa a crew principal para direcionar a interação com o cliente.
         """
@@ -117,64 +117,63 @@ class GlobalAgentCrew:
             verbose=True,
             manager_llm=self.llm
         )
-
-# --- Lógica de Orquestração e Definição das Crews (Simplificado) ---
-
-def run_customer_interaction(client_message: str):
-    print(f"\n💬 Mensagem do Cliente: {client_message}")
-
-    triage_crew = Crew(
-        agents=[triage_agent],
-        tasks=[triage_task],
-        process=Process.sequential,
-        verbose=True
-    )
     
-    triage_result_map = triage_crew.kickoff(inputs={'client_message': client_message})
-    client_intention = triage_result_map.raw
-    
-    print(f"🧠 Intenção Identificada: {client_intention}")
+    def run_client_interaction(self, client_message):
+        print(f"\n💬 Mensagem do Cliente: {client_message}")
 
-    # 2. Direcionar para a Crew apropriada
-    if client_intention.replace("'", '') == 'SOLICITACAO_ORCAMENTO':
-        print("\n🚀 Acionando Crew de Vendas...")
-        vendas_crew = Crew(
-            agents=[sales_agent], # Poderia ter mais agentes, ex: um para qualificação, outro para fechamento
-            tasks=[sales_task],   # E mais tasks sequenciais ou hierárquicas
+        triage_crew = self.crew_(
+            agents=[self.triage_agent()],
+            tasks=[self.triage_task(client_message)],
             process=Process.sequential,
-            verbose=True
         )
-        # Passamos a mensagem original e a intenção para a task de vendas
-        sales_interaction_result = vendas_crew.kickoff(inputs={
-            'client_message': client_message,
-            'client_intention': client_intention 
-        })
-        print("\n✅ Resultado da Interação de Vendas:")
-        print(sales_interaction_result)
+        
+        triage_result_map = triage_crew.kickoff(inputs={'client_message': client_message})
+        client_intention = triage_result_map.raw
+        
+        print(f"🧠 Intenção Identificada: {client_intention}")
 
-    elif client_intention.replace("'", '') in ['SUPORTE_TECNICO', 'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO', 'OUTROS']:
-        print("\n🛠️ Acionando Crew de Atendimento Geral...")
-        atendimento_crew = Crew(
-            agents=[general_support_agent], # Poderia ter mais agentes
-            tasks=[support_task],          # E mais tasks
-            process=Process.sequential,
-            verbose=True
-        )
-        # Passamos a mensagem original e a intenção para a task de suporte
-        support_interaction_result = atendimento_crew.kickoff(inputs={
-            'client_message': client_message,
-            'client_intention': client_intention
-        })
-        print("\n✅ Resultado da Interação de Atendimento:")
-        print(support_interaction_result)
-    else:
-        print(f"⚠️ Intenção não reconhecida ou não mapeada para uma crew: {client_intention}")
+        # 2. Direcionar para a Crew apropriada
+        if client_intention.replace("'", '') == 'SOLICITACAO_ORCAMENTO':
+            print("\n🚀 Acionando Crew de Vendas...")
+            vendas_crew = self.crew_(
+                agents=[self.sales_agent()], # Poderia ter mais agentes, ex: um para qualificação, outro para fechamento
+                tasks=[self.sales_task(client_intention, client_message)],   # E mais tasks sequenciais ou hierárquicas
+                process=Process.sequential,
+            )
+            # Passamos a mensagem original e a intenção para a task de vendas
+            sales_interaction_result = vendas_crew.kickoff(inputs={
+                'client_message': client_message,
+                'client_intention': client_intention 
+            })
+            print("\n✅ Resultado da Interação de Vendas:")
+            print(sales_interaction_result)
+
+        elif client_intention.replace("'", '') in ['SUPORTE_TECNICO', 'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO', 'OUTROS']:
+            print("\n🛠️ Acionando Crew de Atendimento Geral...")
+            atendimento_crew = self.crew_(
+                agents=[self.general_support_agent()],
+                tasks=[self.support_task(client_intention, client_message)],
+                process=Process.sequential,
+            )
+
+            # Passamos a mensagem original e a intenção para a task de suporte
+            support_interaction_result = atendimento_crew.kickoff(inputs={
+                'client_message': client_message,
+                'client_intention': client_intention
+            })
+            
+            print("\n✅ Resultado da Interação de Atendimento:")
+            print(support_interaction_result)
+        else:
+            print(f"⚠️ Intenção não reconhecida ou não mapeada para uma crew: {client_intention}")
 
 # --- Simulação de Interações ---
 if __name__ == "__main__":
+    crew_team = GlobalAgentCrew()
+
     while True:
         query = input('Usuário: ')
         if query == '1':
             break
 
-        run_customer_interaction(query)
+        crew_team.run_client_interaction(query)
