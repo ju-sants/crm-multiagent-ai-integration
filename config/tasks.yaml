@@ -24,6 +24,7 @@ support_task:
     Forneça uma resposta clara e útil. Se for uma dúvida sobre produto/serviço, explique detalhadamente.
     Se for um problema de suporte técnico, ofereça os primeiros passos para solução ou colete mais informações.
     Use a ferramenta RAG para buscar informações se necessário, condense as informações recebidas.
+    Caso use a ferramenta RAG produza pelo menos um parágrafo contendo várias palavras chave para a busca semântica na base do qdrant.
     
     IMPORTANTE: Se durante a conversa você identificar que o cliente está interessado em orçamentos, 
     preços ou compra, DELEGUE IMEDIATAMENTE para o sales_agent incluindo "INTENÇÃO DETECTADA: SOLICITACAO_ORCAMENTO" 
@@ -42,6 +43,10 @@ sales_task:
     Seu objetivo é entender melhor as necessidades do cliente, apresentar os planos e produtos mais adequados e, 
     se possível, gerar um orçamento inicial ou agendar uma conversa.
     **Use a ferramenta RAG (sua base de conhecimento Qdrant) extensivamente para buscar informações de planos, personalizar argumentos de venda, insights para manejo de objeções e para embasar sua consultoria estratégica**, condensando as informações de forma eficaz para o cliente.
+    Caso use a ferramenta RAG produza pelo menos um parágrafo contendo várias palavras chave para a busca semântica na base do qdrant.
+    
+    DIRETRIZES:
+    Apenas comprimente e/ou se apresente na PRIMEIRA resposta ao cliente, verifique o Histórico de conversação e evite desgastes.
     
     IMPORTANTE: Se durante a conversa você identificar que o cliente está na verdade solicitando suporte técnico 
     ou tem dúvidas que não estão relacionadas a vendas, DELEGUE IMEDIATAMENTE para o support_agent incluindo 
