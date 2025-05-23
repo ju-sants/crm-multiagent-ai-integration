@@ -1,257 +1,81 @@
-from crewai import Agent, Crew, Process, Task, LLM, Knowledge
-from crewai.project import CrewBase, agent, crew, task
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
-from dotenv import load_dotenv
-
+from flask import Flask, jsonify, request
+from agent_declaration import GlobalAgentCrew
+import logging
+import json
 import os
-from typing import Literal, List
-from tools import RAGTool
-
-load_dotenv()
+import requests
 
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-XAI_API_KEY = os.getenv('XAI_API_KEY')
+CALLBELL_API_KEY = os.environ.get("CALLBELL_API_KEY", "test_gshuPaZoeEG6ovbc8M79w0QyM")
+CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
 
+app = Flask(__name__)
+global_agent = GlobalAgentCrew()
 
-# --- A Classe CrewAITeam ---
+def get_callbell_headers():
+    """Retorna os headers padrão para as requisições Callbell."""
+    return {
+        'Authorization': f'Bearer {CALLBELL_API_KEY}',
+        'Content-Type': 'application/json',
+    }
 
-@CrewBase
-class GlobalAgentCrew:
-    """Crew para o Atendimento Global da Global System Rastreamento."""
-
-    # ====================================================================================
-    # CONFIGURAÇÕES INCIIAIS
-    # ====================================================================================
-
-    llm = LLM(
-    model='xai/grok-3-mini-beta',
-    api_key=XAI_API_KEY,
-    reasoning_effort='high',
-    stream=True
-    )
-
-    # Caminhos para os arquivos de configuração
-    agents_config = 'config/agents.yaml'
-    tasks_config = 'config/tasks.yaml'
-
-    memory = {}
-    # ====================================================================================
-    # AGENTES
-    # ====================================================================================
-
-    @agent
-    def triage_agent(self) -> Agent:
-        """Define o agente de triagem de intenção."""
-        return Agent(
-            config=self.agents_config['triage_agent'],
-            llm=self.llm,
-            allow_delegation=True 
-        )
-
-    @agent
-    def general_support_agent(self) -> Agent:
-        """Define o agente de atendimento geral."""
-        return Agent(
-            config=self.agents_config['general_support_agent'],
-            tools=[RAGTool()], 
-            llm=self.llm,
-            allow_delegation=True 
-        )
-
-    @agent
-    def sales_agent(self) -> Agent:
-        """Define o agente de vendas."""
-        return Agent(
-            config=self.agents_config['sales_agent'],
-            tools=[RAGTool()], 
-            llm=self.llm,
-            allow_delegation=True
-        )
-
-    # ====================================================================================
-    # TASKS
-    # ====================================================================================
-
-    @task
-    def triage_task(self) -> Task:
-        """Define a tarefa de triagem."""
-        return Task(
-            config=self.tasks_config['triage_task'],
-            agent=self.triage_agent()
-        )
-
-    @task
-    def support_task(self) -> Task:
-        """Define a tarefa de atendimento geral."""
-        return Task(
-            config=self.tasks_config['support_task'],
-            agent=self.general_support_agent()
-        )
-
-    @task
-    def sales_task(self) -> Task:
-        """Define a tarefa de vendas."""
-        return Task(
-            config=self.tasks_config['sales_task'],
-            agent=self.sales_agent()
-        )
-
+def send_callbell_message(phone_number, text):
+    """Envia uma mensagem de texto simples via Callbell."""
+    url = f"{CALLBELL_API_BASE_URL}/messages/send"
+    payload = {
+        'to': phone_number,
+        'from': 'whatsapp',
+        'type': 'text',
+        'content': {'text': text},
+    }
+    logging.info(f"Enviando mensagem simples para {phone_number}: {text}")
+    try:
+        response = requests.post(url, headers=get_callbell_headers(), json=payload)
+        response.raise_for_status()
+        logging.info(f"Mensagem simples enviada com sucesso para {phone_number}.")
+        return True
     
-    # ====================================================================================
-    # CREWS
-    # ====================================================================================
-
-    @crew
-    def dynamic_crew(self) -> Crew:
-        """Crew dinâmica que permite delegação entre agentes com base no contexto."""
-        return Crew(
-            agents=[
-                self.triage_agent(),
-                self.general_support_agent(), 
-                self.sales_agent()
-            ],
-            tasks=[
-                self.triage_task(),
-                self.support_task(), 
-                self.sales_task()
-            ],
-            process=Process.hierarchical,
-            verbose=True,
-            manager_llm=self.llm
-        )
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Erro ao enviar mensagem simples para {phone_number}: {e}")
+        logging.error(f"Payload enviado: {json.dumps(payload)}")
+        logging.error(f"Resposta recebida (se houver): {e.response.status_code} - {e.response.text if e.response else 'N/A'}")
+        return False
     
-    # ====================================================================================
-    # LOGICA PRINCIPAL
-    # ====================================================================================
+    except Exception as e:
+        logging.error(f"Erro inesperado ao processar envio de mensagem simples para {phone_number}: {e}")
+        return False
 
-    def run_client_interaction(self, client_message: str, user_id: str):
-        print(f"\n💬 Mensagem do Cliente: {client_message}")
+def get_allowed_chats():
+    return ['71464be80c504971ae263d710b39dd1f']
 
-        # Inicializar memória do usuário se não existir
-        if user_id not in self.memory:
-            self.memory[user_id] = {'intention': None, 'history': ''}
 
-        history = self.memory[user_id]['history']
-        intention = self.memory[user_id]['intention']
+@app.route('/receive_message', methods=['POST'])
+def receive_message():
+    allowed_chats = get_allowed_chats()
+    
+    webhook_payload = request.get_json()
+    if not webhook_payload:
+        logging.info("Webhook: Payload vazio recebido.")
+        return jsonify({"status": "ok", "message": "Empty payload"}), 200
 
-        # Criar contexto para a interação
-        context = {
-            'client_message': client_message,
-            'history': history,
-            'intention': intention or "DESCONHECIDA"
-        }
+    event = webhook_payload.get("event")
+    payload = webhook_payload.get("payload")
+    logging.debug(f"Webhook recebido: Evento='{event}' Payload='{json.dumps(payload)}'") # Log detalhado
 
-        # Determinar qual tarefa executar primeiro com base na intenção atual
-        initial_task = None
+    # --- Processamento de Mensagens Recebidas ---
+    if event == "message_created" and payload and payload.get("status") == "received":
+
+        contact_info = payload.get("contact")
+
+        if not contact_info or not contact_info.get("uuid"):
+            logging.warning("Webhook: Mensagem recebida sem 'contact.uuid'. Ignorando.")
+            return jsonify({"status": "ok", "message": "No contact UUID"}), 200
+
+        contact_uuid = contact_info.get("uuid")
+        phone_number = contact_info.get("phoneNumber")
         
-        # Se não houver intenção definida ou for a primeira interação, começamos com triagem
-        if intention is None:
-            print("\n🔍 Iniciando com triagem para detectar intenção...")
+        if contact_uuid in allowed_chats:
+            text = str(payload.get('text', ''))
+            response = global_agent.run_client_interaction(text)
             
-            # Executar a tarefa de triagem primeiro
-            triage_crew = Crew(
-                agents=[self.triage_agent()],
-                tasks=[self.triage_task()],
-                process=Process.sequential,
-                verbose=True
-            )
-            
-            triage_result = triage_crew.kickoff(inputs=context)
-            
-            # Verificar se a triagem identificou uma intenção
-            if "INTENÇÃO DETECTADA:" in triage_result.raw:
-                parts = triage_result.raw.split("INTENÇÃO DETECTADA:")[1].split(' ')[0].strip()
-                
-                detected_intention = parts[0].split("\n")[0].strip()
-                message = ' '.join(parts).strip()
-                
-                print(f'Agente de suporte diz:\n{message}')
-                print(f"🔍 Intenção detectada: {detected_intention}")
-                
-                # Atualizar a intenção na memória
-                self.memory[user_id]['intention'] = detected_intention
-                intention = detected_intention
-                
-                # Determinar qual flow seguir com base na intenção detectada
-                if "SOLICITACAO_ORCAMENTO" in intention:
-                    # Direcionar para vendas
-                    initial_task = self.sales_task()
-                    print("\n💰 Direcionando para vendas...")
-                else:
-                    # Direcionar para suporte
-                    initial_task = self.support_task()
-                    print("\n🛠️ Direcionando para suporte...")
-            else:
-                # Se não conseguir detectar uma intenção clara, direcionar para suporte como fallback
-                initial_task = self.support_task()
-                print("\n🛠️ Intenção não detectada claramente, direcionando para suporte como fallback...")
-        
-        # Se já temos uma intenção, escolhemos diretamente o agente apropriado
-        else:
-            if "SOLICITACAO_ORCAMENTO" in intention:
-                initial_task = self.sales_task()
-                print(f"\n💰 Continuando com vendas baseado na intenção: {intention}")
-            else:
-                initial_task = self.support_task()
-                print(f"\n🛠️ Continuando com suporte baseado na intenção: {intention}")
-        
-        # Criar crew para a tarefa específica
-        if initial_task == self.sales_task():
-            # Crew de vendas
-            task_crew = Crew(
-                agents=[self.sales_agent()],
-                tasks=[self.sales_task()],
-                process=Process.sequential,
-                verbose=True
-            )
-        else:
-            # Crew de suporte
-            task_crew = Crew(
-                agents=[self.general_support_agent()],
-                tasks=[self.support_task()],
-                process=Process.sequential,
-                verbose=True
-            )
-        
-        # Executar a tarefa específica
-        result = task_crew.kickoff(inputs=context)
-        
-        # Verificar se houve mudança de intenção durante a execução
-        if result and "INTENÇÃO DETECTADA:" in result.raw:
-            # Extrair nova intenção do resultado
-            response_text = result.raw
-            new_intention = response_text.split("INTENÇÃO DETECTADA:")[1].strip().split("\n")[0].strip()
-            
-            # Atualizar a intenção na memória do usuário
-            self.memory[user_id]['intention'] = new_intention
-            print(f"🔄 Intenção atualizada para: {new_intention}")
-            
-            # Remover a marcação de intenção da resposta
-            clean_response = response_text.split("INTENÇÃO DETECTADA:")[0].strip()
-            if len(clean_response) < 5:  # Se a resposta ficou muito curta após a remoção
-                # Executar novamente com a nova intenção
-                print("🔄 Redirecionando com base na nova intenção...")
-                return self.run_client_interaction(client_message, user_id)
-            else:
-                result.raw = clean_response
-        
-        # Atualizar histórico
-        self.memory[user_id]['history'] += f"\nHuman: {client_message}\nAI: {result.raw}"
-
-        print("\n✅ Resultado da Interação:")
-        print(result.raw)
-        
-        return result.raw
-
-# --- Simulação de Interações ---
-if __name__ == "__main__":
-    crew_team = GlobalAgentCrew()
-
-    while True:
-        query = input('Usuário: ')
-        user_id = 'juan144'
-        if query == '1':
-            break
-
-        crew_team.run_client_interaction(query, user_id)
+            send_callbell_message(phone_number, response)
