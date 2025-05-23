@@ -35,6 +35,7 @@ class GlobalAgentCrew:
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
 
+    memory = {}
     # ====================================================================================
     # AGENTES
     # ====================================================================================
@@ -44,7 +45,8 @@ class GlobalAgentCrew:
         """Define o agente de triagem de intenção."""
         return Agent(
             config=self.agents_config['triage_agent'],
-            llm=self.llm 
+            llm=self.llm,
+            allow_delegation=True 
         )
 
     @agent
@@ -53,7 +55,8 @@ class GlobalAgentCrew:
         return Agent(
             config=self.agents_config['general_support_agent'],
             tools=[RAGTool()], 
-            llm=self.llm 
+            llm=self.llm,
+            allow_delegation=True 
         )
 
     @agent
@@ -62,7 +65,8 @@ class GlobalAgentCrew:
         return Agent(
             config=self.agents_config['sales_agent'],
             tools=[RAGTool()], 
-            llm=self.llm 
+            llm=self.llm,
+            allow_delegation=True
         )
 
     # ====================================================================================
@@ -74,7 +78,7 @@ class GlobalAgentCrew:
         """Define a tarefa de triagem."""
         return Task(
             config=self.tasks_config['triage_task'],
-            agent=self.triage_agent(), 
+            agent=self.triage_agent()
         )
 
     @task
@@ -82,8 +86,7 @@ class GlobalAgentCrew:
         """Define a tarefa de atendimento geral."""
         return Task(
             config=self.tasks_config['support_task'],
-            agent=self.general_support_agent(), 
-            context=[self.triage_task()], 
+            agent=self.general_support_agent()
         )
 
     @task
@@ -91,8 +94,7 @@ class GlobalAgentCrew:
         """Define a tarefa de vendas."""
         return Task(
             config=self.tasks_config['sales_task'],
-            agent=self.sales_agent(), 
-            context=[self.triage_task()], 
+            agent=self.sales_agent()
         )
 
     
@@ -101,70 +103,146 @@ class GlobalAgentCrew:
     # ====================================================================================
 
     @crew
-    def triage_flow_crew(self) -> Crew:
-        """Crew específica para realizar a triagem da intenção do cliente."""
+    def dynamic_crew(self) -> Crew:
+        """Crew dinâmica que permite delegação entre agentes com base no contexto."""
         return Crew(
-            agents=[self.triage_agent()],
-            tasks=[self.triage_task()],
-            process=Process.sequential,
+            agents=[
+                self.triage_agent(),
+                self.general_support_agent(), 
+                self.sales_agent()
+            ],
+            tasks=[
+                self.triage_task(),
+                self.support_task(), 
+                self.sales_task()
+            ],
+            process=Process.hierarchical,
             verbose=True,
-        )
-
-    @crew
-    def sales_flow_crew(self) -> Crew:
-        """Crew específica para o fluxo de vendas."""
-        return Crew(
-            agents=[self.sales_agent()],
-            tasks=[self.sales_task()],
-            process=Process.sequential,
-            verbose=True,
-        )
-
-    @crew
-    def support_flow_crew(self) -> Crew:
-        """Crew específica para o fluxo de atendimento/suporte."""
-        return Crew(
-            agents=[self.general_support_agent()],
-            tasks=[self.support_task()],
-            process=Process.sequential,
-            verbose=True,
+            manager_llm=self.llm
         )
     
     # ====================================================================================
     # LOGICA PRINCIPAL
     # ====================================================================================
 
-    def run_client_interaction(self, client_message: str):
+    def run_client_interaction(self, client_message: str, user_id: str):
         print(f"\n💬 Mensagem do Cliente: {client_message}")
 
-        triage_crew_instance = self.triage_flow_crew()
-        triage_result = triage_crew_instance.kickoff(inputs={'client_message': client_message})
-        client_intention = triage_result.raw.strip().replace("'", "")
+        # Inicializar memória do usuário se não existir
+        if user_id not in self.memory:
+            self.memory[user_id] = {'intention': None, 'history': ''}
 
-        print(f"🧠 Intenção Identificada: {client_intention}")
+        history = self.memory[user_id]['history']
+        intention = self.memory[user_id]['intention']
 
-        # 2. Direcionar para a Crew apropriada
-        if client_intention == 'SOLICITACAO_ORCAMENTO':
-            print("\n🚀 Acionando Crew de Vendas...")
-            sales_crew_instance = self.sales_flow_crew()
-            sales_interaction_result = sales_crew_instance.kickoff(inputs={
-                'client_message': client_message,
-                'client_intention': client_intention
-            })
-            print("\n✅ Resultado da Interação de Vendas:")
-            print(sales_interaction_result)
+        # Criar contexto para a interação
+        context = {
+            'client_message': client_message,
+            'history': history,
+            'intention': intention or "DESCONHECIDA"
+        }
 
-        elif client_intention in ['SUPORTE_TECNICO', 'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO', 'OUTROS']:
-            print("\n🛠️ Acionando Crew de Atendimento Geral...")
-            support_crew_instance = self.support_flow_crew()
-            support_interaction_result = support_crew_instance.kickoff(inputs={
-                'client_message': client_message,
-                'client_intention': client_intention
-            })
-            print("\n✅ Resultado da Interação de Atendimento:")
-            print(support_interaction_result)
+        # Determinar qual tarefa executar primeiro com base na intenção atual
+        initial_task = None
+        
+        # Se não houver intenção definida ou for a primeira interação, começamos com triagem
+        if intention is None:
+            print("\n🔍 Iniciando com triagem para detectar intenção...")
+            
+            # Executar a tarefa de triagem primeiro
+            triage_crew = Crew(
+                agents=[self.triage_agent()],
+                tasks=[self.triage_task()],
+                process=Process.sequential,
+                verbose=True
+            )
+            
+            triage_result = triage_crew.kickoff(inputs=context)
+            
+            # Verificar se a triagem identificou uma intenção
+            if "INTENÇÃO DETECTADA:" in triage_result.raw:
+                parts = triage_result.raw.split("INTENÇÃO DETECTADA:")[1].split(' ')[0].strip()
+                
+                detected_intention = parts[0].split("\n")[0].strip()
+                message = ' '.join(parts).strip()
+                
+                print(f'Agente de suporte diz:\n{message}')
+                print(f"🔍 Intenção detectada: {detected_intention}")
+                
+                # Atualizar a intenção na memória
+                self.memory[user_id]['intention'] = detected_intention
+                intention = detected_intention
+                
+                # Determinar qual flow seguir com base na intenção detectada
+                if "SOLICITACAO_ORCAMENTO" in intention:
+                    # Direcionar para vendas
+                    initial_task = self.sales_task()
+                    print("\n💰 Direcionando para vendas...")
+                else:
+                    # Direcionar para suporte
+                    initial_task = self.support_task()
+                    print("\n🛠️ Direcionando para suporte...")
+            else:
+                # Se não conseguir detectar uma intenção clara, direcionar para suporte como fallback
+                initial_task = self.support_task()
+                print("\n🛠️ Intenção não detectada claramente, direcionando para suporte como fallback...")
+        
+        # Se já temos uma intenção, escolhemos diretamente o agente apropriado
         else:
-            print(f"⚠️ Intenção não reconhecida ou não mapeada para uma crew: {client_intention}")
+            if "SOLICITACAO_ORCAMENTO" in intention:
+                initial_task = self.sales_task()
+                print(f"\n💰 Continuando com vendas baseado na intenção: {intention}")
+            else:
+                initial_task = self.support_task()
+                print(f"\n🛠️ Continuando com suporte baseado na intenção: {intention}")
+        
+        # Criar crew para a tarefa específica
+        if initial_task == self.sales_task():
+            # Crew de vendas
+            task_crew = Crew(
+                agents=[self.sales_agent()],
+                tasks=[self.sales_task()],
+                process=Process.sequential,
+                verbose=True
+            )
+        else:
+            # Crew de suporte
+            task_crew = Crew(
+                agents=[self.general_support_agent()],
+                tasks=[self.support_task()],
+                process=Process.sequential,
+                verbose=True
+            )
+        
+        # Executar a tarefa específica
+        result = task_crew.kickoff(inputs=context)
+        
+        # Verificar se houve mudança de intenção durante a execução
+        if result and "INTENÇÃO DETECTADA:" in result.raw:
+            # Extrair nova intenção do resultado
+            response_text = result.raw
+            new_intention = response_text.split("INTENÇÃO DETECTADA:")[1].strip().split("\n")[0].strip()
+            
+            # Atualizar a intenção na memória do usuário
+            self.memory[user_id]['intention'] = new_intention
+            print(f"🔄 Intenção atualizada para: {new_intention}")
+            
+            # Remover a marcação de intenção da resposta
+            clean_response = response_text.split("INTENÇÃO DETECTADA:")[0].strip()
+            if len(clean_response) < 5:  # Se a resposta ficou muito curta após a remoção
+                # Executar novamente com a nova intenção
+                print("🔄 Redirecionando com base na nova intenção...")
+                return self.run_client_interaction(client_message, user_id)
+            else:
+                result.raw = clean_response
+        
+        # Atualizar histórico
+        self.memory[user_id]['history'] += f"\nHuman: {client_message}\nAI: {result.raw}"
+
+        print("\n✅ Resultado da Interação:")
+        print(result.raw)
+        
+        return result.raw
 
 # --- Simulação de Interações ---
 if __name__ == "__main__":
@@ -172,7 +250,8 @@ if __name__ == "__main__":
 
     while True:
         query = input('Usuário: ')
+        user_id = 'juan144'
         if query == '1':
             break
 
-        crew_team.run_client_interaction(query)
+        crew_team.run_client_interaction(query, user_id)

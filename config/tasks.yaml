@@ -2,24 +2,53 @@ triage_task:
   description: |
     Analise a seguinte mensagem do cliente: '{client_message}'.
     Determine a principal intenção do cliente.
+    
     As categorias de intenção são: 'SUPORTE_TECNICO', 'SOLICITACAO_ORCAMENTO',
     'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO', 'OUTROS'.
-    Seu output final DEVE SER APENAS a string da categoria identificada (ex: 'SOLICITACAO_ORCAMENTO').
-  expected_output: "Uma única string representando a categoria da intenção do cliente (ex: 'SOLICITACAO_ORCAMENTO')."
+    
+    Após identificar a intenção, você deve decidir qual agente deve lidar com ela:
+    - Se for 'SOLICITACAO_ORCAMENTO' ou qualquer interesse em compra/produtos, delegue para o sales_agent
+    - Se for 'SUPORTE_TECNICO', 'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO' ou 'OUTROS', delegue para o support_agent
+    
+    Histórico de conversação:
+    {history}
+    
+    Responda com o identificador da intenção, seguido por "INTENÇÃO DETECTADA:" e a string da categoria.
+    Exemplo: "INTENÇÃO DETECTADA: SOLICITACAO_ORCAMENTO"
+  expected_output: "INTENÇÃO DETECTADA: [categoria da intenção]"
 
 support_task:
   description: |
     O cliente entrou em contato com a seguinte dúvida/problema: '{client_message}'.
-    A intenção foi classificada como {client_intention}.
+    
     Forneça uma resposta clara e útil. Se for uma dúvida sobre produto/serviço, explique detalhadamente.
     Se for um problema de suporte técnico, ofereça os primeiros passos para solução ou colete mais informações.
     Use a ferramenta RAG para buscar informações se necessário, condense as informações recebidas.
-  expected_output: "Uma resposta completa e cordial para o cliente, abordando sua solicitação de suporte ou dúvida. No MÁXIMO 5 linhas mas apenas quando estritamente necessário, apenas passe disso se houver a mais explícita necessidade, senão perderá pontos."
+    
+    IMPORTANTE: Se durante a conversa você identificar que o cliente está interessado em orçamentos, 
+    preços ou compra, DELEGUE IMEDIATAMENTE para o sales_agent incluindo "INTENÇÃO DETECTADA: SOLICITACAO_ORCAMENTO" 
+    no início da sua resposta.
+    
+    Histórico de conversação:
+    {history}
+    
+    Intenção atual: {intention}
+  expected_output: "Uma resposta completa e cordial para o cliente, abordando sua solicitação de suporte ou dúvida. No MÁXIMO 5 linhas a menos que absolutamente necessário."
 
 sales_task:
   description: |
     Um cliente demonstrou interesse em um orçamento ou em adquirir nossos serviços. A mensagem inicial foi: '{client_message}'.
-    A intenção foi classificada como {client_intention}.
-    Seu objetivo é entender melhor as necessidades do cliente, apresentar os planos e produtos mais adequados e, se possível, gerar um orçamento inicial ou agendar uma conversa.
-    Use a ferramenta RAG para informações de planos, condense as informações recebidas.
-  expected_output: "Uma interação de vendas proativa, buscando entender as necessidades do cliente, apresentar soluções e/ou um orçamento. No MÁXIMO 5 linhas mas apenas quando estritamente necessário, apenas passe disso se houver a mais explícita necessidade, senão perderá pontos."
+    
+    Seu objetivo é entender melhor as necessidades do cliente, apresentar os planos e produtos mais adequados e, 
+    se possível, gerar um orçamento inicial ou agendar uma conversa.
+    **Use a ferramenta RAG (sua base de conhecimento Qdrant) extensivamente para buscar informações de planos, personalizar argumentos de venda, insights para manejo de objeções e para embasar sua consultoria estratégica**, condensando as informações de forma eficaz para o cliente.
+    
+    IMPORTANTE: Se durante a conversa você identificar que o cliente está na verdade solicitando suporte técnico 
+    ou tem dúvidas que não estão relacionadas a vendas, DELEGUE IMEDIATAMENTE para o support_agent incluindo 
+    "INTENÇÃO DETECTADA: SUPORTE_TECNICO" (ou a categoria apropriada) no início da sua resposta.
+    
+    Histórico de conversação:
+    {history}
+    
+    Intenção atual: {intention}
+  expected_output: "Uma interação de vendas proativa, buscando entender as necessidades do cliente, apresentar soluções e/ou um orçamento. No MÁXIMO 5 linhas a menos que absolutamente necessário."
