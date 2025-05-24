@@ -1,0 +1,11 @@
+crewai
+crewai-tools
+langchain-huggingface
+langchain-qdrant
+sentence-transformers
+qdrant-client
+python-dotenv
+Flask
+gunicorn
+fastembed
+requests
