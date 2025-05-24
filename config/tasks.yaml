@@ -1,3 +1,5 @@
+# tasks.yaml:
+
 triage_task:
   description: |
     Analise a seguinte mensagem do cliente: '{client_message}'.
@@ -40,13 +42,15 @@ sales_task:
   description: |
     Um cliente demonstrou interesse em um orçamento ou em adquirir nossos serviços. A mensagem inicial foi: '{client_message}'.
     
-    Seu objetivo é entender melhor as necessidades do cliente, apresentar os planos e produtos mais adequados e, 
-    se possível, gerar um orçamento inicial ou agendar uma conversa.
-    **Use a ferramenta RAG (sua base de conhecimento Qdrant) extensivamente para buscar informações de planos, personalizar argumentos de venda, insights para manejo de objeções e para embasar sua consultoria estratégica**, condensando as informações de forma eficaz para o cliente.
+    Seu objetivo é entender melhor as necessidades do cliente conforme as diretrizes do Manual de Atendimento Global System (ETAPA 1 e 2), 
+    apresentar os planos e produtos mais adequados, e gerar um **ORÇAMENTO DETALHADO E COMPLETO** (ETAPA 3 do Manual) que inclua dados comerciais, 
+    funcionamento operacional, aspectos contratuais e declarações jurídicas obrigatórias. Após apresentação e acordo, encaminhar para formalização contratual.
+    **Use a ferramenta RAG (sua base de conhecimento Qdrant) extensivamente para buscar informações de planos, realizar a sondagem correta, definir o produto, construir o orçamento detalhado com todas as cláusulas e declarações necessárias, personalizar argumentos de venda, insights para manejo de objeções e para embasar sua consultoria estratégica**, condensando as informações de forma eficaz para o cliente.
     Caso use a ferramenta RAG produza pelo menos um parágrafo contendo várias palavras chave para a busca semântica na base do qdrant.
     
     DIRETRIZES:
     Apenas comprimente e/ou se apresente na PRIMEIRA resposta ao cliente, verifique o Histórico de conversação e evite desgastes.
+    Siga rigorosamente o "FLUXO DE VENDAS CONSULTIVAS E FORMALIZADAS" e as diretrizes de "SEGURANÇA JURÍDICA E DOCUMENTAÇÃO" detalhadas no seu backstory.
     
     IMPORTANTE: Se durante a conversa você identificar que o cliente está na verdade solicitando suporte técnico 
     ou tem dúvidas que não estão relacionadas a vendas, DELEGUE IMEDIATAMENTE para o support_agent incluindo 
@@ -56,4 +60,4 @@ sales_task:
     {history}
     
     Intenção atual: {intention}
-  expected_output: "Uma interação de vendas proativa, buscando entender as necessidades do cliente, apresentar soluções e/ou um orçamento. No MÁXIMO 5 linhas a menos que absolutamente necessário."
+  expected_output: "Uma interação de vendas consultiva e formalizada, seguindo o fluxo e diretrizes do Manual Global System, buscando entender as necessidades do cliente, apresentar uma solução adequada com um orçamento detalhado e completo, e obter o acordo para os próximos passos. A resposta inicial pode ser mais longa se estiver apresentando o orçamento detalhado, mas divida informações complexas."
