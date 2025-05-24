@@ -79,3 +79,6 @@ def receive_message():
             response = global_agent.run_client_interaction(text)
             
             send_callbell_message(phone_number, response)
+
+    
+    return jsonify({'status': 'ok'}), 200
