@@ -76,7 +76,6 @@ def run_mvp_crew(contact_id: str, chat_id: str, message_text: str): # Adapted fr
         mvp_crew.kickoff(initial_inputs_for_kickoff)
         logger.info(f"MVP Crew: Kickoff executado com sucesso para chat_id {chat_id}")
 
-        # Send the response to Callbell
         response = triage_task.output.raw
         logger.info(f"MVP Crew: Resposta gerada pelo crew: {response}")
         if response:

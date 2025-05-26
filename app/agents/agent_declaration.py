@@ -1,8 +1,9 @@
 from crewai import Agent
+import yaml
+
 from app.config.llm_config import default_llm
 from app.tools.callbell_tools import CallbellSendTool
 from app.utils.funcs.funcs import obter_caminho_projeto
-import yaml
 
 
 callbell_send_tool = CallbellSendTool()
