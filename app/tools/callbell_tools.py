@@ -22,6 +22,7 @@ class CallbellSendTool(BaseTool):
             "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
             "Content-Type": "application/json"
         }
+        
         payload = {
             "to": phone_number,
             "from": "whatsapp",
@@ -30,6 +31,7 @@ class CallbellSendTool(BaseTool):
             "content": {
                 "text": message
             },
+            "filds": "conversation,contact"
         }
         
         response = requests.post(url, json=payload, headers=headers)
