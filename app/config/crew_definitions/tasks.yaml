@@ -1,66 +1,164 @@
-# tasks.yaml:
+# tasks.yaml
 
 triage_task:
   description: |
     Analise a seguinte mensagem do cliente: '{client_message}'.
-    Determine a principal intenção do cliente.
-    
-    As categorias de intenção são: 'SUPORTE_TECNICO', 'SOLICITACAO_ORCAMENTO',
-    'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO', 'OUTROS'.
-    
-    Após identificar a intenção, você deve decidir qual agente deve lidar com ela:
-    - Se for 'SOLICITACAO_ORCAMENTO' ou qualquer interesse em compra/produtos, delegue para o sales_agent
-    - Se for 'SUPORTE_TECNICO', 'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO' ou 'OUTROS', delegue para o support_agent
-    
-    Histórico de conversação:
-    {history}
-    
-    Responda com o identificador da intenção, seguido por "INTENÇÃO DETECTADA:" e a string da categoria.
-    Exemplo: "INTENÇÃO DETECTADA: SOLICITACAO_ORCAMENTO"
-  expected_output: "INTENÇÃO DETECTADA: [categoria da intenção]"
+    Considere também o histórico da conversa: '{history}'.
+    Sua principal função é determinar a intenção do cliente e para qual especialista ele deve ser encaminhado.
 
-support_task:
-  description: |
-    O cliente entrou em contato com a seguinte dúvida/problema: '{client_message}'.
-    
-    Forneça uma resposta clara e útil. Se for uma dúvida sobre produto/serviço, explique detalhadamente.
-    Se for um problema de suporte técnico, ofereça os primeiros passos para solução ou colete mais informações.
-    Use a ferramenta RAG para buscar informações se necessário, condense as informações recebidas.
-    Caso use a ferramenta RAG produza pelo menos um parágrafo contendo várias palavras chave para a busca semântica na base do qdrant.
-    
-    IMPORTANTE: Se durante a conversa você identificar que o cliente está interessado em orçamentos, 
-    preços ou compra, DELEGUE IMEDIATAMENTE para o sales_agent incluindo "INTENÇÃO DETECTADA: SOLICITACAO_ORCAMENTO" 
-    no início da sua resposta.
-    
-    Histórico de conversação:
-    {history}
-    
-    Intenção atual: {intention}
-  expected_output: "Uma resposta completa e cordial para o cliente, abordando sua solicitação de suporte ou dúvida. No MÁXIMO 5 linhas a menos que absolutamente necessário."
+    As categorias de intenção são:
+    - 'SOLICITACAO_ORCAMENTO': Interesse em compra, preços, planos.
+    - 'SUPORTE_TECNICO': Problemas técnicos, configurações, falhas.
+    - 'DUVIDA_PRODUTO_SERVICO': Informações sobre funcionamento, características.
+    - 'FINANCEIRO': Pagamentos, cobranças, faturas.
+    - 'OUTROS': Demais assuntos.
 
-sales_task:
+    Com base na intenção identificada:
+    - Se for 'SOLICITACAO_ORCAMENTO' ou qualquer claro interesse em compra/produtos, o próximo passo é com o 'sales_agent'.
+    - Para TODAS as outras categorias ('SUPORTE_TECNICO', 'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO', 'OUTROS'), o próximo passo é com o 'general_support_agent'.
+
+    Forneça APENAS a string da intenção que você detectou para o sistema usar no roteamento.
+    Se você tiver alta confiança em uma resposta DIRETA e IMEDIATA baseada em cache L1 ou L2 (Qdrant Knowledge Base) para uma dúvida MUITO simples,
+    e a mensagem do cliente for "{client_message}", você pode, opcionalmente, fornecer essa resposta.
+    Caso contrário, foque na classificação da intenção.
+  expected_output: |
+    "INTENÇÃO DETECTADA: [categoria_da_intenção]"
+    OU, se aplicável e com altíssima confiança para uma resposta direta de cache:
+    {
+      "action": "RESPOND_DIRECTLY",
+      "messages_sent": ["Resposta curta e direta do cache."],
+      "chat_id": "{chat_id}"
+    }
+    Caso contrário, priorize a classificação:
+    "INTENÇÃO DETECTADA: [categoria_da_intenção]" # Este é o output principal e mais comum.
+
+profile_customer_task:
   description: |
-    Um cliente demonstrou interesse em um orçamento ou em adquirir nossos serviços. A mensagem inicial foi: '{client_message}'.
-    
-    Seu objetivo é entender as necessidades do cliente (ETAPA 1 e 2 do Manual), apresentar os planos mais adequados, e 
-    comunicar os termos da proposta (ETAPA 3 do Manual). Isso inclui um **RESUMO dos dados comerciais chave no chat, seguido pela APRESENTAÇÃO PROGRESSIVA 
-    ou OFERTA DE ENVIO do orçamento detalhado completo** (incluindo funcionamento operacional, aspectos contratuais e declarações jurídicas obrigatórias). 
-    Após acordo, encaminhar para formalização contratual.
-    **Use a ferramenta RAG (sua base de conhecimento Qdrant) extensivamente para sondagem, definição de produto, elaboração da proposta completa (para envio) 
-    e dos resumos (para o chat), personalização de argumentos, manejo de objeções e consultoria estratégica.** Condense informações de forma eficaz para o cliente no chat.
-    Caso use a ferramenta RAG produza pelo menos um parágrafo contendo várias palavras chave para a busca semântica na base do qdrant.
-    
-    DIRETRIZES:
-    **Verifique o Histórico de conversação: APENAS cumprimente/apresente-se na PRIMEIRA interação da conversa. EVITE saudações repetitivas.**
-    Siga rigorosamente o "FLUXO DE VENDAS CONSULTIVAS E FORMALIZADAS" e as diretrizes de "SEGURANÇA JURÍDICA E DOCUMENTAÇÃO", "COMUNICAÇÃO CONCISA E PROGRESSIVA" e "SEM REFERÊNCIAS INTERNAS" detalhadas no seu backstory.
-    **NÃO envie blocos de texto excessivamente longos. Apresente as informações de forma faseada e clara.**
-    
-    IMPORTANTE: Se durante a conversa você identificar que o cliente está na verdade solicitando suporte técnico 
-    ou tem dúvidas que não estão relacionadas a vendas, DELEGUE IMEDIATAMENTE para o support_agent incluindo 
-    "INTENÇÃO DETECTADA: SUPORTE_TECNICO" (ou a categoria apropriada) no início da sua resposta.
-    
-    Histórico de conversação:
-    {history}
-    
-    Intenção atual: {intention}
-  expected_output: "Uma interação de vendas consultiva e formalizada. A resposta deve ser concisa, progredir a conversa de acordo com o fluxo, apresentar um resumo dos termos comerciais chave e oferecer o detalhamento completo de forma progressiva ou como documento formal. Evitar blocos de texto longos e saudações repetitivas. Não mencionar ferramentas internas nem usar placeholders literais."
+    Com base no ID de contato '{contact_id}', na mensagem atual do cliente '{client_message}' e no contexto operacional '{operational_context}',
+    consulte o histórico de interações no Qdrant.
+    Sintetize as informações coletadas em um perfil resumido e estruturado do cliente.
+    Destaque preferências, histórico de compras/suporte, e qualquer insight relevante para a interação atual.
+    O objetivo é fornecer um entendimento rápido e acionável do cliente para o próximo agente.
+  expected_output: |
+    # JSON estruturado contendo o perfil do cliente.
+    {
+      "contact_id": "{contact_id}",
+      "profile_summary": "Resumo conciso do cliente e seu histórico relevante.",
+      "history_highlights": ["Ponto chave 1 do histórico", "Ponto chave 2 do histórico"],
+      "current_conversation_context": "Contexto da conversa atual e mensagem do cliente.",
+      "sales_stage_inferred": "[Estágio de vendas inferido, se aplicável]",
+      "key_insights_for_current_interaction": ["Insight acionável 1", "Insight acionável 2"]
+    }
+
+support_task: # Para o general_support_agent
+  description: |
+    O cliente (perfil: {customer_profile}) entrou em contato com a seguinte dúvida/problema: '{client_message}'.
+    A intenção inicial foi classificada como: '{intention}'.
+    O histórico da conversa é: '{history}'.
+
+    Sua missão é resolver a questão do cliente seguindo os "PRINCÍPIOS DE ATENDIMENTO" e utilizando sua "EXPERTISE TÉCNICA" e o "USO DA BASE DE CONHECIMENTO TÉCNICO (QDRANT)" conforme detalhado no seu backstory.
+    Forneça respostas claras, concisas e progressivas.
+    Se precisar consultar o Qdrant para informações técnicas, manuais, ou soluções (o que é encorajado para garantir precisão), formule uma query relevante para a ferramenta de busca vetorial.
+    Por exemplo, para uma busca no Qdrant sobre 'problema de conexão GSM no modelo X', você pode gerar: "Troubleshooting falha conexão GSM rastreador modelo X área de sombra erro sinal fraco".
+
+    Lembre-se da DELEGAÇÃO OBRIGATÓRIA: Se o cliente demonstrar interesse em COMPRA/PREÇOS/PLANOS, sua resposta DEVE ser EXATAMENTE "INTENÇÃO DETECTADA: SOLICITACAO_ORCAMENTO".
+
+    Opcionalmente, se você identificar a necessidade de uma ação em um sistema interno (que não seja consulta ao Qdrant, ex: abrir um ticket formal em outro sistema),
+    especifique essa ação para o SystemOperationsAgent. Formato:
+    { "system_action_request": {"action_type": "NOME_DA_ACAO", "parameters": {...}} }
+
+    Seu output principal deve ser a(s) mensagem(ns) de resposta para o cliente e, se aplicável, o pedido de ação de sistema.
+  expected_output: |
+    # Um objeto JSON contendo a sequência de mensagens de resposta e, opcionalmente, uma solicitação de ação de sistema.
+    {
+      "primary_messages_sequence": [
+        "Primeira mensagem de resposta concisa.",
+        "Segunda mensagem, se necessário, aprofundando ou solicitando mais informações."
+      ],
+      "proactive_content_generated": [ # Opcional, se o agente também gerar conteúdo para KB
+        {"question": "Pergunta proativa 1", "answer": "Resposta proativa 1"}
+      ],
+      "system_action_request": null # Ou: {"action_type": "CREATE_SUPPORT_TICKET", "parameters": {"details": "...", "customer_id": "{contact_id}"}}
+    }
+    # OU, em caso de delegação:
+    "INTENÇÃO DETECTADA: SOLICITACAO_ORCAMENTO"
+
+sales_task: # Para o sales_agent
+  description: |
+    O cliente (perfil: {customer_profile}) demonstrou interesse em um orçamento ou em adquirir nossos serviços.
+    A mensagem inicial que levou a este ponto foi: '{client_message}'.
+    A intenção foi classificada como: '{intention}'.
+    O histórico da conversa é: '{history}'.
+
+    Sua missão é conduzir uma consultoria de vendas personalizada, empática e juridicamente segura, seguindo a "FILOSOFIA DE CONSULTORIA ALESSANDRO" e o "FLUXO DE VENDAS CONSULTIVAS E FORMALIZADAS" detalhados no seu backstory.
+    Utilize intensivamente sua base de conhecimento (Qdrant) para sondagem (ETAPA 1), diagnóstico do produto correto (ETAPA 2), elaboração do resumo comercial para o chat e da proposta detalhada para envio (ETAPA 3), superação de objeções e negociação.
+    Lembre-se da importância da "SEGURANÇA JURÍDICA E DOCUMENTAÇÃO".
+    Formule queries relevantes para o Qdrant quando necessário. Ex: "Argumentos de valor rastreador híbrido cliente frota logística segurança custo benefício".
+
+    DELEGAÇÃO OBRIGATÓRIA: Se a conversa desviar completamente para SUPORTE TÉCNICO DETALHADO ou dúvidas não-comerciais que o impeçam de prosseguir com a venda, sua resposta DEVE ser EXATAMENTE "INTENÇÃO DETECTADA: SUPORTE_TECNICO".
+
+    Opcionalmente, se você identificar a necessidade de uma ação em um sistema interno (ex: registrar lead no CRM, verificar crédito),
+    especifique essa ação para o SystemOperationsAgent. Formato:
+    { "system_action_request": {"action_type": "NOME_DA_ACAO", "parameters": {...}} }
+
+    Seu output principal deve ser a(s) mensagem(ns) de resposta para o cliente e, se aplicável, o pedido de ação de sistema.
+  expected_output: |
+    # Um objeto JSON contendo a sequência de mensagens de resposta e, opcionalmente, uma solicitação de ação de sistema.
+    {
+      "primary_messages_sequence": [
+        "Primeira mensagem de vendas, seguindo o fluxo (ex: sondagem, apresentação inicial).",
+        "Segunda mensagem, progredindo na venda (ex: resumo da proposta, oferta de detalhamento)."
+      ],
+      "proactive_content_generated": [ # Opcional, se o agente também gerar conteúdo para KB
+        {"question": "Pergunta proativa relacionada à venda 1", "answer": "Resposta proativa 1"}
+      ],
+      "system_action_request": null # Ou: {"action_type": "REGISTER_LEAD_CRM", "parameters": {"name": "...", "contact": "{contact_id}", "product_interest": "..."}}
+    }
+    # OU, em caso de delegação:
+    "INTENÇÃO DETECTADA: SUPORTE_TECNICO"
+
+execute_system_operations_task: # Para o SystemOperationsAgent
+  description: |
+    Você recebeu uma solicitação para executar uma operação em um sistema interno.
+    A solicitação é: '{system_action_request_json_string}'.
+    O `system_action_request` contém 'action_type' e 'parameters'.
+    Identifique a ferramenta de API interna correta e execute a ação com os parâmetros fornecidos.
+    Retorne o resultado da operação de forma estruturada.
+  expected_output: |
+    # JSON com o resultado da operação da API.
+    {
+      "action_type_executed": "[NOME_DA_ACAO_EXECUTADA]",
+      "status": "success_or_error",
+      "data": { # Dados retornados pela API em caso de sucesso
+        # ... (varia conforme a API)
+      },
+      "error_message": "[Mensagem de erro, se status for error]"
+    }
+
+coordinate_delivery_task: # Para o DeliveryCoordinator
+  description: |
+    Você recebeu uma sequência de mensagens para entregar ao cliente.
+    ID do Contato: '{contact_id}'
+    ID do Chat: '{chat_id}'
+    Sequência de Mensagens: {primary_messages_sequence_list_of_strings}
+
+    Sua tarefa é enviar essas mensagens ao cliente de forma cadenciada, uma por uma, usando a CallbellSendTool.
+    Simule uma conversa natural, esperando brevemente entre o envio de cada mensagem.
+    Utilize a ConversationStateTool para marcar as mensagens como pendentes/enviadas.
+
+    CRÍTICO: Este processo deve ser capaz de ser interrompido. Se uma nova mensagem do cliente para o mesmo '{chat_id}'
+    for recebida pelo sistema (detectada externamente pelo webhook), este processo de envio para '{chat_id}' é considerado
+    interrompido. Sua tarefa deve então limpar o estado de mensagens pendentes para este chat usando a ConversationStateTool
+    para evitar envios conflitantes. A nova mensagem do cliente iniciará um novo ciclo de avaliação pelo TriageAgent.
+
+    Se todas as mensagens forem enviadas sem interrupção, o status é 'COMPLETED'.
+    Se o processo for interrompido por uma nova mensagem do cliente (sinalização externa), o status é 'INTERRUPTED_BY_CLIENT'.
+    Se ocorrer um erro ao enviar uma mensagem, o status é 'ERROR'.
+  expected_output: |
+    # JSON com o status da entrega.
+    {
+      "chat_id": "{chat_id}",
+      "delivery_status": "COMPLETED_OR_INTERRUPTED_BY_CLIENT_OR_ERROR",
+      "messages_sent_count": "[numero_de_mensagens_efetivamente_enviadas_antes_de_completar_ou_interromper]",
+      "error_message": "[Detalhes do erro, se houver]"
+    }
