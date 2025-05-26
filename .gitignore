@@ -5,3 +5,4 @@ utils/embedder/all-mpnet-base-v2
 __pycache__/
 log.txt
 Global-Agent/
+tests/
