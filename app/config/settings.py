@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = "your_gemini_api_key_here"
     CALLBELL_API_KEY: str = "your_callbell_api_key_here"
     
-    LOG_LEVEL: str = "DEBUG"
+    LOG_LEVEL: str = "INFO"
     
 
 settings = Settings()

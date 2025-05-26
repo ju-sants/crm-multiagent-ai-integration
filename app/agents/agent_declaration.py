@@ -1,12 +1,16 @@
 from crewai import Agent
 from app.config.llm_config import default_llm
 from app.tools.callbell_tools import CallbellSendTool
+from app.utils.funcs.funcs import obter_caminho_projeto
 import yaml
 
 
 callbell_send_tool = CallbellSendTool()
 
-agents_config = yaml.safe_load(open('app/config/agents_config.yaml', 'r').read())
+base_path = obter_caminho_projeto()
+config_path = base_path / 'app/config/crew_definitions/agents.yaml'
+
+agents_config = yaml.safe_load(open(config_path, 'r').read())
 
 def get_triage_agent() -> Agent:
     return Agent(
@@ -28,7 +32,7 @@ def get_customer_profile_agent() -> Agent:
 
 def get_strategic_advisor_agent() -> Agent:
     return Agent(
-        config=agents_config['StrategicAdvisorAgent'],
+        config=agents_config['StrategicAdvisor'],
         llm=default_llm,
         tools=[],
         verbose=True,
@@ -46,7 +50,7 @@ def get_system_operations_agent() -> Agent:
     
 def get_response_craftsman_agent() -> Agent:
     return Agent(
-        config=agents_config['ResponseCraftsmanAgent'],
+        config=agents_config['ResponseCraftsman'],
         llm=default_llm,
         tools=[],
         verbose=True,
@@ -55,7 +59,7 @@ def get_response_craftsman_agent() -> Agent:
 
 def get_delivery_coordinator_agent() -> Agent:
     return Agent(
-        config=agents_config['DeliveryCoordinatorAgent'],
+        config=agents_config['DeliveryCoordinator'],
         llm=default_llm,
         tools=[callbell_send_tool],
         verbose=True,

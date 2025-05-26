@@ -1,16 +1,15 @@
 from flask import Flask, jsonify, request
-from agent_declaration import GlobalAgentCrew
 import logging
 import json
 import os
 import requests
+from app.crews.conversation_crew import run_mvp_crew
 
 
 CALLBELL_API_KEY = os.environ.get("CALLBELL_API_KEY", "test_gshuPaZoeEG6ovbc8M79w0QyM")
 CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
 
 app = Flask(__name__)
-global_agent = GlobalAgentCrew()
 
 def get_callbell_headers():
     """Retorna os headers padrão para as requisições Callbell."""
@@ -76,9 +75,9 @@ def receive_message():
         
         if contact_uuid in allowed_chats:
             text = str(payload.get('text', ''))
-            response = global_agent.run_client_interaction(text)
             
-            send_callbell_message(phone_number, response)
-
     
     return jsonify({'status': 'ok'}), 200
+
+
+run_mvp_crew('71464be80c504971ae263d710b39dd1f', '71464be80c504971ae263d710b39dd1f', 'Oi queria saber os valor de moto')
