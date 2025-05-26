@@ -1,164 +1,129 @@
 # tasks.yaml
 
-triage_task:
+triage_initial_message_task:
   description: |
-    Analise a seguinte mensagem do cliente: '{client_message}'.
-    Considere também o histórico da conversa: '{history}'.
-    Sua principal função é determinar a intenção do cliente e para qual especialista ele deve ser encaminhado.
+    Você é o TriageAgent. Analise a mensagem do cliente fornecida no input:
+    - Mensagem: "{{ message_text }}"
+    - ID Contato: "{{ contact_id }}"
+    - ID Chat: "{{ chat_id }}"
+    - Timestamp: "{{ timestamp }}"
+    - Payload Completo do Webhook: "{{ full_webhook_payload }}"
 
-    As categorias de intenção são:
-    - 'SOLICITACAO_ORCAMENTO': Interesse em compra, preços, planos.
-    - 'SUPORTE_TECNICO': Problemas técnicos, configurações, falhas.
-    - 'DUVIDA_PRODUTO_SERVICO': Informações sobre funcionamento, características.
-    - 'FINANCEIRO': Pagamentos, cobranças, faturas.
-    - 'OUTROS': Demais assuntos.
-
-    Com base na intenção identificada:
-    - Se for 'SOLICITACAO_ORCAMENTO' ou qualquer claro interesse em compra/produtos, o próximo passo é com o 'sales_agent'.
-    - Para TODAS as outras categorias ('SUPORTE_TECNICO', 'DUVIDA_PRODUTO_SERVICO', 'FINANCEIRO', 'OUTROS'), o próximo passo é com o 'general_support_agent'.
-
-    Forneça APENAS a string da intenção que você detectou para o sistema usar no roteamento.
-    Se você tiver alta confiança em uma resposta DIRETA e IMEDIATA baseada em cache L1 ou L2 (Qdrant Knowledge Base) para uma dúvida MUITO simples,
-    e a mensagem do cliente for "{client_message}", você pode, opcionalmente, fornecer essa resposta.
-    Caso contrário, foque na classificação da intenção.
+    Siga seu FLUXO DE ANÁLISE E DECISÃO:
+    1. Consulte caches L0/L1 (via L1CacheQueryTool).
+    2. Consulte a Base de Conhecimento L2 - Qdrant (via KnowledgeBaseQueryTool).
+    3. Decida se uma RESPOSTA IMEDIATA é viável.
+       - Se sim, prepare a(s) mensagem(ns) para envio direto (via CallbellSendTool) e defina "action": "RESPONDED_DIRECTLY".
+    4. Se não houver resposta imediata, determine a INTENÇÃO PRINCIPAL, TÓPICO e CONTEXTO OPERACIONAL.
+       - Defina "action": "INITIATE_FULL_PROCESSING".
+    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+  agent: TriageAgent
   expected_output: |
-    "INTENÇÃO DETECTADA: [categoria_da_intenção]"
-    OU, se aplicável e com altíssima confiança para uma resposta direta de cache:
     {
-      "action": "RESPOND_DIRECTLY",
-      "messages_sent": ["Resposta curta e direta do cache."],
-      "chat_id": "{chat_id}"
+      "action": "RESPONDED_DIRECTLY" | "INITIATE_FULL_PROCESSING",
+      "message_text_original": "{{ message_text }}",
+      "contact_id": "{{ contact_id }}",
+      "chat_id": "{{ chat_id }}",
+      "identified_topic": "{{ identified_topic }}",
+      "operational_context": "{{ operational_context }}",
+      "direct_response_messages": [mensagens] - se RESPONDED_DIRECTLY,
+      "requires_profiling": true - se INITIATE_FULL_PROCESSING
     }
-    Caso contrário, priorize a classificação:
-    "INTENÇÃO DETECTADA: [categoria_da_intenção]" # Este é o output principal e mais comum.
 
 profile_customer_task:
   description: |
-    Com base no ID de contato '{contact_id}', na mensagem atual do cliente '{client_message}' e no contexto operacional '{operational_context}',
-    consulte o histórico de interações no Qdrant.
-    Sintetize as informações coletadas em um perfil resumido e estruturado do cliente.
-    Destaque preferências, histórico de compras/suporte, e qualquer insight relevante para a interação atual.
-    O objetivo é fornecer um entendimento rápido e acionável do cliente para o próximo agente.
+    Você é o CustomerProfiler. O TriageAgent decidiu por "INITIATE_FULL_PROCESSING".
+    Dados recebidos (contexto da tarefa anterior):
+    - ID Contato: "{{ contact_id }}" (Extraído do output da tarefa de triagem)
+    - ID Chat: "{{ chat_id }}" (Extraído do output da tarefa de triagem)
+    - Mensagem Original: "{{ message_text_original }}" (Extraído do output da tarefa de triagem)
+    - Contexto Operacional: "{{ operational_context }}" (Extraído do output da tarefa de triagem)
+
+    Siga seu FLUXO DE CONSTRUÇÃO DE PERFIL:
+    1. Use a QdrantHistorySearchTool com o contact_id para buscar o histórico de interações.
+    2. Analise a mensagem original e o histórico para consolidar um perfil.
+    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+  agent: CustomerProfiler
   expected_output: |
-    # JSON estruturado contendo o perfil do cliente.
     {
-      "contact_id": "{contact_id}",
-      "profile_summary": "Resumo conciso do cliente e seu histórico relevante.",
-      "history_highlights": ["Ponto chave 1 do histórico", "Ponto chave 2 do histórico"],
-      "current_conversation_context": "Contexto da conversa atual e mensagem do cliente.",
-      "sales_stage_inferred": "[Estágio de vendas inferido, se aplicável]",
-      "key_insights_for_current_interaction": ["Insight acionável 1", "Insight acionável 2"]
+      "contact_id": ID do contato
+      "profile_summary": Sumário do perfil
+      "detailed_profile": { "past_purchases": [], "support_tickets": [], "current_sentiment": "...", "sales_stage": "...", "preferences": [] }
+      "operational_context": (SALES, SUPPORT, etc.)
     }
 
-support_task: # Para o general_support_agent
+develop_strategy_task:
   description: |
-    O cliente (perfil: {customer_profile}) entrou em contato com a seguinte dúvida/problema: '{client_message}'.
-    A intenção inicial foi classificada como: '{intention}'.
-    O histórico da conversa é: '{history}'.
+    Você é o StrategicAdvisor. Dados recebidos (contexto das tarefas anteriores):
+    - Perfil do Cliente (JSON): "{{ profile_customer_task.output }}" (Output completo da tarefa profile_customer_task)
+    - Mensagem Original do Cliente: "{{ triage_initial_message_task.output.message_text_original }}"
+    - Contexto Operacional: "{{ triage_initial_message_task.output.operational_context }}"
+    - Tópico Identificado: "{{ triage_initial_message_task.output.identified_topic }}"
 
-    Sua missão é resolver a questão do cliente seguindo os "PRINCÍPIOS DE ATENDIMENTO" e utilizando sua "EXPERTISE TÉCNICA" e o "USO DA BASE DE CONHECIMENTO TÉCNICO (QDRANT)" conforme detalhado no seu backstory.
-    Forneça respostas claras, concisas e progressivas.
-    Se precisar consultar o Qdrant para informações técnicas, manuais, ou soluções (o que é encorajado para garantir precisão), formule uma query relevante para a ferramenta de busca vetorial.
-    Por exemplo, para uma busca no Qdrant sobre 'problema de conexão GSM no modelo X', você pode gerar: "Troubleshooting falha conexão GSM rastreador modelo X área de sombra erro sinal fraco".
-
-    Lembre-se da DELEGAÇÃO OBRIGATÓRIA: Se o cliente demonstrar interesse em COMPRA/PREÇOS/PLANOS, sua resposta DEVE ser EXATAMENTE "INTENÇÃO DETECTADA: SOLICITACAO_ORCAMENTO".
-
-    Opcionalmente, se você identificar a necessidade de uma ação em um sistema interno (que não seja consulta ao Qdrant, ex: abrir um ticket formal em outro sistema),
-    especifique essa ação para o SystemOperationsAgent. Formato:
-    { "system_action_request": {"action_type": "NOME_DA_ACAO", "parameters": {...}} }
-
-    Seu output principal deve ser a(s) mensagem(ns) de resposta para o cliente e, se aplicável, o pedido de ação de sistema.
+    Siga sua FILOSOFIA DE CONSULTORIA ESTRATÉGICA e FLUXO DE DEFINIÇÃO DE ESTRATÉGIA:
+    1. Analise todos os inputs.
+    2. Use a BusinessGuidelinesTool para buscar as diretrizes relevantes para o contexto operacional.
+    3. Formule o plano estratégico (objetivo, pontos-chave, perguntas, necessidade de ação de sistema).
+       - Adapte a estratégia se o contexto for SALES (Alessandro) ou SUPPORT (Sofia).
+    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+  agent: StrategicAdvisor
   expected_output: |
-    # Um objeto JSON contendo a sequência de mensagens de resposta e, opcionalmente, uma solicitação de ação de sistema.
     {
-      "primary_messages_sequence": [
-        "Primeira mensagem de resposta concisa.",
-        "Segunda mensagem, se necessário, aprofundando ou solicitando mais informações."
-      ],
-      "proactive_content_generated": [ # Opcional, se o agente também gerar conteúdo para KB
-        {"question": "Pergunta proativa 1", "answer": "Resposta proativa 1"}
-      ],
-      "system_action_request": null # Ou: {"action_type": "CREATE_SUPPORT_TICKET", "parameters": {"details": "...", "customer_id": "{contact_id}"}}
+      "strategy_type": (ex: "SALES_QUALIFICATION", "SUPPORT_TROUBLESHOOTING")
+      "conversation_goal": Descrição do objetivo
+      "key_talking_points": [argumentos/informações]
+      "questions_to_ask_client": [perguntas]
+      "system_action_request": { "action_type": "...", "parameters": {...} } ou null
+      "internal_notes_for_craftsman": "Instruções de tom, estilo, foco."
+      "empathy_statement_suggestion": (Opcional, para Suporte) "Sugestão de frase empática inicial."
     }
-    # OU, em caso de delegação:
-    "INTENÇÃO DETECTADA: SOLICITACAO_ORCAMENTO"
 
-sales_task: # Para o sales_agent
+execute_system_operations_task:
   description: |
-    O cliente (perfil: {customer_profile}) demonstrou interesse em um orçamento ou em adquirir nossos serviços.
-    A mensagem inicial que levou a este ponto foi: '{client_message}'.
-    A intenção foi classificada como: '{intention}'.
-    O histórico da conversa é: '{history}'.
+    Você é o SystemOperationsAgent. Dados recebidos (contexto da tarefa anterior):
+    - Solicitação de Ação de Sistema (JSON): "{{ develop_strategy_task.output.system_action_request }}"
 
-    Sua missão é conduzir uma consultoria de vendas personalizada, empática e juridicamente segura, seguindo a "FILOSOFIA DE CONSULTORIA ALESSANDRO" e o "FLUXO DE VENDAS CONSULTIVAS E FORMALIZADAS" detalhados no seu backstory.
-    Utilize intensivamente sua base de conhecimento (Qdrant) para sondagem (ETAPA 1), diagnóstico do produto correto (ETAPA 2), elaboração do resumo comercial para o chat e da proposta detalhada para envio (ETAPA 3), superação de objeções e negociação.
-    Lembre-se da importância da "SEGURANÇA JURÍDICA E DOCUMENTAÇÃO".
-    Formule queries relevantes para o Qdrant quando necessário. Ex: "Argumentos de valor rastreador híbrido cliente frota logística segurança custo benefício".
+    Verifique se `system_action_request` não é nulo e contém `action_type` e `parameters`.
+    Se for nulo ou inválido, retorne: {"action_type_executed": "NONE", "status": "no_action_requested", "data": null, "error_message": null}
 
-    DELEGAÇÃO OBRIGATÓRIA: Se a conversa desviar completamente para SUPORTE TÉCNICO DETALHADO ou dúvidas não-comerciais que o impeçam de prosseguir com a venda, sua resposta DEVE ser EXATAMENTE "INTENÇÃO DETECTADA: SUPORTE_TECNICO".
+    Caso contrário, siga seu FLUXO DE EXECUÇÃO DE AÇÃO DE SISTEMA:
+    1. Mapeie o `action_type` para a ferramenta InternalAPITool_* correta.
+    2. Execute a ferramenta com os `parameters`.
+    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+  agent: SystemOperationsAgent
+  # expected_output é definido no backstory do agente para este YAML
 
-    Opcionalmente, se você identificar a necessidade de uma ação em um sistema interno (ex: registrar lead no CRM, verificar crédito),
-    especifique essa ação para o SystemOperationsAgent. Formato:
-    { "system_action_request": {"action_type": "NOME_DA_ACAO", "parameters": {...}} }
-
-    Seu output principal deve ser a(s) mensagem(ns) de resposta para o cliente e, se aplicável, o pedido de ação de sistema.
-  expected_output: |
-    # Um objeto JSON contendo a sequência de mensagens de resposta e, opcionalmente, uma solicitação de ação de sistema.
-    {
-      "primary_messages_sequence": [
-        "Primeira mensagem de vendas, seguindo o fluxo (ex: sondagem, apresentação inicial).",
-        "Segunda mensagem, progredindo na venda (ex: resumo da proposta, oferta de detalhamento)."
-      ],
-      "proactive_content_generated": [ # Opcional, se o agente também gerar conteúdo para KB
-        {"question": "Pergunta proativa relacionada à venda 1", "answer": "Resposta proativa 1"}
-      ],
-      "system_action_request": null # Ou: {"action_type": "REGISTER_LEAD_CRM", "parameters": {"name": "...", "contact": "{contact_id}", "product_interest": "..."}}
-    }
-    # OU, em caso de delegação:
-    "INTENÇÃO DETECTADA: SUPORTE_TECNICO"
-
-execute_system_operations_task: # Para o SystemOperationsAgent
+craft_response_task:
   description: |
-    Você recebeu uma solicitação para executar uma operação em um sistema interno.
-    A solicitação é: '{system_action_request_json_string}'.
-    O `system_action_request` contém 'action_type' e 'parameters'.
-    Identifique a ferramenta de API interna correta e execute a ação com os parâmetros fornecidos.
-    Retorne o resultado da operação de forma estruturada.
-  expected_output: |
-    # JSON com o resultado da operação da API.
-    {
-      "action_type_executed": "[NOME_DA_ACAO_EXECUTADA]",
-      "status": "success_or_error",
-      "data": { # Dados retornados pela API em caso de sucesso
-        # ... (varia conforme a API)
-      },
-      "error_message": "[Mensagem de erro, se status for error]"
-    }
+    Você é o ResponseCraftsman. Dados recebidos (contexto das tarefas anteriores):
+    - Plano Estratégico (JSON): "{{ develop_strategy_task.output }}"
+    - Perfil do Cliente (JSON): "{{ profile_customer_task.output }}"
+    - Resultado da Ação de Sistema (JSON, pode ser nulo): "{{ execute_system_operations_task.output }}"
+    - Contexto Operacional: "{{ develop_strategy_task.output.operational_context }}" (ou do triage_initial_message_task)
 
-coordinate_delivery_task: # Para o DeliveryCoordinator
+    Siga seus PRINCÍPIOS DE COMUNICAÇÃO GLOBAL SYSTEM e FLUXO DE CRIAÇÃO DE RESPOSTA:
+    1. Analise todos os inputs, especialmente as "internal_notes_for_craftsman" do plano estratégico.
+    2. Gere a(s) mensagem(ns) principal(is), fragmentando se necessário.
+    3. Gere conteúdo proativo (perguntas/respostas) para a Base de Conhecimento.
+       (Este conteúdo será passado para a KnowledgeBaseStoreTool pela lógica do CrewAI após sua tarefa,
+        você apenas gera o conteúdo no formato esperado).
+    Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated".
+  agent: ResponseCraftsman
+  # expected_output é definido no backstory do agente para este YAML
+
+coordinate_delivery_task:
   description: |
-    Você recebeu uma sequência de mensagens para entregar ao cliente.
-    ID do Contato: '{contact_id}'
-    ID do Chat: '{chat_id}'
-    Sequência de Mensagens: {primary_messages_sequence_list_of_strings}
+    Você é o DeliveryCoordinator. Dados recebidos (contexto das tarefas anteriores):
+    - Sequência de Mensagens Primárias: "{{ craft_response_task.output.primary_messages_sequence }}"
+    - ID Contato: "{{ triage_initial_message_task.output.contact_id }}"
+    - ID Chat: "{{ triage_initial_message_task.output.chat_id }}"
 
-    Sua tarefa é enviar essas mensagens ao cliente de forma cadenciada, uma por uma, usando a CallbellSendTool.
-    Simule uma conversa natural, esperando brevemente entre o envio de cada mensagem.
-    Utilize a ConversationStateTool para marcar as mensagens como pendentes/enviadas.
-
-    CRÍTICO: Este processo deve ser capaz de ser interrompido. Se uma nova mensagem do cliente para o mesmo '{chat_id}'
-    for recebida pelo sistema (detectada externamente pelo webhook), este processo de envio para '{chat_id}' é considerado
-    interrompido. Sua tarefa deve então limpar o estado de mensagens pendentes para este chat usando a ConversationStateTool
-    para evitar envios conflitantes. A nova mensagem do cliente iniciará um novo ciclo de avaliação pelo TriageAgent.
-
-    Se todas as mensagens forem enviadas sem interrupção, o status é 'COMPLETED'.
-    Se o processo for interrompido por uma nova mensagem do cliente (sinalização externa), o status é 'INTERRUPTED_BY_CLIENT'.
-    Se ocorrer um erro ao enviar uma mensagem, o status é 'ERROR'.
-  expected_output: |
-    # JSON com o status da entrega.
-    {
-      "chat_id": "{chat_id}",
-      "delivery_status": "COMPLETED_OR_INTERRUPTED_BY_CLIENT_OR_ERROR",
-      "messages_sent_count": "[numero_de_mensagens_efetivamente_enviadas_antes_de_completar_ou_interromper]",
-      "error_message": "[Detalhes do erro, se houver]"
-    }
+    Siga seus PRINCÍPIOS DE ENTREGA E COORDENAÇÃO e FLUXO DE ENTREGA COORDENADA:
+    1. Use a ConversationStateTool para registrar as mensagens pendentes.
+    2. Envie cada mensagem da sequência cadenciadamente usando a CallbellSendTool.
+    3. Atualize o estado na ConversationStateTool após cada envio.
+    4. (Lógica de tratamento de interrupção é complexa e pode ser gerenciada pelo reinício do ciclo pelo TriageAgent).
+       Se a entrega for concluída, retorne "COMPLETED". Se houver falha no envio, "FAILED_TO_SEND".
+    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+  agent: DeliveryCoordinator
+  # expected_output é definido no backstory do agente para este YAML
