@@ -6,3 +6,5 @@ __pycache__/
 log.txt
 Global-Agent/
 tests/
+tests.py
+minha_arvore.txt

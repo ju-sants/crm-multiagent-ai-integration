@@ -1,6 +1,5 @@
-from crewai import Agent, Crew, Process, Task, LLM, Knowledge
+from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from dotenv import load_dotenv
 
 import os
