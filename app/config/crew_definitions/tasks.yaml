@@ -1,11 +1,10 @@
 triage_initial_message_task:
   description: |
     Você é o TriageAgent. Analise a mensagem do cliente fornecida no input:
-    - Mensagem: "{{ message_text }}"
-    - ID Contato: "{{ contact_id }}"
-    - ID Chat: "{{ chat_id }}"
-    - Timestamp: "{{ timestamp }}"
-    - Payload Completo do Webhook: "{{ full_webhook_payload }}"
+    - Mensagem: "{message_text}"
+    - ID Contato: "{contact_id}"
+    - ID Chat: "{chat_id}"
+    - Timestamp: "{timestamp}"
 
     Siga seu FLUXO DE ANÁLISE E DECISÃO:
     1. Consulte caches L0/L1 (via L1CacheQueryTool).
@@ -15,15 +14,14 @@ triage_initial_message_task:
     4. Se não houver resposta imediata, determine a INTENÇÃO PRINCIPAL, TÓPICO e CONTEXTO OPERACIONAL.
        - Defina "action": "INITIATE_FULL_PROCESSING".
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
-  agent: TriageAgent
   expected_output: |
     {
       "action": "RESPONDED_DIRECTLY" | "INITIATE_FULL_PROCESSING",
-      "message_text_original": "{{ message_text }}",
-      "contact_id": "{{ contact_id }}",
-      "chat_id": "{{ chat_id }}",
-      "identified_topic": "{{ identified_topic }}",
-      "operational_context": "{{ operational_context }}",
+      "message_text_original": "message_text",
+      "contact_id": "contact_id",
+      "chat_id": "{chat_id}",
+      "identified_topic": "identified_topic",
+      "operational_context": "operational_context",
       "direct_response_messages": [mensagens] - se RESPONDED_DIRECTLY,
       "requires_profiling": true - se INITIATE_FULL_PROCESSING
     }
@@ -32,10 +30,10 @@ profile_customer_task:
   description: |
     Você é o CustomerProfiler. O TriageAgent decidiu por "INITIATE_FULL_PROCESSING".
     Dados recebidos (contexto da tarefa anterior):
-    - ID Contato: "{{ contact_id }}" (Extraído do output da tarefa de triagem)
-    - ID Chat: "{{ chat_id }}" (Extraído do output da tarefa de triagem)
-    - Mensagem Original: "{{ message_text_original }}" (Extraído do output da tarefa de triagem)
-    - Contexto Operacional: "{{ operational_context }}" (Extraído do output da tarefa de triagem)
+    - ID Contato: "{contact_id}" (Extraído do output da tarefa de triagem)
+    - ID Chat: "{chat_id}" (Extraído do output da tarefa de triagem)
+    - Mensagem Original: "{message_text_original}" (Extraído do output da tarefa de triagem)
+    - Contexto Operacional: "{operational_context}" (Extraído do output da tarefa de triagem)
 
     Siga seu FLUXO DE CONSTRUÇÃO DE PERFIL:
     1. Use a QdrantHistorySearchTool com o contact_id para buscar o histórico de interações.
@@ -52,10 +50,10 @@ profile_customer_task:
 develop_strategy_task:
   description: |
     Você é o StrategicAdvisor. Dados recebidos (contexto das tarefas anteriores):
-    - Perfil do Cliente (JSON): "{{ profile_customer_task.output }}" (Output completo da tarefa profile_customer_task)
-    - Mensagem Original do Cliente: "{{ triage_initial_message_task.output.message_text_original }}"
-    - Contexto Operacional: "{{ triage_initial_message_task.output.operational_context }}"
-    - Tópico Identificado: "{{ triage_initial_message_task.output.identified_topic }}"
+    - Perfil do Cliente (JSON): "{profile_customer_task.output}" (Output completo da tarefa profile_customer_task)
+    - Mensagem Original do Cliente: "{triage_initial_message_task.output.message_text_original}"
+    - Contexto Operacional: "{triage_initial_message_task.output.operational_context}"
+    - Tópico Identificado: "{triage_initial_message_task.output.identified_topic}"
 
     Siga sua FILOSOFIA DE CONSULTORIA ESTRATÉGICA e FLUXO DE DEFINIÇÃO DE ESTRATÉGIA:
     1. Analise todos os inputs.
@@ -77,7 +75,7 @@ develop_strategy_task:
 execute_system_operations_task:
   description: |
     Você é o SystemOperationsAgent. Dados recebidos (contexto da tarefa anterior):
-    - Solicitação de Ação de Sistema (JSON): "{{ develop_strategy_task.output.system_action_request }}"
+    - Solicitação de Ação de Sistema (JSON): "{develop_strategy_task.output.system_action_request}"
 
     Verifique se `system_action_request` não é nulo e contém `action_type` e `parameters`.
     Se for nulo ou inválido, retorne: {"action_type_executed": "NONE", "status": "no_action_requested", "data": null, "error_message": null}
@@ -97,10 +95,10 @@ execute_system_operations_task:
 craft_response_task:
   description: |
     Você é o ResponseCraftsman. Dados recebidos (contexto das tarefas anteriores):
-    - Plano Estratégico (JSON): "{{ develop_strategy_task.output }}"
-    - Perfil do Cliente (JSON): "{{ profile_customer_task.output }}"
-    - Resultado da Ação de Sistema (JSON, pode ser nulo): "{{ execute_system_operations_task.output }}"
-    - Contexto Operacional: "{{ develop_strategy_task.output.operational_context }}" (ou do triage_initial_message_task)
+    - Plano Estratégico (JSON): "{develop_strategy_task.output}"
+    - Perfil do Cliente (JSON): "{profile_customer_task.output}"
+    - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
+    - Contexto Operacional: "{develop_strategy_task.output.operational_context}" (ou do triage_initial_message_task)
 
     Siga seus PRINCÍPIOS DE COMUNICAÇÃO GLOBAL SYSTEM e FLUXO DE CRIAÇÃO DE RESPOSTA:
     1. Analise todos os inputs, especialmente as "internal_notes_for_craftsman" do plano estratégico.
@@ -119,9 +117,9 @@ craft_response_task:
 coordinate_delivery_task:
   description: |
     Você é o DeliveryCoordinator. Dados recebidos (contexto das tarefas anteriores):
-    - Sequência de Mensagens Primárias: "{{ craft_response_task.output.primary_messages_sequence }}"
-    - ID Contato: "{{ triage_initial_message_task.output.contact_id }}"
-    - ID Chat: "{{ triage_initial_message_task.output.chat_id }}"
+    - Sequência de Mensagens Primárias: "{craft_response_task.output.primary_messages_sequence}"
+    - ID Contato: "{triage_initial_message_task.output.contact_id}"
+    - ID Chat: "{triage_initial_message_task.output.chat_id}"
 
     Siga seus PRINCÍPIOS DE ENTREGA E COORDENAÇÃO e FLUXO DE ENTREGA COORDENADA:
     1. Use a ConversationStateTool para registrar as mensagens pendentes.
