@@ -52,9 +52,7 @@ def get_response_craftsman_agent() -> Agent:
         verbose=True,
         allow_delegation=False
     )
-    
 
-    
 def get_delivery_coordinator_agent() -> Agent:
     return Agent(
         config=agents_config['DeliveryCoordinatorAgent'],
