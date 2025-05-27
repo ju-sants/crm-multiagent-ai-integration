@@ -8,7 +8,7 @@ triage_initial_message_task:
 
     Siga seu FLUXO DE ANÁLISE E DECISÃO:
     1. Consulte caches L0/L1 (via L1CacheQueryTool).
-    2. Consulte a Base de Conhecimento L2 - Qdrant (via KnowledgeBaseQueryTool).
+    2. Consulte a Base de Conhecimento L2 - Qdrant (via FastMemoryMessages).
     3. Decida se uma RESPOSTA IMEDIATA é viável.
        - Se sim, prepare a(s) mensagem(ns) para envio direto (via CallbellSendTool) e defina "action": "RESPONDED_DIRECTLY".
     4. Se não houver resposta imediata, determine a INTENÇÃO PRINCIPAL, TÓPICO e CONTEXTO OPERACIONAL.
@@ -36,8 +36,14 @@ profile_customer_task:
     - Contexto Operacional: "{operational_context}" (Extraído do output da tarefa de triagem)
 
     Siga seu FLUXO DE CONSTRUÇÃO DE PERFIL:
-    1. Use a QdrantHistorySearchTool com o contact_id para buscar o histórico de interações.
-    2. Analise a mensagem original e o histórico para consolidar um perfil.
+    1. Use a GetUserProfile com o contact_id para buscar o histórico de interações e informações relevantes do cliente.
+    2. Analise se o perfil já existe ou se é necessário criar um novo.
+    3. Se o perfil não existir, crie um novo perfil com base na mensagem original e no histórico, tente inferir informações relevantes.
+    4. Se o perfil já existir, atualize-o com as informações da mensagem original e do histórico.
+    5. Consolide as informações em um sumário e perfil detalhado.
+       - Inclua compras passadas, tickets de suporte, sentimento atual, estágio de vendas e preferências.
+    6. Salve o perfil atualizado usando a SaveUserProfile, passando seu json resposta para a ferramenta.
+
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
   expected_output: |
     {
@@ -50,16 +56,18 @@ profile_customer_task:
 develop_strategy_task:
   description: |
     Você é o StrategicAdvisor. Dados recebidos (contexto das tarefas anteriores):
-    - Perfil do Cliente (JSON): "{profile_customer_task.output}" (Output completo da tarefa profile_customer_task)
-    - Mensagem Original do Cliente: "{triage_initial_message_task.output.message_text_original}"
-    - Contexto Operacional: "{triage_initial_message_task.output.operational_context}"
-    - Tópico Identificado: "{triage_initial_message_task.output.identified_topic}"
+    - Perfil do Cliente (JSON): "{profile_customer_task.output}"
+    - Mensagem Original do Cliente: "{message_text_original}"
+    - Contexto Operacional: "{operational_context}"
+    - Tópico Identificado: "{identified_topic}"
 
     Siga sua FILOSOFIA DE CONSULTORIA ESTRATÉGICA e FLUXO DE DEFINIÇÃO DE ESTRATÉGIA:
     1. Analise todos os inputs.
     2. Use a BusinessGuidelinesTool para buscar as diretrizes relevantes para o contexto operacional.
-    3. Formule o plano estratégico (objetivo, pontos-chave, perguntas, necessidade de ação de sistema).
+    3. Use a RAGTool juntamente com a técnica HyDE para conseguir extrair informações valiosas da nossa base de dados vetorial Qdrant. 
+    4. Formule o plano estratégico (objetivo, pontos-chave, perguntas, necessidade de ação de sistema).
        - Adapte a estratégia se o contexto for SALES (Alessandro) ou SUPPORT (Sofia).
+
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
   expected_output: |
     {
@@ -69,7 +77,9 @@ develop_strategy_task:
       "questions_to_ask_client": [perguntas],
       "system_action_request": { "action_type": "...", "parameters": {...} } ou null,
       "internal_notes_for_craftsman": "Instruções de tom, estilo, foco.",
-      "empathy_statement_suggestion": (Opcional, para Suporte) "Sugestão de frase empática inicial."
+      "empathy_statement_suggestion": (Opcional, para Suporte) "Sugestão de frase empática inicial.",
+      "super_message": (OBRIGATÓRIO) "Uma super mensagem de muitos parágrafos rica em informação para ser meticulosamente usada pelo ResponseCraftsman"
+
     }
 
 execute_system_operations_task:
@@ -93,25 +103,28 @@ execute_system_operations_task:
     }
 
 craft_response_task:
-  description: |
+  description: | # - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
     Você é o ResponseCraftsman. Dados recebidos (contexto das tarefas anteriores):
     - Plano Estratégico (JSON): "{develop_strategy_task.output}"
     - Perfil do Cliente (JSON): "{profile_customer_task.output}"
-    - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
-    - Contexto Operacional: "{develop_strategy_task.output.operational_context}" (ou do triage_initial_message_task)
-
+    - Contexto Operacional: "{operational_context}"
+    - Tópico Identificado: "{identified_topic}"
+    - Mensagem Original do Cliente: "{message_text_original}"
+    
     Siga seus PRINCÍPIOS DE COMUNICAÇÃO GLOBAL SYSTEM e FLUXO DE CRIAÇÃO DE RESPOSTA:
     1. Analise todos os inputs, especialmente as "internal_notes_for_craftsman" do plano estratégico.
-    2. Gere a(s) mensagem(ns) principal(is), fragmentando se necessário.
+    2. Gere as mensagens principais, fragmentando se necessário.
     3. Gere conteúdo proativo (perguntas/respostas) para a Base de Conhecimento.
-       (Este conteúdo será passado para a KnowledgeBaseStoreTool pela lógica do CrewAI após sua tarefa,
+       (Este conteúdo será passado para a SaveFastMemoryMessages pela lógica do CrewAI após sua tarefa,
         você apenas gera o conteúdo no formato esperado).
+    4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa.
+    5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens relevantes para o que o cliente precisa.
+
     Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated".
   expected_output: |
     {
       "primary_messages_sequence": [ "Mensagem 1...", "Mensagem 2...", ... ],
       "proactive_content_generated": [ { "question": "...", "answer": "..." }, ... ],
-      "proactive_content_stored_successfully": true/false
     }
 
 coordinate_delivery_task:
