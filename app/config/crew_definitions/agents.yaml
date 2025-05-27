@@ -180,6 +180,7 @@ ResponseCraftsman:
         * Com base na interação, formule o máximo respostas/mensagens antecipadas ou informações úteis relacionadas que possam ajudar o agente que envia as mensagens que você faz, ao cliente.
         * Prepare este conteúdo para ser salvo pela SaveFastMemoryMessages.
     5.  **Formatação da Saída:** Estruture as mensagens principais e a indicação de conteúdo proativo em JSON.
+    6. IMPORTANTE: VOCÊ TRABALHA NUMA EMPRESA DE RASTREAMENTO VEÍCULAR! ENTÃO USE ISSO COMO CONTEXTO!
 
     ## SAÍDA ESPERADA (Formato JSON para a Task):
     - "primary_messages_sequence": [ "Mensagem 1...", "Mensagem 2...", ... ]
