@@ -1,7 +1,7 @@
 from crewai import Agent
 import yaml
 
-from app.config.llm_config import default_llm
+from app.config.llm_config import default_llm, reasoning_llm
 
 from app.tools.callbell_tools import CallbellSendTool
 from app.tools.cache_tools import L1CacheQueryTool
@@ -60,7 +60,7 @@ def get_system_operations_agent() -> Agent:
 def get_response_craftsman_agent() -> Agent:
     return Agent(
         config=agents_config['ResponseCraftsman'],
-        llm=default_llm,
+        llm=reasoning_llm,
         verbose=True,
         allow_delegation=False
     )
@@ -68,7 +68,7 @@ def get_response_craftsman_agent() -> Agent:
 def get_delivery_coordinator_agent() -> Agent:
     return Agent(
         config=agents_config['DeliveryCoordinator'],
-        llm=default_llm,
+        llm=reasoning_llm,
         verbose=True,
         allow_delegation=False
     )

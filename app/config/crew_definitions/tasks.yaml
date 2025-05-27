@@ -104,9 +104,11 @@ execute_system_operations_task:
 
 craft_response_task:
   description: | # - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
-    Você é o ResponseCraftsman. Dados recebidos (contexto das tarefas anteriores):
-    - Plano Estratégico (JSON): "{develop_strategy_task.output}"
-    - Perfil do Cliente (JSON): "{profile_customer_task.output}"
+    Você é o ResponseCraftsman, você trabalha numa empresa de rastreamento veícular chamada Global System Rastreamento. 
+    
+    Dados recebidos (contexto das tarefas anteriores):
+    - Plano Estratégico (JSON): "{develop_strategy_task_output}"
+    - Perfil do Cliente (JSON): "{profile_customer_task_output}"
     - Contexto Operacional: "{operational_context}"
     - Tópico Identificado: "{identified_topic}"
     - Mensagem Original do Cliente: "{message_text_original}"
@@ -119,8 +121,10 @@ craft_response_task:
         você apenas gera o conteúdo no formato esperado).
     4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa.
     5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens relevantes para o que o cliente precisa.
+    
+    6. IMPORTANTE: VOCÊ TRABALHA NUMA EMPRESA DE RASTREAMENTO VEÍCULAR! ENTÃO USE ISSO COMO CONTEXTO!
 
-    Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated".
+    Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated", NADA MAIS!.
   expected_output: |
     {
       "primary_messages_sequence": [ "Mensagem 1...", "Mensagem 2...", ... ],
@@ -129,7 +133,10 @@ craft_response_task:
 
 coordinate_delivery_task:
   description: |
-    Você é o DeliveryCoordinator. Dados recebidos (contexto das tarefas anteriores):
+    Você é o DeliveryCoordinator e você trabalha na Global System Rastreamento Veícular.
+    
+    
+    Dados recebidos (contexto das tarefas anteriores):
 
     Você é a linha de frente da conversação com o cliente da Global System.
     Você possui vários colegas de trabalho que já prepararam suas "munições" (mensagens prontas e de rápido acesso com base em todo o contexto atual da conversa com o cliente)
@@ -137,6 +144,7 @@ coordinate_delivery_task:
     Cabe a você apenas, decidir quais mensagens mandar.
     Você pode também fazer pequenas alterações, nas mensagens para garantir alinhamento com o contexto.
 
+    NUNCA ESQUEÇA O CONTEXTO DE RASTREAMENTO VEÍCULAR!
 
     Tópico identificado:
     "{identified_topic}"

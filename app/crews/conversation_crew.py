@@ -91,31 +91,69 @@ def run_mvp_crew(contact_id: str, chat_id: str, message_text: str): # Adapted fr
                         agents=[
                             customer_profile_agent_instance,
                             strategic_advisor_instance,
-                            response_craftman_instance
                         ],
                         tasks=[
                             profile_customer_task,
                             strategic_advise_task,
-                            response_craft_task
                         ],
                         process=Process.sequential,
                         verbose=True,
                     )
                     
-                    initial_inputs_for_full_processing = {
+                    crew_craft_messages = Crew(
+                        agents=[
+                            response_craftman_instance  
+                        ],
+                        tasks=[
+                            response_craft_task
+                        ],
+                        process=Process.sequential,
+                        verbose=True
+                    )
+                    
+                    inputs_for_full_processing = {
                         "contact_id": contact_id,
                         "chat_id": chat_id,
                         "message_text_original": message_text,
                         "operational_context": json_response.get('operational_context', ''),
-                        "identified_topic": json_response.get('identified_topic')
+                        "identified_topic": json_response.get('identified_topic', ''),
                     }
                     
-                    response_full_processing = crew_full_processing.kickoff(initial_inputs_for_full_processing)
+                    response_full_processing = crew_full_processing.kickoff(inputs_for_full_processing)
                     logger.info(f"MVP Crew: Processamento completo iniciado com sucesso para chat_id {chat_id}")
-                    print(response_full_processing.raw)
-                    SaveFastMemoryMessages()._run(
-                        response_full_processing.raw
-                    )
+                    
+                    inputs_for_full_processing["develop_strategy_task_output"] = str(response_full_processing.tasks_output[0].raw)
+                    inputs_for_full_processing["profile_customer_task_output"] = str(response_full_processing.tasks_output[1].raw)
+                    
+                    response_craft = crew_craft_messages.kickoff(inputs_for_full_processing)
+                    
+                    response_craft_json = json.loads(response_craft.raw)
+                    
+                    redo = False
+                    if 'Final Answer' in response_craft_json:
+                        if not 'primary_messages_sequence' in response_craft_json.get('Final Answer', {}):
+                            redo = True
+                        
+                        else:
+                            primary_messages = response_craft_json['Final Answer']['primary_messages_sequence']
+                            proactive_content = response_craft_json['Final Answer'].get('proactive_content_generated', [])
+                            
+                            del response_craft_json['Final Answer']
+                            
+                            response_craft_json['primary_messages_sequence'] = primary_messages
+                            response_craft_json['proactive_content_generated'] = proactive_content
+                            
+                    else:
+                        if not 'primary_messages_sequence' in response_craft_json:
+                            redo = True
+                    
+                    if redo:
+                        run_mvp_crew(contact_id, chat_id, message_text)
+                    
+                    else:
+                        SaveFastMemoryMessages()._run(
+                            response_craft_json
+                        )
                 
                 delivery_coordinator_instance = get_delivery_coordinator_agent()
                 delivery_coordinator_task = create_coordinate_delivery_task(delivery_coordinator_instance)
