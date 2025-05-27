@@ -148,12 +148,15 @@ def run_mvp_crew(contact_id: str, chat_id: str, message_text: str): # Adapted fr
                     "proactive_content_generated": scroll[0][0].payload.get('proactive_content_generated', ''),
                 }
                 
-                response_delivery_json = delivery_crew.kickoff(inputs_delivery_crew)
+                response_delivery = delivery_crew.kickoff(inputs_delivery_crew)
                 
-                response_delivery_json = json.loads(response_delivery_json.raw)
+                response_delivery_json = json.loads(response_delivery.raw)
                 
                 if 'choosen_messages' in response_delivery_json:
-                    CallbellSendTool(phone_number='555198906538', messages=response_delivery_json['choosen_messages'])
+                    # CallbellSendTool(phone_number='555198906538', messages=response_delivery_json['choosen_messages'])
+                    for message in response_delivery_json['choosen_messages']:
+                        print(message)
+                        
                 else:
                     run_mvp_crew(contact_id, chat_id, message_text)
                 print()
