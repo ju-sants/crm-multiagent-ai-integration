@@ -4,7 +4,9 @@ import json
 import os
 import requests
 from app.crews.conversation_crew import run_mvp_crew
-
+from app.services.qdrant_service import get_client
+from qdrant_client import models
+from qdrant_client.http.models import Distance
 
 CALLBELL_API_KEY = os.environ.get("CALLBELL_API_KEY", "test_gshuPaZoeEG6ovbc8M79w0QyM")
 CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
@@ -78,6 +80,5 @@ def receive_message():
             
     
     return jsonify({'status': 'ok'}), 200
-
 
 run_mvp_crew('71464be80c504971ae263d710b39dd1f', '71464be80c504971ae263d710b39dd1f', 'Oi queria saber os valor de moto')

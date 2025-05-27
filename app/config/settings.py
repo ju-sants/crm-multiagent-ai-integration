@@ -8,6 +8,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    LLM_MODEL: str = "xai/grok-3-mini-beta"
+    
     XAI_API_KEY: str = "your_xai_api_key_here"
     GEMINI_API_KEY: str = "your_gemini_api_key_here"
     CALLBELL_API_KEY: str = "your_callbell_api_key_here"

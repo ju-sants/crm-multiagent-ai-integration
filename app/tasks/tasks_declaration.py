@@ -1,12 +1,14 @@
 # app/tasks/tasks_declaration.py
 from crewai import Task, Agent
-from app.agents.agent_declaration import (
-    get_triage_agent,
-    get_strategic_advisor_agent,
-    get_response_craftsman_agent,
-    get_delivery_coordinator_agent
-)
 from app.utils.funcs.funcs import obter_caminho_projeto
+
+from app.tools.cache_tools import L1CacheQueryTool
+from app.tools.qdrant_tools import (
+    SaveFastMemoryMessages, FastMemoryMessages, GetUserProfile, SaveUserProfile,
+    RAGTool
+    )
+from app.tools.knowledge_tools import BusinessGuidelinesTool
+
 import yaml
 
 base_path = obter_caminho_projeto()
@@ -15,38 +17,49 @@ config_path = base_path / 'app/config/crew_definitions/tasks.yaml'
 tasks_config = yaml.safe_load(open(config_path, 'r').read())
 
 
-def create_triage_task() -> Task:
+def create_triage_task(agent: Agent) -> Task:
     return Task(
             config=tasks_config['triage_initial_message_task'],
-            agent=get_triage_agent(),
+            tools=[
+                L1CacheQueryTool(), 
+                FastMemoryMessages()
+                ],
+            agent=agent,
         )
 
-def create_profile_customer_task() -> Task:
+def create_profile_customer_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['profile_customer_task'],
-        agent=get_triage_agent(),
+        tools=[
+            GetUserProfile(), 
+            SaveUserProfile()
+            ],
+        agent=agent,
     )
     
-def create_execute_system_operations_task() -> Task:
+def create_execute_system_operations_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['execute_system_operations_task'],
-        agent=get_triage_agent(),
+        agent=agent,
     )
 
-def create_develop_strategy_task() -> Task:
+def create_develop_strategy_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['develop_strategy_task'],
-        agent=get_strategic_advisor_agent(),
+        tools=[
+            BusinessGuidelinesTool(), RAGTool()
+        ],
+        agent=agent,
     )
 
-def create_craft_response_task() -> Task:
+def create_craft_response_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['craft_response_task'],
-        agent=get_response_craftsman_agent(),
-        )
-
-def create_coordinate_delivery_task() -> Task:
+        agent=agent,
+    )
+    
+def create_coordinate_delivery_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['coordinate_delivery_task'],
-        agent=get_delivery_coordinator_agent(),
+        agent=agent,
     )
