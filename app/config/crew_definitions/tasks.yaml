@@ -130,21 +130,32 @@ craft_response_task:
 coordinate_delivery_task:
   description: |
     Você é o DeliveryCoordinator. Dados recebidos (contexto das tarefas anteriores):
-    - Sequência de Mensagens Primárias: "{craft_response_task.output.primary_messages_sequence}"
-    - ID Contato: "{triage_initial_message_task.output.contact_id}"
-    - ID Chat: "{triage_initial_message_task.output.chat_id}"
 
-    Siga seus PRINCÍPIOS DE ENTREGA E COORDENAÇÃO e FLUXO DE ENTREGA COORDENADA:
-    1. Use a ConversationStateTool para registrar as mensagens pendentes.
-    2. Envie cada mensagem da sequência cadenciadamente usando a CallbellSendTool.
-    3. Atualize o estado na ConversationStateTool após cada envio.
-    4. (Lógica de tratamento de interrupção é complexa e pode ser gerenciada pelo reinício do ciclo pelo TriageAgent).
-       Se a entrega for concluída, retorne "COMPLETED". Se houver falha no envio, "FAILED_TO_SEND".
-    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+    Você é a linha de frente da conversação com o cliente da Global System.
+    Você possui vários colegas de trabalho que já prepararam suas "munições" (mensagens prontas e de rápido acesso com base em todo o contexto atual da conversa com o cliente)
+
+    Cabe a você apenas, decidir quais mensagens mandar.
+    Você pode também fazer pequenas alterações, nas mensagens para garantir alinhamento com o contexto.
+
+
+    Tópico identificado:
+    "{identified_topic}"
+
+    Contexto Operacional:
+    "{operational_context}"
+
+
+    Mensagem do cliente:
+    "{message_text_original}"
+
+    Mensagens prontas pela sua equipe:
+    {fast_messages}
+
+    Conteúdo proativo gerado (pares de pergunta e resposta para você lidar com possíveis cenários):
+    {proactive_content_generated} 
+
+    Você deve retornar um JSON com a chave "choosen_messages" e seu valor sendo uma lista das mensagens escolhidas.
   expected_output: |
     {
-      "delivery_status": "COMPLETED" ou "INTERRUPTED_BY_CLIENT" ou "FAILED_TO_SEND",
-      "messages_sent_count": número de mensagens efetivamente enviadas da sequência,
-      "remaining_messages_in_queue": [mensagens que não foram enviadas devido à interrupção] (se interrompido),
-      "new_client_message_text_that_interrupted": (Opcional, se o sistema puder prover essa informação diretamente à tarefa)
+      "choosen_messages": ["Mensagens", "Escolhidas"]
     }

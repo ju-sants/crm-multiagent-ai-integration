@@ -1,5 +1,9 @@
 from crewai import Crew, Process, Task
+import datetime
+import json
+
 from app.core.logger import get_logger
+
 from app.agents.agent_declaration import (
     get_triage_agent,
     get_strategic_advisor_agent,
@@ -16,11 +20,12 @@ from app.tasks.tasks_declaration import (
     create_profile_customer_task,
     create_execute_system_operations_task
 )
+
 from app.tools.qdrant_tools import SaveFastMemoryMessages
+from app.tools.callbell_tools import CallbellSendTool
 
-import datetime
+from app.services.qdrant_service import get_client
 
-import json
 
 logger = get_logger(__name__)
 
@@ -111,6 +116,47 @@ def run_mvp_crew(contact_id: str, chat_id: str, message_text: str): # Adapted fr
                     SaveFastMemoryMessages()._run(
                         response_full_processing.raw
                     )
+                
+                delivery_coordinator_instance = get_delivery_coordinator_agent()
+                delivery_coordinator_task = create_coordinate_delivery_task(delivery_coordinator_instance)
+                
+                delivery_crew = Crew(
+                    agents=[
+                        delivery_coordinator_instance
+                    ],
+                    tasks=[
+                        delivery_coordinator_task   
+                    ],
+                    process=Process.sequential,
+                    verbose=True
+                )
+                
+                qdrant_client = get_client()
+                
+                scroll = qdrant_client.scroll(
+                    collection_name="FastMemoryMessages",
+                    limit=500,
+                    with_vectors=False,
+                    with_payload=True
+                    )
+            
+                inputs_delivery_crew = {
+                    "identified_topic": json_response.get('identified_topic', ''),
+                    "operational_context": json_response.get('operational_context', ''),
+                    "message_text_original": message_text,
+                    "fast_messages": scroll[0][0].payload.get('primary_messages_sequence', ''),
+                    "proactive_content_generated": scroll[0][0].payload.get('proactive_content_generated', ''),
+                }
+                
+                response_delivery_json = delivery_crew.kickoff(inputs_delivery_crew)
+                
+                response_delivery_json = json.loads(response_delivery_json.raw)
+                
+                if 'choosen_messages' in response_delivery_json:
+                    CallbellSendTool(phone_number='555198906538', messages=response_delivery_json['choosen_messages'])
+                else:
+                    run_mvp_crew(contact_id, chat_id, message_text)
+                print()
         else:
             logger.warning(f"MVP Crew: Nenhuma resposta gerada para chat_id {chat_id}")
     except Exception as e:
