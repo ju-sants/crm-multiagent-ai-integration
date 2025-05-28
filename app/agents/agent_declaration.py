@@ -22,6 +22,7 @@ def get_triage_agent() -> Agent:
         llm=default_Google_llm,
         verbose=True,
         allow_delegation=False,
+        max_retry_limit=500
     )
 
 def get_customer_profile_agent() -> Agent:
@@ -30,6 +31,7 @@ def get_customer_profile_agent() -> Agent:
         llm=default_Google_llm,
         verbose=True,
         allow_delegation=False,
+        max_retry_limit=500
     )
 
 def get_strategic_advisor_agent() -> Agent:
@@ -38,7 +40,7 @@ def get_strategic_advisor_agent() -> Agent:
         llm=default_Google_llm,
         verbose=True,
         allow_delegation=False,
-        max_iter=3
+        max_retry_limit=500
     )
 
 def get_system_operations_agent() -> Agent:
@@ -46,7 +48,8 @@ def get_system_operations_agent() -> Agent:
         config=agents_config['SystemOperationsAgent'],
         llm=default_Google_llm,
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        max_retry_limit=500
     )
     
 def get_response_craftsman_agent() -> Agent:
@@ -54,7 +57,8 @@ def get_response_craftsman_agent() -> Agent:
         config=agents_config['ResponseCraftsman'],
         llm=reasoning_X_llm,
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        max_retry_limit=500
     )
 
 def get_delivery_coordinator_agent() -> Agent:
@@ -62,5 +66,6 @@ def get_delivery_coordinator_agent() -> Agent:
         config=agents_config['DeliveryCoordinator'],
         llm=reasoning_X_llm,
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        max_retry_limit=500
     )

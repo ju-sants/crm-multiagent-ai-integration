@@ -16,5 +16,6 @@ class Settings(BaseSettings):
     
     LOG_LEVEL: str = "INFO"
     
+    MAX_RETRIES_MODEL: int = 500
 
 settings = Settings()

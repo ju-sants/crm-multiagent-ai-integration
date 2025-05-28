@@ -9,5 +9,3 @@ Flask
 gunicorn
 fastembed
 requests
-langchain-xai
-litellm

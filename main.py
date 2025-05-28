@@ -77,8 +77,8 @@ def receive_message():
         
         if contact_uuid in allowed_chats:
             text = str(payload.get('text', ''))
+
+            run_mvp_crew(contact_uuid, contact_uuid, phone_number, text)
             
     
     return jsonify({'status': 'ok'}), 200
-
-run_mvp_crew('71464be80c504971ae263d710b39dd1f', '71464be80c504971ae263d710b39dd1f', '555198906538', 'boa tarde como funciona esse plano PGS')

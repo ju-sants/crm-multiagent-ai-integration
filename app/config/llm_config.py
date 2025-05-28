@@ -15,6 +15,6 @@ reasoning_X_llm = LLM(
     )
 
 default_Google_llm = LLM(
-    model='gemini/gemini-2.5-flash-preview-04-17',
+    model='gemini/ gemini-2.5-flash-preview-05-20',
     api_key=settings.GEMINI_API_KEY,
 )
