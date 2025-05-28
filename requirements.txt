@@ -7,7 +7,6 @@ aiohttp==3.12.2
     #   auth0-python
     #   instructor
     #   langchain-community
-    #   langchain-xai
     #   litellm
 aiosignal==1.3.2
     # via aiohttp
@@ -81,7 +80,7 @@ cohere==5.15.0
     # via langchain-cohere
 coloredlogs==15.0.1
     # via onnxruntime
-crewai==0.121.0
+crewai==0.121.1
     # via
     #   -r requirements.in
     #   crewai-tools
@@ -261,7 +260,7 @@ langchain-community==0.3.24
     # via
     #   embedchain
     #   langchain-experimental
-langchain-core==0.3.61
+langchain-core==0.3.62
     # via
     #   langchain
     #   langchain-cohere
@@ -271,21 +270,16 @@ langchain-core==0.3.61
     #   langchain-openai
     #   langchain-qdrant
     #   langchain-text-splitters
-    #   langchain-xai
 langchain-experimental==0.3.4
     # via langchain-cohere
 langchain-huggingface==0.2.0
     # via -r requirements.in
 langchain-openai==0.2.14
-    # via
-    #   embedchain
-    #   langchain-xai
+    # via embedchain
 langchain-qdrant==0.2.0
     # via -r requirements.in
 langchain-text-splitters==0.3.8
     # via langchain
-langchain-xai==0.1.1
-    # via -r requirements.in
 langsmith==0.3.42
     # via
     #   embedchain
@@ -293,9 +287,7 @@ langsmith==0.3.42
     #   langchain-community
     #   langchain-core
 litellm==1.68.0
-    # via
-    #   -r requirements.in
-    #   crewai
+    # via crewai
 loguru==0.7.3
     # via fastembed
 mako==1.3.10
@@ -629,7 +621,6 @@ requests==2.32.3
     #   kubernetes
     #   langchain
     #   langchain-community
-    #   langchain-xai
     #   langsmith
     #   opentelemetry-exporter-otlp-proto-http
     #   posthog

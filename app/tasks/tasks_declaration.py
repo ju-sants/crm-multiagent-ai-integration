@@ -9,6 +9,8 @@ from app.tools.qdrant_tools import (
     )
 from app.tools.knowledge_tools import BusinessGuidelinesTool
 
+from app.config.settings import settings
+
 import yaml
 
 base_path = obter_caminho_projeto()
@@ -20,26 +22,22 @@ tasks_config = yaml.safe_load(open(config_path, 'r').read())
 def create_triage_task(agent: Agent) -> Task:
     return Task(
             config=tasks_config['triage_initial_message_task'],
-            tools=[
-                L1CacheQueryTool(), 
-                FastMemoryMessages()
-                ],
             agent=agent,
+            max_retries=settings.MAX_RETRIES_MODEL
         )
 
 def create_profile_customer_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['profile_customer_task'],
-        tools=[
-            GetUserProfile()
-            ],
         agent=agent,
+        max_retries=settings.MAX_RETRIES_MODEL
     )
     
 def create_execute_system_operations_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['execute_system_operations_task'],
         agent=agent,
+        max_retries=settings.MAX_RETRIES_MODEL,
     )
 
 def create_develop_strategy_task(agent: Agent) -> Task:
@@ -49,16 +47,19 @@ def create_develop_strategy_task(agent: Agent) -> Task:
             BusinessGuidelinesTool(), RAGTool()
         ],
         agent=agent,
+        max_retries=settings.MAX_RETRIES_MODEL
     )
 
 def create_craft_response_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['craft_response_task'],
         agent=agent,
+        max_retries=settings.MAX_RETRIES_MODEL
     )
     
 def create_coordinate_delivery_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['coordinate_delivery_task'],
         agent=agent,
+        max_retries=settings.MAX_RETRIES_MODEL
     )

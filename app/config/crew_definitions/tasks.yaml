@@ -7,12 +7,22 @@ triage_initial_message_task:
     - Timestamp: "{timestamp}"
 
     Siga seu FLUXO DE ANÁLISE E DECISÃO:
-    1. Consulte caches L0/L1 (via L1CacheQueryTool).
-    2. Consulte a Base de Conhecimento L2 - Qdrant (via FastMemoryMessages).
+    1. Consulte caches L0/L1 - (Um dicionário com interações iguais a que recebeu agora).
+    2. Consulte a Base de Conhecimento L2 - Qdrant (Uma coleção no qdrant que serve como uma memória no seu cerebro, feita para armazenar mensagens rápidas e embasadas no contexto. Criada por sua equipe especializada.).
     3. Decida se uma RESPOSTA IMEDIATA é viável.
-       - Se sim, prepare a(s) mensagem(ns) para envio direto (via CallbellSendTool) e defina "action": "RESPONDED_DIRECTLY".
+       - Se sim, prepare a(s) mensagem(ns) para envio direto e defina "action": "RESPONDED_DIRECTLY".
     4. Se não houver resposta imediata, determine a INTENÇÃO PRINCIPAL, TÓPICO e CONTEXTO OPERACIONAL.
        - Defina "action": "INITIATE_FULL_PROCESSING".
+
+    L1/L0 - (Interações iguais a essa):
+
+    "{l0l1_cache}"
+
+    L2 - (Memória de mensagens imediatas para serem enviadas):
+
+    "{l2_cache}"
+
+
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
   expected_output: |
     {
@@ -36,13 +46,16 @@ profile_customer_task:
     - Contexto Operacional: "{operational_context}" (Extraído do output da tarefa de triagem)
 
     Siga seu FLUXO DE CONSTRUÇÃO DE PERFIL:
-    1. Use a GetUserProfile com o contact_id para buscar o histórico de interações e informações relevantes do cliente.
-    2. Analise se o perfil já existe ou se é necessário criar um novo.
-    3. Se o perfil não existir, crie um novo perfil com base na mensagem original e no histórico, tente inferir informações relevantes.
-    4. Se o perfil já existir, atualize-o com as informações da mensagem original e do histórico.
-    5. Consolide as informações em um sumário e perfil detalhado.
+    1. Analise o perfil do cliente que será proporcionado a você abaixo.
+    2. Se o perfil não existir, crie um novo perfil com base na mensagem original e no histórico, tente inferir informações relevantes.
+    3. Se o perfil já existir, atualize-o com as informações da mensagem original e do histórico.
+    4. Consolide as informações em um sumário e perfil detalhado.
        - Inclua compras passadas, tickets de suporte, sentimento atual, estágio de vendas e preferências.
 
+    Perfil (pode ser null):
+
+    "{customer_profile}"
+    
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
   expected_output: |
     {
@@ -153,10 +166,10 @@ coordinate_delivery_task:
     **Informações Estratégicas:**
 
     * **Perfil do Cliente:**
-        `{client_profile}` # Insira aqui detalhes como nome, histórico com a empresa, produtos que possui, nível de conhecimento técnico, etc.
+        `{client_profile}`
 
     * **Plano de Vendas Estratégico:**
-        `{strategic_sales_plan}` # Insira aqui diretrizes como objetivos de venda (ex: cross-sell, up-sell), promoções ativas, abordagens preferenciais, etc.
+        `{strategic_plan}`
 
     ---
 

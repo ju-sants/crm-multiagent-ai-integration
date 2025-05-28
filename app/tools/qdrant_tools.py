@@ -50,7 +50,7 @@ class FastMemoryMessages(BaseTool):
     name: str = "FastMemoryMessages"
     description: str = "Usado para buscar mensagens rápidas na memória do Qdrant. É como se fosse parte do seu cerebro, te dando uma munição de mensagens rápidas para usar em suas respostas."
     
-    def _run(self) -> str:
+    def _run(self, contact_id) -> str:
         client = get_client()
         if not client:
             return "Erro ao conectar ao Qdrant."
@@ -61,7 +61,6 @@ class FastMemoryMessages(BaseTool):
                     vectors_config={'default': models.VectorParams(size=VECTOR_SIZE, distance=DISTANCE_METRIC)},
                 )
             
-            all_points = []
             scroll = client.scroll(
                 collection_name="FastMemoryMessages",
                 limit=1000000000,
@@ -69,10 +68,12 @@ class FastMemoryMessages(BaseTool):
                 with_payload=True
                 )
             
-            for point in scroll[0]:
-                all_points.append(point.payload)
-                
-            return all_points
+            point_memory = None
+            for point_memory in scroll[0]:
+                if point_memory.payload.get('contact_id') == contact_id:
+                    break
+            
+            return point_memory if point_memory else {'primary_messages_sequence': [], 'proactive_content_generated': []}
         
         except Exception as e:
             return f"Erro ao buscar mensagens rápidas: {str(e)}"
