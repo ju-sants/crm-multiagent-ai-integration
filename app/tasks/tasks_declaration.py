@@ -31,8 +31,7 @@ def create_profile_customer_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['profile_customer_task'],
         tools=[
-            GetUserProfile(), 
-            SaveUserProfile()
+            GetUserProfile()
             ],
         agent=agent,
     )
