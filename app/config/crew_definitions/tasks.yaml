@@ -122,8 +122,6 @@ craft_response_task:
     4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa.
     5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens relevantes para o que o cliente precisa.
     
-    6. IMPORTANTE: VOCÊ TRABALHA NUMA EMPRESA DE RASTREAMENTO VEÍCULAR! ENTÃO USE ISSO COMO CONTEXTO!
-
     Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated", NADA MAIS!.
   expected_output: |
     {
@@ -143,8 +141,6 @@ coordinate_delivery_task:
 
     Cabe a você apenas, decidir quais mensagens mandar.
     Você pode também fazer pequenas alterações, nas mensagens para garantir alinhamento com o contexto.
-
-    NUNCA ESQUEÇA O CONTEXTO DE RASTREAMENTO VEÍCULAR!
 
     Tópico identificado:
     "{identified_topic}"

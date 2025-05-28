@@ -81,4 +81,4 @@ def receive_message():
     
     return jsonify({'status': 'ok'}), 200
 
-run_mvp_crew('71464be80c504971ae263d710b39dd1f', '71464be80c504971ae263d710b39dd1f', 'boa tarde como funciona esse plano PGS')
+run_mvp_crew('71464be80c504971ae263d710b39dd1f', '71464be80c504971ae263d710b39dd1f', '555198906538', 'boa tarde como funciona esse plano PGS')

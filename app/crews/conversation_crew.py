@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 
 
 
-def run_mvp_crew(contact_id: str, chat_id: str, message_text: str): # Adapted from run_full_processing_crew [cite: 265]
+def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text: str):
     logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, chat_id: {chat_id}, mensagem: '{message_text}'")
 
     triage_agent_instance = get_triage_agent()
@@ -69,6 +69,9 @@ def run_mvp_crew(contact_id: str, chat_id: str, message_text: str): # Adapted fr
         if response:
             json_response = None
             try:
+                if '```' in response:
+                    response = response.split('```json')[-1].split('```')[0]
+                    
                 json_response = json.loads(response)
             except json.JSONDecodeError:
                 logger.error(f"MVP Crew: Resposta não é um JSON válido: {response}")
@@ -188,16 +191,23 @@ def run_mvp_crew(contact_id: str, chat_id: str, message_text: str): # Adapted fr
                 
                 response_delivery = delivery_crew.kickoff(inputs_delivery_crew)
                 
-                response_delivery_json = json.loads(response_delivery.raw)
+                try:
+                    if '```' in response_delivery.raw:
+                        response_delivery_str = response_delivery.raw.split('```json')[-1].split('```')[0]
+                    response_delivery_json = json.loads(response_delivery_str)
+                except json.JSONDecodeError:
+                    logger.error(f"MVP Crew: Resposta não é um JSON válido: {response}")
+                    
                 
                 if 'choosen_messages' in response_delivery_json:
-                    # CallbellSendTool(phone_number='555198906538', messages=response_delivery_json['choosen_messages'])
-                    for message in response_delivery_json['choosen_messages']:
-                        print(message)
-                        
+                    CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
+                
+                elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
+                    CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                    
                 else:
                     run_mvp_crew(contact_id, chat_id, message_text)
-                print()
+                    
         else:
             logger.warning(f"MVP Crew: Nenhuma resposta gerada para chat_id {chat_id}")
     except Exception as e:
