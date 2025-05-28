@@ -64,7 +64,7 @@ class FastMemoryMessages(BaseTool):
             all_points = []
             scroll = client.scroll(
                 collection_name="FastMemoryMessages",
-                limit=500,
+                limit=1000000000,
                 with_vectors=False,
                 with_payload=True
                 )

@@ -42,7 +42,6 @@ profile_customer_task:
     4. Se o perfil já existir, atualize-o com as informações da mensagem original e do histórico.
     5. Consolide as informações em um sumário e perfil detalhado.
        - Inclua compras passadas, tickets de suporte, sentimento atual, estágio de vendas e preferências.
-    6. Salve o perfil atualizado usando a SaveUserProfile, passando seu json resposta para a ferramenta.
 
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
   expected_output: |
@@ -56,7 +55,7 @@ profile_customer_task:
 develop_strategy_task:
   description: |
     Você é o StrategicAdvisor. Dados recebidos (contexto das tarefas anteriores):
-    - Perfil do Cliente (JSON): "{profile_customer_task.output}"
+    - Perfil do Cliente (JSON): "{profile_customer_task_output}"
     - Mensagem Original do Cliente: "{message_text_original}"
     - Contexto Operacional: "{operational_context}"
     - Tópico Identificado: "{identified_topic}"
@@ -131,35 +130,62 @@ craft_response_task:
 
 coordinate_delivery_task:
   description: |
-    Você é o DeliveryCoordinator e você trabalha na Global System Rastreamento Veícular.
-    
-    
-    Dados recebidos (contexto das tarefas anteriores):
+    Você é o **DeliveryCoordinator** e trabalha na **Global System Rastreamento Veicular**.
 
-    Você é a linha de frente da conversação com o cliente da Global System.
-    Você possui vários colegas de trabalho que já prepararam suas "munições" (mensagens prontas e de rápido acesso com base em todo o contexto atual da conversa com o cliente)
+    Sua função é ser a mente por trás da estratégia de conversação com o cliente da Global System. Você não envia as mensagens diretamente nem monitora interrupções; seu único trabalho é preparar o "roteiro" da conversa.
 
-    Cabe a você apenas, decidir quais mensagens mandar.
-    Você pode também fazer pequenas alterações, nas mensagens para garantir alinhamento com o contexto.
+    Você tem acesso às "munições" que seus colegas de equipe já prepararam: mensagens prontas e de rápido acesso (com base no contexto atual da conversa) e conteúdo proativo para lidar com possíveis cenários.
 
-    Tópico identificado:
-    "{identified_topic}"
+    Sua principal responsabilidade é **decidir quais mensagens e conteúdos enviar para o cliente neste momento**, em qual ordem, e se precisam de **mínimas alterações** para se encaixarem perfeitamente no contexto.
 
-    Contexto Operacional:
-    "{operational_context}"
+    **Você pode e deve fazer pequenas alterações controladas nas mensagens** para garantir um alinhamento perfeito com o contexto da conversa, **apenas se for ESTRITAMENTE necessário**. Preserve a intenção e o conteúdo central da mensagem original.
+
+    ---
+
+    **Contexto da Conversa:**
+
+    * **Tópico identificado:** "{identified_topic}"
+    * **Contexto Operacional:** "{operational_context}"
+    * **Mensagem do cliente:** "{message_text_original}"
+
+    ---
+
+    **Informações Estratégicas:**
+
+    * **Perfil do Cliente:**
+        `{client_profile}` # Insira aqui detalhes como nome, histórico com a empresa, produtos que possui, nível de conhecimento técnico, etc.
+
+    * **Plano de Vendas Estratégico:**
+        `{strategic_sales_plan}` # Insira aqui diretrizes como objetivos de venda (ex: cross-sell, up-sell), promoções ativas, abordagens preferenciais, etc.
+
+    ---
+
+    **Recursos Disponíveis:**
+
+    * **Mensagens prontas da sua equipe (Rapid Messages):**
+        `{fast_messages}`
+
+    * **Conteúdo Proativo Gerado (apenas respostas para cenários):**
+        `{proactive_content_generated}`
+
+    ---
+
+    **Formato de Retorno (OBRIGATÓRIO):**
+
+    Você **DEVE retornar um JSON** seguindo a estrutura abaixo. Não inclua perguntas do conteúdo proativo no campo `order`; envie apenas as respostas.
+
+    {
+        "rapid_messages_choosen_index": [], # Array de índices das mensagens escolhidas da lista 'fast_messages'
+        "proactive_content_choosen_index": [], # Array de índices dos conteúdos proativos escolhidos da lista 'proactive_content_generated'
+        "order": [] # Array de strings, representando as mensagens finais em ordem de envio, com quaisquer pequenas alterações já aplicadas.
+    }
 
 
-    Mensagem do cliente:
-    "{message_text_original}"
-
-    Mensagens prontas pela sua equipe:
-    {fast_messages}
-
-    Conteúdo proativo gerado (pares de pergunta e resposta para você lidar com possíveis cenários):
-    {proactive_content_generated} 
-
-    Você deve retornar um JSON com a chave "choosen_messages" e seu valor sendo uma lista das mensagens escolhidas.
   expected_output: |
     {
-      "choosen_messages": ["Mensagens", "Escolhidas"]
+    "rapid_messages_choosen_index": [], # indices das mensagens escolhidas na lista
+    "proactive_content_choosen_index": [], # indices dos conteúdos proativos escolhidos na lista
+    "order": [] # lista de mensagens e conteúdo proativo em ordem de envio
     }
+
+  
