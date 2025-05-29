@@ -2,11 +2,7 @@
 from crewai import Task, Agent
 from app.utils.funcs.funcs import obter_caminho_projeto
 
-from app.tools.cache_tools import L1CacheQueryTool
-from app.tools.qdrant_tools import (
-    SaveFastMemoryMessages, FastMemoryMessages, GetUserProfile, SaveUserProfile,
-    RAGTool
-    )
+from app.tools.qdrant_tools import RAGTool
 from app.tools.knowledge_tools import BusinessGuidelinesTool
 
 from app.config.settings import settings

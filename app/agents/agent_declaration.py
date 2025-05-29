@@ -19,16 +19,16 @@ agents_config = yaml.safe_load(open(config_path, 'r').read())
 def get_triage_agent() -> Agent:
     return Agent(
         config=agents_config['TriageAgent'],
-        llm=default_Google_llm,
+        llm=reasoning_X_llm,
         verbose=True,
         allow_delegation=False,
-        max_retry_limit=500
+        max_retry_limit=500,
     )
 
 def get_customer_profile_agent() -> Agent:
     return Agent(
         config=agents_config['CustomerProfiler'],
-        llm=default_Google_llm,
+        llm=reasoning_X_llm,
         verbose=True,
         allow_delegation=False,
         max_retry_limit=500
@@ -49,7 +49,6 @@ def get_system_operations_agent() -> Agent:
         llm=default_Google_llm,
         verbose=True,
         allow_delegation=False,
-        max_retry_limit=500
     )
     
 def get_response_craftsman_agent() -> Agent:
@@ -58,7 +57,6 @@ def get_response_craftsman_agent() -> Agent:
         llm=reasoning_X_llm,
         verbose=True,
         allow_delegation=False,
-        max_retry_limit=500
     )
 
 def get_delivery_coordinator_agent() -> Agent:
@@ -67,5 +65,4 @@ def get_delivery_coordinator_agent() -> Agent:
         llm=reasoning_X_llm,
         verbose=True,
         allow_delegation=False,
-        max_retry_limit=500
     )

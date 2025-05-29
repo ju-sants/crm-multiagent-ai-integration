@@ -5,13 +5,11 @@ from app.config.settings import settings
 default_X_llm = LLM(
     model='xai/grok-3',
     api_key=settings.XAI_API_KEY,
-    stream=settings.LLM_STREAM
     )
 
 reasoning_X_llm = LLM(
     model='xai/grok-3-mini-beta',
     api_key=settings.XAI_API_KEY,
-    stream=settings.LLM_STREAM
     )
 
 default_Google_llm = LLM(
