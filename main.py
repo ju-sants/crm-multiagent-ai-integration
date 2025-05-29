@@ -99,8 +99,6 @@ def receive_message():
                 
                 if contact_lock:
                     
-                    text = '\n'.join(messages_after)
-                    
                     try:
                         headers = {
                             "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
@@ -108,8 +106,8 @@ def receive_message():
                         }
                         
                         history = requests.get(f'https://api.callbell.eu/v1/contacts/{contact_uuid}/messages', headers=headers).json()
-                        run_mvp_crew(contact_uuid, contact_uuid, phone_number, text, history)
-
+                        run_mvp_crew(contact_uuid, phone_number, redis_client, history)
+                        
                     except Exception as e:
                         logging.error(f'Ocorreu um erro processando a mensagem do contato {contact_uuid}. Erro:\n\n{e}')
                     
@@ -122,7 +120,6 @@ def receive_message():
                             
                             try:
                                 redis_client.delete(f'processing:{contact_uuid}')
-                                redis_client.delete(f'contacts_messages:waiting:{contact_uuid}')
                                 
                             except Exception as e:
                                 logging.error(f'Ocorreu um erro: {e}')
@@ -130,5 +127,5 @@ def receive_message():
                                 
                             else:
                                 break
-                        
+                
     return jsonify({'status': 'ok'}), 200
