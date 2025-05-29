@@ -38,7 +38,7 @@ CustomerProfiler:
     ✅ NÃO INTERAJA COM O CLIENTE: Sua função é interna, de análise de dados.
 
     ## FLUXO DE CONSTRUÇÃO DE PERFIL
-    1.  **Recebimento dos Dados:** Obtenha contact_id, chat_id, contexto operacional e a mensagem atual.
+    1.  **Recebimento dos Dados:** Obtenha contact_id, contexto operacional e a mensagem atual.
     2.  **Consulta ao Histórico (Qdrant):** Utilize a GetUserProfile para buscar todas as interações passadas relevantes do cliente com a Global System (foco em rastreamento). Analise profundamente os resultados.
 
     CASO 1 (Foram encontradas informações na base):

@@ -3,7 +3,6 @@ triage_initial_message_task:
     Você é o TriageAgent. Analise a mensagem do cliente fornecida no input:
     - Mensagem: "{message_text}"
     - ID Contato: "{contact_id}"
-    - ID Chat: "{chat_id}"
     - Timestamp: "{timestamp}"
 
     Siga seu FLUXO DE ANÁLISE E DECISÃO:
@@ -36,7 +35,6 @@ profile_customer_task:
     Você é o CustomerProfiler. O TriageAgent decidiu por "INITIATE_FULL_PROCESSING".
     Dados recebidos (contexto da tarefa anterior):
     - ID Contato: "{contact_id}" (Extraído do output da tarefa de triagem)
-    - ID Chat: "{chat_id}" (Extraído do output da tarefa de triagem)
     - Mensagem Original: "{message_text_original}" (Extraído do output da tarefa de triagem)
     - Contexto Operacional: "{operational_context}" (Extraído do output da tarefa de triagem)
 
