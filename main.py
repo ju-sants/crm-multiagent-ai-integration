@@ -53,6 +53,7 @@ def receive_message():
     allowed_chats = get_allowed_chats()
     
     webhook_payload = request.get_json()
+    print(webhook_payload)
     if not webhook_payload:
         logging.info("Webhook: Payload vazio recebido.")
         return jsonify({"status": "ok", "message": "Empty payload"}), 200
