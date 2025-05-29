@@ -10,12 +10,18 @@ class Settings(BaseSettings):
 
     LLM_STREAM: bool = True
     
-    XAI_API_KEY: str = "your_xai_api_key_here"
-    GEMINI_API_KEY: str = "your_gemini_api_key_here"
-    CALLBELL_API_KEY: str = "your_callbell_api_key_here"
+    XAI_API_KEY: str = "..."
+    GEMINI_API_KEY: str = "..."
+    CALLBELL_API_KEY: str = "..."
     
     LOG_LEVEL: str = "INFO"
     
     MAX_RETRIES_MODEL: int = 500
-
+    
+    REDIS_HOST: str = '...'
+    REDIS_PORT: str = '...'
+    REDIS_PASSWORD: str = '...'
+    REDIS_DB_MAIN: int = 7
+    
+    
 settings = Settings()

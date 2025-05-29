@@ -1,15 +1,22 @@
 from flask import Flask, jsonify, request
-import logging
 import json
-import os
 import requests
+
+import logging
+import os
+from time import sleep
+
 from app.crews.conversation_crew import run_mvp_crew
 from app.config.settings import settings
+from app.services.redis_service import get_redis
+
 
 CALLBELL_API_KEY = os.environ.get("CALLBELL_API_KEY", "test_gshuPaZoeEG6ovbc8M79w0QyM")
 CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
 
 app = Flask(__name__)
+redis_client = get_redis()
+
 
 def get_callbell_headers():
     """Retorna os headers padrão para as requisições Callbell."""
@@ -50,8 +57,6 @@ def get_allowed_chats():
 
 @app.route('/receive_message', methods=['POST'])
 def receive_message():
-    allowed_chats = get_allowed_chats()
-    
     webhook_payload = request.get_json()
     print(webhook_payload)
     if not webhook_payload:
@@ -75,16 +80,55 @@ def receive_message():
         contact_uuid = contact_info.get("uuid")
         phone_number = contact_info.get("phoneNumber")
         
+        allowed_chats = get_allowed_chats()
+        
         if contact_uuid in allowed_chats:
             text = str(payload.get('text', ''))
+            
+            redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', text)
+            
+            messages_before = redis_client.lrange(f'contacts_messages:waiting:{contact_uuid}', 0, -1)
+            
+            sleep(3.5)
+            
+            messages_after = redis_client.lrange(f'contacts_messages:waiting:{contact_uuid}', 0, -1)
+            
+            if messages_after == messages_before:
+                
+                contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True)
+                
+                if contact_lock:
+                    
+                    text = '\n'.join(messages_after)
+                    
+                    try:
+                        headers = {
+                            "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
+                            "Content-Type": "application/json"
+                        }
+                        
+                        history = requests.get(f'https://api.callbell.eu/v1/contacts/{contact_uuid}/messages', headers=headers).json()
+                        run_mvp_crew(contact_uuid, contact_uuid, phone_number, text, history)
 
-            headers = {
-                "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            
-            history = requests.get(f'https://api.callbell.eu/v1/contacts/{contact_uuid}/messages', headers=headers).json()
-            run_mvp_crew(contact_uuid, contact_uuid, phone_number, text, history)
-            
-    
+                    except Exception as e:
+                        logging.error(f'Ocorreu um erro processando a mensagem do contato {contact_uuid}. Erro:\n\n{e}')
+                    
+                    finally:
+                        
+                        tries = 1
+                        while True:
+                            if tries > 5:
+                                break
+                            
+                            try:
+                                redis_client.delete(f'processing:{contact_uuid}')
+                                redis_client.delete(f'contacts_messages:waiting:{contact_uuid}')
+                                
+                            except Exception as e:
+                                logging.error(f'Ocorreu um erro: {e}')
+                                tries += 1
+                                
+                            else:
+                                break
+                        
     return jsonify({'status': 'ok'}), 200

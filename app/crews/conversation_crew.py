@@ -39,9 +39,9 @@ logger = get_logger(__name__)
 
 
 
-def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text: str, history: Any):
+def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history: Any):
     # litellm._turn_on_debug()
-    logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, chat_id: {chat_id}, mensagem: '{message_text}'")
+    logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, mensagem: '{message_text}'")
 
     triage_agent_instance = get_triage_agent()
 
@@ -60,7 +60,6 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
 
     inputs_triage = {
         "contact_id": contact_id,
-        "chat_id": chat_id,
         "message_text": message_text,
         "timestamp": datetime.datetime.now().isoformat(), 
         "l0l1_cache": str(L1CacheQueryTool()._run(contact_id)),
@@ -69,14 +68,12 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
     
     history_messages = ''
     if history:
-        history_messages = '\n'.join([f'{"AI" if "Alessandro" in message.get("text", "") else "collaborator" if not message.get("status", '') == "received" else "customer"}' for message in history.get('messages', [])])
-
-    return
+        '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', []))])
 
     logger.info(f"MVP Crew: Executando kickoff com inputs: {inputs_triage}")
     try:
         triage_crew.kickoff(inputs_triage)
-        logger.info(f"MVP Crew: Kickoff executado com sucesso para chat_id {chat_id}")
+        logger.info(f"MVP Crew: Kickoff executado com sucesso para contact_id {contact_id}")
 
         response_triage = triage_task.output.raw
         logger.info(f"MVP Crew: Resposta gerada pelo crew: {response_triage}")
@@ -97,7 +94,7 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
             
             if json_response:
                 if 'action' and json_response['action'] == "INITIATE_FULL_PROCESSING":
-                    logger.info(f"MVP Crew: Iniciando processamento completo para chat_id {chat_id}")
+                    logger.info(f"MVP Crew: Iniciando processamento completo para contact_id {contact_id}")
                     customer_profile_agent_instance = get_customer_profile_agent()
                     strategic_advisor_instance = get_strategic_advisor_agent()
                     response_craftman_instance = get_response_craftsman_agent()
@@ -106,7 +103,7 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                     strategic_advise_task = create_develop_strategy_task(strategic_advisor_instance)
                     response_craft_task = create_craft_response_task(response_craftman_instance)
                     
-                    logger.info(f"MVP Crew: Iniciando processamento completo para chat_id {chat_id}")
+                    logger.info(f"MVP Crew: Iniciando processamento completo para contact_id {contact_id}")
                     
                     # Criando Perfil
                     crew_profile = Crew(
@@ -123,7 +120,7 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                     
                     inputs_profile = {
                         "contact_id": contact_id,
-                        "chat_id": chat_id,
+                        "contact_id": contact_id,
                         "message_text_original": message_text,
                         "operational_context": json_response.get('operational_context', ''),
                         "identified_topic": json_response.get('identified_topic', ''),
@@ -259,7 +256,7 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                             redo = True
                     
                     if redo:
-                        run_mvp_crew(contact_id, chat_id, message_text)
+                        run_mvp_crew(contact_id, phone_number, message_text, history)
                     
                     else:
                         response_craft_json['contact_id'] = contact_id
@@ -347,21 +344,68 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                         logger.error(f"MVP Crew: Resposta não é um JSON válido: {response_delivery_str}")
                     
                     if response_delivery_json:
+                        if not 'fast_messages_choosen_index' in response_delivery_json:
+                            run_mvp_crew(contact_id, phone_number, message_text, history)
+                        
                         if 'choosen_messages' in response_delivery_json:
-                            CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
+                            CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
+                            new_payload = point_memory.payload.copy()
+                            
+                            if response_delivery_json['fast_messages_choosen_index']:
+                                for index in response_delivery_json['fast_messages_choosen_index']:
+                                    
+                                    del new_payload['primary_messages_sequence'][index]
+                            
+                            if 'proactive_content_choosen_index' in response_delivery_json and response_delivery_json['proactive_content_choosen_index']:
+                                for index in response_delivery_json['proactive_content_choosen_index']:
+                                    del response_delivery_json['proactive_content_choosen_index'][index]
+                            
+                            qdrant_client.upsert(
+                                'FastMemoryMessages',
+                                [
+                                    models.PointStruct(
+                                        id=str(point_memory.id),
+                                        vector={},
+                                        payload=new_payload
+                                    )
+                                ]
+                            )
                             
                         elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
-                            CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                            CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+
+                            new_response_json = {}
+                            new_payload = point_memory.payload.copy()
                             
-                        print(response_delivery_json)
-                        
+                            for k, v in response_craft_json['Final Answer']:
+                                new_response_json[k] = v
+                                
+                            if new_response_json['fast_messages_choosen_index']:
+                                for index in new_response_json['fast_messages_choosen_index']:
+                                    
+                                    del new_payload['primary_messages_sequence'][index]
+                            
+                            if 'proactive_content_choosen_index' in new_response_json and new_response_json['proactive_content_choosen_index']:
+                                for index in new_response_json['proactive_content_choosen_index']:
+                                    del new_response_json['proactive_content_choosen_index'][index]
+                            
+                            qdrant_client.upsert(
+                                'FastMemoryMessages',
+                                [
+                                    models.PointStruct(
+                                        id=str(point_memory.id),
+                                        vector={},
+                                        payload=new_payload
+                                    )
+                                ]
+                            )
                     else:
-                        run_mvp_crew(contact_id, chat_id, message_text)
+                        run_mvp_crew(contact_id, phone_number, message_text, history)
                 else:
-                    run_mvp_crew(contact_id, chat_id, message_text)
+                    run_mvp_crew(contact_id, phone_number, message_text, history)
                     
         else:
-            logger.warning(f"MVP Crew: Nenhuma resposta gerada para chat_id {chat_id}")
+            logger.warning(f"MVP Crew: Nenhuma resposta gerada para contact_id {contact_id}")
     except Exception as e:
-        logger.error(f"MVP Crew: Erro durante a execução do crew para chat_id {chat_id}: {e}", exc_info=True)
+        logger.error(f"MVP Crew: Erro durante a execução do crew para contact_id {contact_id}: {e}", exc_info=True)
         
