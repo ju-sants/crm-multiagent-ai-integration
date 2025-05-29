@@ -343,11 +343,11 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                         logger.error(f"MVP Crew: Resposta não é um JSON válido: {response_delivery_str}")
                     
                     if response_delivery_json:
-                        # if 'choosen_messages' in response_delivery_json:
-                        #     CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
+                        if 'choosen_messages' in response_delivery_json:
+                            CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
                             
-                        # elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
-                        #     CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                        elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
+                            CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
                             
                         print(response_delivery_json)
                         

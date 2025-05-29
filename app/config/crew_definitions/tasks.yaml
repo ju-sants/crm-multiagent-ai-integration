@@ -174,8 +174,8 @@ coordinate_delivery_task:
         `{strategic_plan}`
 
     * **Histórico de conversação (5 Últimas mensagens):**
-     `{history}`
-     
+        `{history}`
+
     ---
 
     **Recursos Disponíveis (Suas Munições):**
