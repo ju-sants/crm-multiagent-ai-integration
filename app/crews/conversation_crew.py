@@ -60,8 +60,8 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
         "chat_id": chat_id,
         "message_text": message_text,
         "timestamp": datetime.datetime.now().isoformat(), 
-        "l0l1_cache": L1CacheQueryTool()._run(contact_id),
-        "l2_cache": FastMemoryMessages()._run(contact_id)
+        "l0l1_cache": str(L1CacheQueryTool()._run(contact_id)),
+        "l2_cache": str(FastMemoryMessages()._run(contact_id))
     }
 
     logger.info(f"MVP Crew: Executando kickoff com inputs: {inputs_triage}")
@@ -117,7 +117,7 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                         "message_text_original": message_text,
                         "operational_context": json_response.get('operational_context', ''),
                         "identified_topic": json_response.get('identified_topic', ''),
-                        "customer_profile": GetUserProfile()._run(contact_id)
+                        "customer_profile": str(GetUserProfile()._run(contact_id))
                     }
                     
                     response_profile = crew_profile.kickoff(inputs_profile)
@@ -320,14 +320,12 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                         logger.error(f"MVP Crew: Resposta não é um JSON válido: {response_delivery_str}")
                     
                     if response_delivery_json:
-                        # if 'choosen_messages' in response_delivery_json:
-                        #     CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
-                        
-                        # elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
-                        #     CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                        if 'choosen_messages' in response_delivery_json:
+                            CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
                             
-                        # else:
-                        #     run_mvp_crew(contact_id, chat_id, message_text)
+                        elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
+                            CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                            
                         print(response_delivery_json)
                         
                     else:
