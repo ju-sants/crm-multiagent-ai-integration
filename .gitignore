@@ -8,3 +8,4 @@ Global-Agent/
 tests/
 tests.py
 minha_arvore.txt
+app.log
