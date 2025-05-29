@@ -73,19 +73,19 @@ class FastMemoryMessages(BaseTool):
                 if point_memory.payload.get('contact_id') == contact_id:
                     break
             
-            return point_memory if point_memory else {'primary_messages_sequence': [], 'proactive_content_generated': []}
+            return point_memory.payload if point_memory else {'primary_messages_sequence': [], 'proactive_content_generated': []}
         
         except Exception as e:
             return f"Erro ao buscar mensagens rápidas: {str(e)}"
 
 class GetUserProfileInput(BaseModel):
-    user_id: str = Field(..., description="ID do usuário para buscar o perfil no Qdrant.")
+    contact_id: str = Field(..., description="ID do usuário para buscar o perfil no Qdrant.")
 class GetUserProfile(BaseTool):
     name: str = "GetUserProfile"
     description: str = "Usado para buscar o perfil do usuário no Qdrant."
     args_schema: Type[BaseModel] = GetUserProfileInput
     
-    def _run(self, user_id: str) -> str:
+    def _run(self, contact_id: str) -> str:
         client = get_client()
         if not client:
             return "Erro ao conectar ao Qdrant."
@@ -103,13 +103,13 @@ class GetUserProfile(BaseTool):
             
             point = None
             for point in scroll[0]:
-                if point.payload.get("user_id") == user_id:
+                if point.payload.get("contact_id") == contact_id:
                     break
                 else:
                     point = None
             
             if point is None:
-                return f"Perfil do usuário {user_id} não encontrado."
+                return f"Perfil do usuário {contact_id} não encontrado."
             
             return point.payload
         

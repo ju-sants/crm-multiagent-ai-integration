@@ -33,11 +33,14 @@ from qdrant_client import models
 
 import uuid
 
+from typing import Any
+
 logger = get_logger(__name__)
 
 
 
-def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text: str):
+def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text: str, history: Any):
+    # litellm._turn_on_debug()
     logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, chat_id: {chat_id}, mensagem: '{message_text}'")
 
     triage_agent_instance = get_triage_agent()
@@ -63,6 +66,8 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
         "l0l1_cache": str(L1CacheQueryTool()._run(contact_id)),
         "l2_cache": str(FastMemoryMessages()._run(contact_id))
     }
+    
+    history_messages = '\n'.join([f'{"AI" if "Alessandro" in message.get("text", "") else "collaborator" if not message.get("status") == "received" else "customer"}' for message in history.get('messages', [])])
 
     logger.info(f"MVP Crew: Executando kickoff com inputs: {inputs_triage}")
     try:
@@ -111,13 +116,15 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                         verbose=True,
                     )
                     
+                    
                     inputs_profile = {
                         "contact_id": contact_id,
                         "chat_id": chat_id,
                         "message_text_original": message_text,
                         "operational_context": json_response.get('operational_context', ''),
                         "identified_topic": json_response.get('identified_topic', ''),
-                        "customer_profile": str(GetUserProfile()._run(contact_id))
+                        "customer_profile": str(GetUserProfile()._run(contact_id)),
+                        "history": history_messages
                     }
                     
                     response_profile = crew_profile.kickoff(inputs_profile)
@@ -166,13 +173,25 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                             pass
                     
                     if payload:  
+                        scroll = qdrant_client.scroll(
+                            'UserProfiles',
+                            limit=1000000000,
+                            with_payload=True,
+                            with_vectors=False
+                        )
+                        
+                        id_point = str(uuid.uuid4())
+                        for point_profile in scroll[0]:
+                            if point_profile.payload.get('contact_id') == contact_id:
+                                id_point = str(point_profile.id)
+                        
                         payload['contact_id'] = contact_id
                         
                         qdrant_client.upsert(
                             'UserProfiles',
                             [
                             models.PointStruct(
-                                id=str(uuid.uuid4()),
+                                id=id_point,
                                 vector={},
                                 payload=payload
                             )
@@ -205,19 +224,20 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                     response_craft = crew_craft_messages.kickoff(inputs_craft)
                     
                     response_craft_json = None
+                    response_craft_str = response_craft_task.output.raw
                     try:
-                        if '```json' in response_task:
-                            response_task = response_task.split('```json')[-1].split('```')[0]
+                        if '```json' in response_craft_str:
+                            response_craft_str = response_craft_str.split('```json')[-1].split('```')[0]
                             
-                        if '```' in response_task:
-                            response_task = response_task.replace('```', '')
+                        if '```' in response_craft_str:
+                            response_craft_str = response_craft_str.replace('```', '')
                             
                         response_craft_json = json.loads(response_craft.raw)
                     except json.JSONDecodeError:
                         logger.error('Não foi possível parsear o json de respostas finais')
                         
                     redo = False
-                    if 'Final Answer' in response_craft_json:
+                    if response_craft_json and 'Final Answer' in response_craft_json:
                         if not 'primary_messages_sequence' in response_craft_json.get('Final Answer', {}):
                             redo = True
                         
@@ -291,14 +311,17 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                 if point_memory and found_memory:
                     found_memory = False
                     
+                    history_messages = '\n'.join([f'{"AI" if "Alessandro" in message.get("text", "") else "collaborator" if not message.get("status") == "received" else "customer"}' for message in history.get('messages', [])[:5]])
+                    
                     inputs_delivery_crew = {
                         "identified_topic": json_response.get('identified_topic', ''),
                         "operational_context": json_response.get('operational_context', ''),
                         "message_text_original": message_text,
-                        "fast_messages": point_memory.payload.get('primary_messages_sequence', ''),
-                        "proactive_content_generated": point_memory.payload.get('proactive_content_generated', ''),
-                        "client_profile": point_profile.payload.get('profile_customer', '') if found_profile else '',
-                        "strategic_plan": point_profile.payload.get('strategic_plan', '') if found_profile else ''
+                        "fast_messages": str(point_memory.payload.get('primary_messages_sequence', '')),
+                        "proactive_content_generated": str(point_memory.payload.get('proactive_content_generated', '')),
+                        "client_profile": str(point_profile.payload.get('profile_customer', '')) if found_profile else '',
+                        "strategic_plan": str(point_profile.payload.get('strategic_plan', '')) if found_profile else '',
+                        "history": history_messages
                     }
                     
                     found_profile = False
@@ -320,11 +343,11 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
                         logger.error(f"MVP Crew: Resposta não é um JSON válido: {response_delivery_str}")
                     
                     if response_delivery_json:
-                        if 'choosen_messages' in response_delivery_json:
-                            CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
+                        # if 'choosen_messages' in response_delivery_json:
+                        #     CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
                             
-                        elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
-                            CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                        # elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
+                        #     CallbellSendTool(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
                             
                         print(response_delivery_json)
                         
