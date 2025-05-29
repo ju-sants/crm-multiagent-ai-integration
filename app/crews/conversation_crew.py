@@ -67,7 +67,11 @@ def run_mvp_crew(contact_id: str, chat_id: str, phone_number: str, message_text:
         "l2_cache": str(FastMemoryMessages()._run(contact_id))
     }
     
-    history_messages = '\n'.join([f'{"AI" if "Alessandro" in message.get("text", "") else "collaborator" if not message.get("status") == "received" else "customer"}' for message in history.get('messages', [])])
+    history_messages = ''
+    if history:
+        history_messages = '\n'.join([f'{"AI" if "Alessandro" in message.get("text", "") else "collaborator" if not message.get("status", '') == "received" else "customer"}' for message in history.get('messages', [])])
+
+    return
 
     logger.info(f"MVP Crew: Executando kickoff com inputs: {inputs_triage}")
     try:
