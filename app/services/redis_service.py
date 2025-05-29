@@ -4,7 +4,7 @@ from app.core.logger import get_logger
 from app.config.settings import settings
 from functools import lru_cache
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 @lru_cache(maxsize=1)
