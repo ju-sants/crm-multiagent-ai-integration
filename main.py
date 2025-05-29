@@ -59,7 +59,8 @@ def receive_message():
 
     event = webhook_payload.get("event")
     payload = webhook_payload.get("payload")
-    logging.info(f"Webhook recebido: Evento='{event}' Payload='{json.dumps(payload)}'") # Log detalhado
+    logging.debug(f"Webhook recebido: Evento='{event}' Payload='{json.dumps(payload)}'") # Log detalhado
+    logging.info('recebida uma mensagem via webhook')
 
     # --- Processamento de Mensagens Recebidas ---
     if event == "message_created" and payload and payload.get("status") == "received":
