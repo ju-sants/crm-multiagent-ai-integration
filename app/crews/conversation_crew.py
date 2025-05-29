@@ -35,13 +35,15 @@ import uuid
 
 from typing import Any
 
+import redis
+
 logger = get_logger(__name__)
 
 
 
-def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history: Any):
+def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, history: Any):
     # litellm._turn_on_debug()
-    logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, mensagem: '{message_text}'")
+    logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, mensagem: '{'\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1))}'")
 
     triage_agent_instance = get_triage_agent()
 
@@ -60,7 +62,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
 
     inputs_triage = {
         "contact_id": contact_id,
-        "message_text": message_text,
+        "message_text": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
         "timestamp": datetime.datetime.now().isoformat(), 
         "l0l1_cache": str(L1CacheQueryTool()._run(contact_id)),
         "l2_cache": str(FastMemoryMessages()._run(contact_id))
@@ -68,7 +70,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
     
     history_messages = ''
     if history:
-        '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', []))])
+        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', []))])
 
     logger.info(f"MVP Crew: Executando kickoff com inputs: {inputs_triage}")
     try:
@@ -121,14 +123,14 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
                     inputs_profile = {
                         "contact_id": contact_id,
                         "contact_id": contact_id,
-                        "message_text_original": message_text,
+                        "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
                         "operational_context": json_response.get('operational_context', ''),
                         "identified_topic": json_response.get('identified_topic', ''),
                         "customer_profile": str(GetUserProfile()._run(contact_id)),
                         "history": history_messages
                     }
                     
-                    response_profile = crew_profile.kickoff(inputs_profile)
+                    crew_profile.kickoff(inputs_profile)
                     
                     # Criando estratégia
                     crew_strategic = Crew(
@@ -144,12 +146,12 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
                     
                     inputs_strategic = {
                         "profile_customer_task_output": profile_customer_task.output.raw,
-                        "message_text_original": message_text,
+                        "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
                         "operational_context": json_response.get('operational_context', ''),
                         "identified_topic": json_response.get('identified_topic', ''),
                     }
                     
-                    response_strategic = crew_strategic.kickoff(inputs_strategic)
+                    crew_strategic.kickoff(inputs_strategic)
                     
                     # Saving Profile and Strategic Plan
                     qdrant_client = get_client()
@@ -216,7 +218,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
                     inputs_craft = {
                         "develop_strategy_task_output": strategic_advise_task.output.raw,
                         "profile_customer_task_output": profile_customer_task.output.raw,
-                        "message_text_original": message_text,
+                        "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
                         "operational_context": json_response.get('operational_context', ''),
                         "identified_topic": json_response.get('identified_topic', ''),
                     }
@@ -256,7 +258,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
                             redo = True
                     
                     if redo:
-                        run_mvp_crew(contact_id, phone_number, message_text, history)
+                        run_mvp_crew(contact_id, phone_number, redis_client, history)
                     
                     else:
                         response_craft_json['contact_id'] = contact_id
@@ -314,10 +316,12 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
                     
                     history_messages = '\n'.join([f'{"AI" if "Alessandro" in message.get("text", "") else "collaborator" if not message.get("status") == "received" else "customer"}' for message in history.get('messages', [])[:5]])
                     
+                    last_messages_processed = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+                    
                     inputs_delivery_crew = {
                         "identified_topic": json_response.get('identified_topic', ''),
                         "operational_context": json_response.get('operational_context', ''),
-                        "message_text_original": message_text,
+                        "message_text_original": '\n'.join(last_messages_processed),
                         "fast_messages": str(point_memory.payload.get('primary_messages_sequence', '')),
                         "proactive_content_generated": str(point_memory.payload.get('proactive_content_generated', '')),
                         "client_profile": str(point_profile.payload.get('profile_customer', '')) if found_profile else '',
@@ -325,9 +329,23 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
                         "history": history_messages
                     }
                     
+                    all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+                    messages_left = [x for x in all_messages if x not in last_messages_processed]
+                    
+                    pipe = redis_client.pipeline()
+                    
+                    pipe.delete(f'contacts_messages:waiting:{contact_id}')
+                    
+                    if messages_left:
+                        pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+                    
+                    pipe.execute()
+
+
+                    
                     found_profile = False
                     
-                    response_delivery = delivery_crew.kickoff(inputs_delivery_crew)
+                    delivery_crew.kickoff(inputs_delivery_crew)
                     
                     response_delivery_json = None
                     response_delivery_str = delivery_coordinator_task.output.raw
@@ -345,7 +363,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
                     
                     if response_delivery_json:
                         if not 'fast_messages_choosen_index' in response_delivery_json:
-                            run_mvp_crew(contact_id, phone_number, message_text, history)
+                            run_mvp_crew(contact_id, phone_number, redis_client, history)
                         
                         if 'choosen_messages' in response_delivery_json:
                             CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
@@ -400,12 +418,11 @@ def run_mvp_crew(contact_id: str, phone_number: str, message_text: str, history:
                                 ]
                             )
                     else:
-                        run_mvp_crew(contact_id, phone_number, message_text, history)
+                        run_mvp_crew(contact_id, phone_number, redis_client, history)
                 else:
-                    run_mvp_crew(contact_id, phone_number, message_text, history)
+                    run_mvp_crew(contact_id, phone_number, redis_client, history)
                     
         else:
             logger.warning(f"MVP Crew: Nenhuma resposta gerada para contact_id {contact_id}")
     except Exception as e:
         logger.error(f"MVP Crew: Erro durante a execução do crew para contact_id {contact_id}: {e}", exc_info=True)
-        
