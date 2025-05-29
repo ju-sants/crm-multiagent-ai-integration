@@ -329,19 +329,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                         "history": history_messages
                     }
                     
-                    all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
-                    messages_left = [x for x in all_messages if x not in last_messages_processed]
-                    
-                    pipe = redis_client.pipeline()
-                    
-                    pipe.delete(f'contacts_messages:waiting:{contact_id}')
-                    
-                    if messages_left:
-                        pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
-                    
-                    pipe.execute()
-
-                    
+                                        
                     found_profile = False
                     
                     delivery_crew.kickoff(inputs_delivery_crew)
@@ -416,6 +404,20 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                                     )
                                 ]
                             )
+                        
+                        all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+                        messages_left = [x for x in all_messages if x not in last_messages_processed]
+                        
+                        pipe = redis_client.pipeline()
+                        
+                        pipe.delete(f'contacts_messages:waiting:{contact_id}')
+                        
+                        if messages_left:
+                            pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+                        
+                        pipe.execute()
+                        
+                        
                     else:
                         run_mvp_crew(contact_id, phone_number, redis_client, history)
                 else:
