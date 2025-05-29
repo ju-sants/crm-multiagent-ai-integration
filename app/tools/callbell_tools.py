@@ -20,7 +20,10 @@ class CallbellSendTool(BaseTool):
         """Envia uma mensagem via Callbell."""
         
         for message in messages:
+            message = f'*Alessandro - Assistente Global System*:\n{message}'
+            
             sleep(0.5)
+            
             url = "https://api.callbell.eu/v1/messages/send"
             headers = {
                 "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
