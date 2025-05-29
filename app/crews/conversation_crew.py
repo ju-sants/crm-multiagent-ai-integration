@@ -341,7 +341,6 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                     
                     pipe.execute()
 
-
                     
                     found_profile = False
                     
