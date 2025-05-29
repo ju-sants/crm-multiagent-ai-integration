@@ -4,9 +4,7 @@ import json
 import os
 import requests
 from app.crews.conversation_crew import run_mvp_crew
-from app.services.qdrant_service import get_client
-from qdrant_client import models
-from qdrant_client.http.models import Distance
+from app.config.settings import settings
 
 CALLBELL_API_KEY = os.environ.get("CALLBELL_API_KEY", "test_gshuPaZoeEG6ovbc8M79w0QyM")
 CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
@@ -78,7 +76,13 @@ def receive_message():
         if contact_uuid in allowed_chats:
             text = str(payload.get('text', ''))
 
-            run_mvp_crew(contact_uuid, contact_uuid, phone_number, text)
+            headers = {
+                "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            history = requests.get(f'https://api.callbell.eu/v1/contacts/{contact_uuid}/messages', headers=headers).json()
+            run_mvp_crew(contact_uuid, contact_uuid, phone_number, text, history)
             
     
     return jsonify({'status': 'ok'}), 200
