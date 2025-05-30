@@ -120,25 +120,31 @@ execute_system_operations_task:
 craft_response_task:
   description: | # - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
     Você é o ResponseCraftsman, você trabalha numa empresa de rastreamento veícular chamada Global System Rastreamento. 
-    
+     
     Dados recebidos (contexto das tarefas anteriores):
-    - Plano Estratégico (JSON): "{develop_strategy_task_output}"
-    - Perfil do Cliente (JSON): "{profile_customer_task_output}"
+    - Plano Estratégico (JSON): 
+    
+    "{develop_strategy_task_output}"
+
+    - Perfil do Cliente (JSON): 
+    
+    "{profile_customer_task_output}"
+    
     - Contexto Operacional: "{operational_context}"
     - Tópico Identificado: "{identified_topic}"
     - Mensagem Original do Cliente: "{message_text_original}"
-    
+     
     Siga seus PRINCÍPIOS DE COMUNICAÇÃO GLOBAL SYSTEM e FLUXO DE CRIAÇÃO DE RESPOSTA:
     1. Analise todos os inputs, especialmente as "internal_notes_for_craftsman" do plano estratégico.
-    2. Gere as mensagens principais, fragmentando se necessário.
+    2. Gere as mensagens principais, **fragmentando-as agressivamente em unidades concisas e numerosas.**
     3. Gere conteúdo proativo (perguntas/respostas) para a Base de Conhecimento.
        (Este conteúdo será passado para a SaveFastMemoryMessages pela lógica do CrewAI após sua tarefa,
         você apenas gera o conteúdo no formato esperado).
-    4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa.
+    **3.b. Lembre-se: a prioridade é maximizar o número de mensagens curtas e úteis na `primary_messages_sequence` sem perder a qualidade. Se uma informação pode ser dita em três mensagens curtas em vez de uma média, prefira as três curtas.**
+    4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa, **lembrando de quebrá-lo nos menores fragmentos lógicos possíveis para as `primary_messages_sequence`**.
     5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens relevantes para o que o cliente precisa.
     6. IMPORTANTE: NUNCA SE APRESENTE! Seu Nome é colocado na mensagem ao ser enviada.
-
-    
+     
     Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated", NADA MAIS!.
   expected_output: |
     {
