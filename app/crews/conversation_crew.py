@@ -60,19 +60,21 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
         process=Process.sequential,
         verbose=True,
     )
+    
+    history_messages = ''
+    if history:
+        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', []))])
 
     inputs_triage = {
         "contact_id": contact_id,
         "message_text": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
         "timestamp": datetime.datetime.now().isoformat(), 
         "l0l1_cache": str(L1CacheQueryTool()._run(contact_id)),
-        "l2_cache": str(FastMemoryMessages()._run(contact_id))
+        "l2_cache": str(FastMemoryMessages()._run(contact_id)),
+        "history": history_messages
     }
     
-    history_messages = ''
-    if history:
-        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', []))])
-
+   
     logger.info(f"MVP Crew: Executando kickoff com inputs: {inputs_triage}")
     try:
         triage_crew.kickoff(inputs_triage)
@@ -236,7 +238,8 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                         if '```' in response_craft_str:
                             response_craft_str = response_craft_str.replace('```', '')
                             
-                        response_craft_json = json.loads(response_craft.raw)
+                        response_craft_json = json.loads(response_craft_str)
+                        
                     except json.JSONDecodeError:
                         logger.error('Não foi possível parsear o json de respostas finais')
                         
@@ -255,6 +258,9 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                             response_craft_json['proactive_content_generated'] = proactive_content
                             
                     else:
+                        if not response_craft_json:
+                            redo = True
+                            
                         if not 'primary_messages_sequence' in response_craft_json:
                             redo = True
                     
@@ -315,7 +321,9 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 if point_memory and found_memory:
                     found_memory = False
                     
-                    history_messages = '\n'.join([f'{"AI" if "Alessandro" in message.get("text", "") else "collaborator" if not message.get("status") == "received" else "customer"}' for message in history.get('messages', [])[:5]])
+                    history_messages = ''
+                    if history:
+                        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status") == "received" else "customer"} - {message.get("text")}' for message in history.get('messages', [])[:5]])
                     
                     last_messages_processed = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
                     
@@ -350,79 +358,140 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                         logger.error(f"MVP Crew: Resposta não é um JSON válido: {response_delivery_str}")
                     
                     if response_delivery_json:
+                        logger.info(f'[{contact_id}] - response_delivery_json existe.')
+
                         if not 'fast_messages_choosen_index' in response_delivery_json:
+                            logger.info(f'[{contact_id}] - "fast_messages_choosen_index" NÃO está em response_delivery_json. Chamando run_mvp_crew.')
                             run_mvp_crew(contact_id, phone_number, redis_client, history)
-                        
-                        if 'choosen_messages' in response_delivery_json:
-                            CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['choosen_messages'])
+                        else:
+                            logger.info(f'[{contact_id}] - "fast_messages_choosen_index" está em response_delivery_json. Prosseguindo com a lógica de order/Final Answer.')
+
+                        if 'order' in response_delivery_json:
+                            logger.info(f'[{contact_id}] - "order" encontrado em response_delivery_json. Enviando mensagens Callbell.')
+                            try:
+                                CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['order'])
+                                logger.info(f'[{contact_id}] - Mensagens do "order" enviadas via CallbellSendTool.')
+                            except Exception as e:
+                                logger.error(f'[{contact_id}] - ERRO ao enviar mensagens do "order" via CallbellSendTool: {e}', exc_info=True)
+
                             new_payload = point_memory.payload.copy()
-                            
+                            logger.info(f'[{contact_id}] - Payload de point_memory copiado para new_payload.')
+
                             if response_delivery_json['fast_messages_choosen_index']:
+                                logger.info(f'[{contact_id}] - "fast_messages_choosen_index" existe e não está vazio. Removendo mensagens primárias.')
                                 for index in response_delivery_json['fast_messages_choosen_index']:
-                                    
-                                    del new_payload['primary_messages_sequence'][index]
-                            
+                                    if 0 <= index < len(new_payload.get('primary_messages_sequence', [])): # Verificação de limite
+                                        logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
+                                        del new_payload['primary_messages_sequence'][index]
+                                    else:
+                                        logger.warning(f'[{contact_id}] - Índice {index} fora dos limites para primary_messages_sequence. Ignorando deleção.')
+                                logger.info(f'[{contact_id}] - Remoção de mensagens primárias concluída.')
+
                             if 'proactive_content_choosen_index' in response_delivery_json and response_delivery_json['proactive_content_choosen_index']:
+                                logger.info(f'[{contact_id}] - "proactive_content_choosen_index" existe e não está vazio. Removendo conteúdo proativo.')
                                 for index in response_delivery_json['proactive_content_choosen_index']:
-                                    del response_delivery_json['proactive_content_choosen_index'][index]
-                            
-                            qdrant_client.upsert(
-                                'FastMemoryMessages',
-                                [
-                                    models.PointStruct(
-                                        id=str(point_memory.id),
-                                        vector={},
-                                        payload=new_payload
-                                    )
-                                ]
-                            )
-                            
+                                    if 0 <= index < len(response_delivery_json.get('proactive_content_choosen_index', [])): # Verificação de limite
+                                        logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
+                                        del response_delivery_json['proactive_content_choosen_index'][index]
+                                    else:
+                                        logger.warning(f'[{contact_id}] - Índice {index} fora dos limites para proactive_content_choosen_index. Ignorando deleção.')
+                                logger.info(f'[{contact_id}] - Remoção de conteúdo proativo concluída.')
+
+                            try:
+                                logger.info(f'[{contact_id}] - Fazendo upsert no Qdrant para FastMemoryMessages com ID: {point_memory.id}.')
+                                qdrant_client.upsert(
+                                    'FastMemoryMessages',
+                                    [
+                                        models.PointStruct(
+                                            id=str(point_memory.id),
+                                            vector={}, # Se o vetor não for atualizado, pode ser um dicionário vazio
+                                            payload=new_payload
+                                        )
+                                    ]
+                                )
+                                logger.info(f'[{contact_id}] - Upsert no Qdrant para FastMemoryMessages CONCLUÍDO.')
+                            except Exception as e:
+                                logger.error(f'[{contact_id}] - ERRO ao fazer upsert no Qdrant para FastMemoryMessages: {e}', exc_info=True)
+
                         elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
-                            CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                            logger.info(f'[{contact_id}] - "Final Answer" e "choosen_messages" encontrados em response_delivery_json. Enviando mensagens Callbell.')
+                            try:
+                                CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                                logger.info(f'[{contact_id}] - Mensagens do "Final Answer" enviadas via CallbellSendTool.')
+                            except Exception as e:
+                                logger.error(f'[{contact_id}] - ERRO ao enviar mensagens do "Final Answer" via CallbellSendTool: {e}', exc_info=True)
 
                             new_response_json = {}
                             new_payload = point_memory.payload.copy()
-                            
-                            for k, v in response_craft_json['Final Answer']:
+                            logger.info(f'[{contact_id}] - Payload de point_memory copiado para new_payload.')
+
+                            logger.info(f'[{contact_id}] - Copiando itens de response_craft_json["Final Answer"] para new_response_json.')
+                            for k, v in response_craft_json['Final Answer'].items(): # Use .items() para iterar sobre dicionário
                                 new_response_json[k] = v
-                                
-                            if new_response_json['fast_messages_choosen_index']:
+                            logger.info(f'[{contact_id}] - Cópia para new_response_json concluída. Conteúdo: {list(new_response_json.keys())}.')
+
+                            if new_response_json.get('fast_messages_choosen_index'):
+                                logger.info(f'[{contact_id}] - "fast_messages_choosen_index" existe em new_response_json. Removendo mensagens primárias.')
                                 for index in new_response_json['fast_messages_choosen_index']:
-                                    
-                                    del new_payload['primary_messages_sequence'][index]
-                            
+                                    if 0 <= index < len(new_payload.get('primary_messages_sequence', [])): # Verificação de limite
+                                        logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence no payload.')
+                                        del new_payload['primary_messages_sequence'][index]
+                                    else:
+                                        logger.warning(f'[{contact_id}] - Índice {index} fora dos limites para primary_messages_sequence no payload. Ignorando deleção.')
+                                logger.info(f'[{contact_id}] - Remoção de mensagens primárias do payload concluída.')
+
                             if 'proactive_content_choosen_index' in new_response_json and new_response_json['proactive_content_choosen_index']:
+                                logger.info(f'[{contact_id}] - "proactive_content_choosen_index" existe em new_response_json. Removendo conteúdo proativo.')
                                 for index in new_response_json['proactive_content_choosen_index']:
-                                    del new_response_json['proactive_content_choosen_index'][index]
-                            
-                            qdrant_client.upsert(
-                                'FastMemoryMessages',
-                                [
-                                    models.PointStruct(
-                                        id=str(point_memory.id),
-                                        vector={},
-                                        payload=new_payload
-                                    )
-                                ]
-                            )
-                        
-                        all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
-                        messages_left = [x for x in all_messages if x not in last_messages_processed]
-                        
-                        pipe = redis_client.pipeline()
-                        
-                        pipe.delete(f'contacts_messages:waiting:{contact_id}')
-                        
-                        if messages_left:
-                            pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
-                        
-                        pipe.execute()
-                        
-                        
+                                    # Mesma observação sobre modificar lista durante iteração
+                                    if 0 <= index < len(new_response_json.get('proactive_content_choosen_index', [])): # Verificação de limite
+                                        logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index em new_response_json.')
+                                        del new_response_json['proactive_content_choosen_index'][index]
+                                    else:
+                                        logger.warning(f'[{contact_id}] - Índice {index} fora dos limites para proactive_content_choosen_index em new_response_json. Ignorando deleção.')
+                                logger.info(f'[{contact_id}] - Remoção de conteúdo proativo de new_response_json concluída.')
+
+                            try:
+                                logger.info(f'[{contact_id}] - Fazendo upsert no Qdrant para FastMemoryMessages com ID: {point_memory.id}.')
+                                qdrant_client.upsert(
+                                    'FastMemoryMessages',
+                                    [
+                                        models.PointStruct(
+                                            id=str(point_memory.id),
+                                            vector={},
+                                            payload=new_payload
+                                        )
+                                    ]
+                                )
+                                logger.info(f'[{contact_id}] - Upsert no Qdrant para FastMemoryMessages CONCLUÍDO.')
+                            except Exception as e:
+                                logger.error(f'[{contact_id}] - ERRO ao fazer upsert no Qdrant para FastMemoryMessages (Final Answer): {e}', exc_info=True)
+
+                        logger.info(f'[{contact_id}] - Iniciando processamento de mensagens restantes no Redis.')
+                        try:
+                            all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+                            logger.info(f'[{contact_id}] - Todas as mensagens na fila Redis antes da filtragem: {len(all_messages)} itens.')
+                            messages_left = [x for x in all_messages if x not in last_messages_processed]
+                            logger.info(f'[{contact_id}] - Mensagens restantes após filtragem (não processadas): {len(messages_left)} itens.')
+
+                            pipe = redis_client.pipeline()
+                            logger.info(f'[{contact_id}] - Pipeline Redis criado.')
+
+                            pipe.delete(f'contacts_messages:waiting:{contact_id}')
+                            logger.info(f'[{contact_id}] - Comando DELETE adicionado ao pipeline para contacts_messages:waiting:{contact_id}.')
+
+                            if messages_left:
+                                pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+                                logger.info(f'[{contact_id}] - Comando RPUSH adicionado ao pipeline para {len(messages_left)} mensagens restantes.')
+
+                            pipe.execute()
+                            logger.info(f'[{contact_id}] - Pipeline Redis EXECUTADO.')
+                        except Exception as e:
+                            logger.error(f'[{contact_id}] - ERRO durante o processamento das mensagens restantes no Redis: {e}', exc_info=True)
+
                     else:
+                        logger.info(f'[{contact_id}] - response_delivery_json é vazio ou nulo. Chamando run_mvp_crew (condição principal).')
                         run_mvp_crew(contact_id, phone_number, redis_client, history)
-                else:
-                    run_mvp_crew(contact_id, phone_number, redis_client, history)
                     
         else:
             logger.warning(f"MVP Crew: Nenhuma resposta gerada para contact_id {contact_id}")

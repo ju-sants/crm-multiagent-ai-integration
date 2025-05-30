@@ -19,6 +19,7 @@ class CallbellSendTool(BaseTool):
     def _run(self, phone_number: str, messages: str) -> Dict[str, Any]:
         """Envia uma mensagem via Callbell."""
         
+        statuses = []
         for message in messages:
             message = f'*Alessandro - Assistente Global System*:\n{message}'
             
@@ -43,7 +44,9 @@ class CallbellSendTool(BaseTool):
             
             response = requests.post(url, json=payload, headers=headers)
             
-            if response.status_code == 200:
-                return {"status": "success", "data": response.json()}
-            else:
-                return {"status": "error", "message": response.text}
+            statuses.append(response.status_code)
+            
+        if all(status == 200 for status in statuses):
+            return {"status": "success", "data": response.json()}
+        else:
+            return {"status": "error", "message": response.text}

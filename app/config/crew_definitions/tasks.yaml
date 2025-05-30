@@ -1,14 +1,18 @@
 triage_initial_message_task:
   description: |
-    Você é o TriageAgent. Analise a mensagem do cliente fornecida no input:
+    Você é o TriageAgent. Analise a mensagem do cliente fornecida no input e seu histórico de cinversação:
     - Mensagem: "{message_text}"
     - ID Contato: "{contact_id}"
     - Timestamp: "{timestamp}"
 
+    Histórico de conversação (5 ùltimas):
+
+    "{history}"
+
     Siga seu FLUXO DE ANÁLISE E DECISÃO:
     1. Consulte caches L0/L1 - (Um dicionário com interações iguais a que recebeu agora).
     2. Consulte a Base de Conhecimento L2 - Qdrant (Uma coleção no qdrant que serve como uma memória no seu cerebro, feita para armazenar mensagens rápidas e embasadas no contexto. Criada por sua equipe especializada.).
-    3. Decida se uma RESPOSTA IMEDIATA é viável.
+    3. Decida se uma RESPOSTA IMEDIATA é viável de acordo com o histórico e a mensagem atual.
        - Se sim, prepare a(s) mensagem(ns) para envio direto e defina "action": "RESPONDED_DIRECTLY".
     4. Se não houver resposta imediata, determine a INTENÇÃO PRINCIPAL, TÓPICO e CONTEXTO OPERACIONAL.
        - Defina "action": "INITIATE_FULL_PROCESSING".
@@ -132,6 +136,8 @@ craft_response_task:
         você apenas gera o conteúdo no formato esperado).
     4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa.
     5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens relevantes para o que o cliente precisa.
+    6. IMPORTANTE: NUNCA SE APRESENTE! Seu Nome é colocado na mensagem ao ser enviada.
+
     
     Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated", NADA MAIS!.
   expected_output: |
