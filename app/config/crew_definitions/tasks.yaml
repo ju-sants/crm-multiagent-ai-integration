@@ -12,9 +12,16 @@ triage_initial_message_task:
     Siga seu FLUXO DE ANÁLISE E DECISÃO:
     1. Consulte caches L0/L1 - (Um dicionário com interações iguais a que recebeu agora).
     2. Consulte a Base de Conhecimento L2 - Qdrant (Uma coleção no qdrant que serve como uma memória no seu cerebro, feita para armazenar mensagens rápidas e embasadas no contexto. Criada por sua equipe especializada.).
-    3. Decida se uma RESPOSTA IMEDIATA é viável de acordo com o histórico e a mensagem atual.
-       - Se sim, prepare a(s) mensagem(ns) para envio direto e defina "action": "RESPONDED_DIRECTLY".
-    4. Se não houver resposta imediata, determine a INTENÇÃO PRINCIPAL, TÓPICO e CONTEXTO OPERACIONAL.
+    3. Decida se uma RESPOSTA IMEDIATA é viável. **Esta decisão exige MUITA CAUTELA.**
+       - **Analise profundamente a MENSAGEM ATUAL do cliente em conjunto com o HISTÓRICO de conversação e o conteúdo das respostas encontradas em L0/L1/L2.**
+       - **Para definir "action": "RESPONDED_DIRECTLY", AS SEGUINTES CONDIÇÕES DEVEM SER ABSOLUTAMENTE SATISFEITAS:**
+         a. A resposta cacheada (de L0/L1 ou L2) é uma **correspondência exata ou de altíssima relevância semântica** para a pergunta/solicitação específica da mensagem atual.
+         b. A resposta cacheada **resolve COMPLETAMENTE a necessidade expressa na mensagem atual**, sem necessitar de contexto adicional ou esclarecimentos.
+         c. A pergunta do cliente é **simples e direta** (ex: uma pergunta factual, uma solicitação de informação básica já catalogada).
+         d. O **histórico da conversa NÃO sugere** que o cliente está em um fluxo mais complexo, que já passou por essa informação, ou que a necessidade é uma variação sutil não coberta pela resposta cacheada.
+       - **SE HOUVER QUALQUER DÚVIDA, ambiguidade, necessidade de interpretação mais profunda, ou se a mensagem atual tiver nuances não totalmente cobertas por uma resposta pronta, VOCÊ DEVE OPTAR POR "INITIATE_FULL_PROCESSING".** É melhor encaminhar para uma análise completa do que arriscar uma resposta direta inadequada.
+       - Se, e somente se, todas as condições (a-d) forem rigorosamente atendidas, defina "action": "RESPONDED_DIRECTLY". (O sistema utilizará a melhor correspondência de cache que você identificou como base para a resposta).
+    4. Se as condições estritas para resposta imediata não forem atendidas, determine a INTENÇÃO PRINCIPAL, TÓPICO e CONTEXTO OPERACIONAL.
        - Defina "action": "INITIATE_FULL_PROCESSING".
 
     L1/L0 - (Interações iguais a essa):
@@ -30,10 +37,11 @@ triage_initial_message_task:
   expected_output: |
     {
       "action": "RESPONDED_DIRECTLY" | "INITIATE_FULL_PROCESSING",
-      "identified_topic": "identified_topic",
-      "operational_context": "operational_context",
+      "identified_topic": "identified_topic", # Deve ser preenchido mesmo para RESPONDED_DIRECTLY, se possível, para logging/análise
+      "operational_context": "operational_context", # Deve ser preenchido mesmo para RESPONDED_DIRECTLY, se possível
     }
 
+    
 profile_customer_task:
   description: |
     Você é o CustomerProfiler. O TriageAgent decidiu por "INITIATE_FULL_PROCESSING".
