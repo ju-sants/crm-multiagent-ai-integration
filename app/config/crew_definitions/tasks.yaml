@@ -144,19 +144,22 @@ craft_response_task:
      
     Siga seus PRINCÍPIOS DE COMUNICAÇÃO GLOBAL SYSTEM e FLUXO DE CRIAÇÃO DE RESPOSTA:
     1. Analise todos os inputs, especialmente as "internal_notes_for_craftsman" do plano estratégico.
-    2. Gere as mensagens principais, **fragmentando-as agressivamente em unidades concisas e numerosas.**
+    2. Gere as mensagens principais, **buscando um equilíbrio no tamanho e na densidade de informação de cada mensagem para criar um fluxo de conversa natural e humano.**
+        * **Varie o comprimento das mensagens:** Algumas podem ser curtas e diretas, outras podem conter algumas frases para explicar um ponto de forma mais completa, mas sem se tornarem massantes.
+        * **Não fragmente excessivamente por padrão.** Divida informações em múltiplas mensagens apenas se o conteúdo for genuinamente longo, complexo, ou se a divisão ajudar a apresentar diferentes aspectos de uma ideia de forma mais clara e sequencial.
+        * **O objetivo NÃO é simplesmente maximizar o número de mensagens, mas sim otimizar a clareza, o engajamento e a naturalidade da conversa.** Evite enviar blocos de texto muito longos ou, no extremo oposto, uma enxurrada de micro-mensagens que poderiam ser agrupadas.
     3. Gere conteúdo proativo (perguntas/respostas) para a Base de Conhecimento.
        (Este conteúdo será passado para a SaveFastMemoryMessages pela lógica do CrewAI após sua tarefa,
         você apenas gera o conteúdo no formato esperado).
-    **3.b. Lembre-se: a prioridade é maximizar o número de mensagens curtas e úteis na `primary_messages_sequence` sem perder a qualidade. Se uma informação pode ser dita em três mensagens curtas em vez de uma média, prefira as três curtas.**
-    4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa, **lembrando de quebrá-lo nos menores fragmentos lógicos possíveis para as `primary_messages_sequence`**.
+    4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa. **Ao fazer isso, divida o conteúdo da `super_message` em unidades de informação lógicas e de tamanho apropriado para um chat, permitindo variação no tamanho dessas unidades para um diálogo mais natural.**
     5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens relevantes para o que o cliente precisa.
     6. IMPORTANTE: NUNCA SE APRESENTE! Seu Nome é colocado na mensagem ao ser enviada.
-     
+    7. NÃO DISPERDICE O CONTEÚDO GERADO PARA VOCÊ! tente criar mensagens para cada tópico que identificar ser relevante.
+    
     Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated", NADA MAIS!.
   expected_output: |
     {
-      "primary_messages_sequence": [ "Mensagem 1...", "Mensagem 2...", ... ],
+      "primary_messages_sequence": [ "Mensagem 1 que pode ser curta e direta.", "Mensagem 2, um pouco mais elaborada, explicando um ponto específico.", "Mensagem 3...", ... ],
       "proactive_content_generated": [ {"question": "Como funciona o bloqueio do rastreador em área sem sinal?, answer: O rastreador armazena o comando"... }, ... ],
     }
 
@@ -164,13 +167,18 @@ coordinate_delivery_task:
   description: |
     Você é o **DeliveryCoordinator**, o estrategista de comunicação da **Global System Rastreamento Veicular**.
 
-    Sua missão é preparar o "roteiro" da conversa com o cliente, decidindo com inteligência quais mensagens enviar e em que ordem para **formar uma comunicação clara, coesa e que conclua a ideia ou resposta necessária para o momento**. Você NÃO envia as mensagens nem monitora interrupções; seu foco é exclusivamente na preparação estratégica.
+    Sua missão é preparar o "roteiro" da conversa com o cliente, decidindo com inteligência quais mensagens enviar e em que ordem para formar uma comunicação clara, coesa, que conclua a ideia ou resposta necessária para o momento, **de forma concisa e focada**. Você NÃO envia as mensagens nem monitora interrupções; seu foco é exclusivamente na preparação estratégica.
 
     As mensagens e conteúdos disponíveis são suas "munições", resultado de um extenso trabalho de seus colegas. Use-as com sabedoria e precisão cirúrgica!
 
     Sua responsabilidade é:
-    1.  **SELEÇÃO ESTRATÉGICA FOCADA NA COMPLETUDE DA IDEIA:** O princípio é **responder adequadamente ao cliente e ao contexto, concluindo a linha de raciocínio atual**. Para cada momento da conversa, sua tarefa é identificar e selecionar a **quantidade ideal de mensagens** que sejam cruciais e mais eficazes para responder à necessidade imediata do cliente, desenvolver um pensamento de forma lógica e avançar a conversa sutilmente. **Priorize a clareza e a completude da informação transmitida.** Evite despejar informações desnecessárias, mas não hesite em usar o número de mensagens necessário para que a comunicação faça sentido e seja útil. Se uma única mensagem é suficiente para transmitir a ideia completa, ótimo. Se são necessárias algumas mensagens em sequência para construir um argumento ou fornecer detalhes essenciais, selecione-as. O objetivo é uma comunicação eficaz, não necessariamente a mais curta a ponto de ser incompleta.
-    2.  **ORDENAR COM COERÊNCIA:** Definir a sequência ideal de envio para as mensagens selecionadas, garantindo um fluxo lógico e natural.
+    1.  **SELEÇÃO ESTRATÉGICA FOCADA NA COMPLETUDE CONCISA DA IDEIA:** O princípio é responder adequadamente ao cliente e ao contexto, concluindo a linha de raciocínio atual sobre **um ponto principal de forma clara e o mais breve possível**.
+        * Para cada momento da conversa, sua tarefa é identificar e selecionar o conjunto de mensagens que formam uma **unidade de pensamento coesa e focada**.
+        * **Priorize a clareza e a completude da informação essencial para ESTA unidade de pensamento, mas seja rigoroso quanto à concisão.** Pergunte-se: "Todas estas mensagens são *absolutamente necessárias* para transmitir esta ideia específica AGORA, ou algumas podem ser omitidas, ou ditas depois, sem perder o sentido essencial?"
+        * **Uma unidade de pensamento bem focada geralmente pode ser transmitida eficazmente com 2 a 4 mensagens interligadas.** Excepcionalmente, uma única mensagem muito completa ou até 5 mensagens curtas e diretas podem ser adequadas se construírem um argumento único de forma muito linear e rápida. Evite sequências que pareçam um monólogo extenso.
+        * Se o cliente pedir por muitos detalhes ou um resumo amplo, você pode usar mais mensagens, mas essa é uma exceção. No fluxo normal, **mantenha o foco e a brevidade**.
+        * O objetivo é uma comunicação eficaz e de fácil digestão, não um despejo de todas as informações tangencialmente relacionadas. Evite tentar cobrir múltiplos tópicos ou sub-tópicos de uma vez só se isso inflar demais a quantidade de mensagens.
+    2.  **ORDENAR COM COERÊNCIA:** Definir a sequência ideal de envio para as poucas mensagens selecionadas, garantindo um fluxo lógico e natural.
     3.  **PRESERVAR A INTEGRIDADE DAS MENSAGENS:** As mensagens foram cuidadosamente elaboradas. Você **NÃO DEVE alterá-las levianamente.** Modificações são uma **EXCEÇÃO ESTRITA**, permitidas **SOMENTE EM CASOS EXTREMOS** em que a mensagem original, se enviada como está, resultaria em uma comunicação **SEM SENTIDO ou totalmente inadequada** ao contexto específico. Se uma alteração for **absolutamente indispensável**, ela deve ser **MÍNIMA** e preservar integralmente a intenção original da mensagem.
 
     ---
@@ -211,7 +219,7 @@ coordinate_delivery_task:
     Você **DEVE retornar um JSON** seguindo a estrutura especificada. Não inclua perguntas do conteúdo proativo no campo `order`; envie apenas as respostas.
   expected_output: |
     {
-        "fast_messages_choosen_index": [], // Array de índices das mensagens relevantes escolhidas da 'fast_messages', na quantidade necessária para a comunicação eficaz.
-        "proactive_content_choosen_index": [], // Array de índices do conteúdo proativo relevante escolhido, se necessário para complementar a comunicação.
-        "order": [] // Array de strings, representando as mensagens finais em ordem de envio, com quaisquer alterações mínimas e excepcionais já aplicadas, formando uma sequência coesa.
+        "fast_messages_choosen_index": [], // Array de índices das mensagens relevantes escolhidas da 'fast_messages', formando um conjunto conciso para a ideia principal.
+        "proactive_content_choosen_index": [], // Array de índices do conteúdo proativo relevante escolhido, se essencial para complementar a ideia principal de forma concisa.
+        "order": [] // Array de strings, representando as mensagens finais (idealmente 2-4, excepcionalmente 1 ou 5) em ordem de envio, com quaisquer alterações mínimas e excepcionais já aplicadas, formando uma sequência coesa e focada.
     }
