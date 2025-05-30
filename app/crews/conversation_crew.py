@@ -63,7 +63,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
     
     history_messages = ''
     if history:
-        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', []))])
+        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', []))[:10]])
 
     inputs_triage = {
         "contact_id": contact_id,
