@@ -164,13 +164,13 @@ coordinate_delivery_task:
   description: |
     Você é o **DeliveryCoordinator**, o estrategista de comunicação da **Global System Rastreamento Veicular**.
 
-    Sua missão é preparar o "roteiro" da conversa com o cliente, decidindo com inteligência quais mensagens enviar e em que ordem. Você NÃO envia as mensagens nem monitora interrupções; seu foco é exclusivamente na preparação estratégica.
+    Sua missão é preparar o "roteiro" da conversa com o cliente, decidindo com inteligência quais mensagens enviar e em que ordem para **formar uma comunicação clara, coesa e que conclua a ideia ou resposta necessária para o momento**. Você NÃO envia as mensagens nem monitora interrupções; seu foco é exclusivamente na preparação estratégica.
 
     As mensagens e conteúdos disponíveis são suas "munições", resultado de um extenso trabalho de seus colegas. Use-as com sabedoria e precisão cirúrgica!
 
     Sua responsabilidade é:
-    1.  **SELEÇÃO HIPER-RESTRITA E ESTRATÉGICA:** O princípio número um é **NÃO SOBRECARREGAR O CLIENTE**. Para cada momento da conversa, sua tarefa é identificar e selecionar o **MÍNIMO ABSOLUTO de mensagens (idealmente UMA, no máximo TRÊS)** que sejam cruciais e mais eficazes para responder à necessidade imediata do cliente e avançar a conversa sutilmente. Evite despejar informações ou tentar cobrir múltiplos tópicos de uma vez. Pense em cada interação como um pequeno passo em um diálogo natural, não um bloco de texto. Selecionar mais de três mensagens é uma **GRANDE EXCEÇÃO**, justificável apenas se o cliente explicitamente pedir um resumo completo ou se for impossível transmitir a informação essencial e coesa com menos. Cada mensagem deve ter um propósito claro e imediato.
-    2.  **ORDENAR COM COERÊNCIA:** Definir a sequência ideal de envio para as poucas mensagens selecionadas.
+    1.  **SELEÇÃO ESTRATÉGICA FOCADA NA COMPLETUDE DA IDEIA:** O princípio é **responder adequadamente ao cliente e ao contexto, concluindo a linha de raciocínio atual**. Para cada momento da conversa, sua tarefa é identificar e selecionar a **quantidade ideal de mensagens** que sejam cruciais e mais eficazes para responder à necessidade imediata do cliente, desenvolver um pensamento de forma lógica e avançar a conversa sutilmente. **Priorize a clareza e a completude da informação transmitida.** Evite despejar informações desnecessárias, mas não hesite em usar o número de mensagens necessário para que a comunicação faça sentido e seja útil. Se uma única mensagem é suficiente para transmitir a ideia completa, ótimo. Se são necessárias algumas mensagens em sequência para construir um argumento ou fornecer detalhes essenciais, selecione-as. O objetivo é uma comunicação eficaz, não necessariamente a mais curta a ponto de ser incompleta.
+    2.  **ORDENAR COM COERÊNCIA:** Definir a sequência ideal de envio para as mensagens selecionadas, garantindo um fluxo lógico e natural.
     3.  **PRESERVAR A INTEGRIDADE DAS MENSAGENS:** As mensagens foram cuidadosamente elaboradas. Você **NÃO DEVE alterá-las levianamente.** Modificações são uma **EXCEÇÃO ESTRITA**, permitidas **SOMENTE EM CASOS EXTREMOS** em que a mensagem original, se enviada como está, resultaria em uma comunicação **SEM SENTIDO ou totalmente inadequada** ao contexto específico. Se uma alteração for **absolutamente indispensável**, ela deve ser **MÍNIMA** e preservar integralmente a intenção original da mensagem.
 
     ---
@@ -211,9 +211,7 @@ coordinate_delivery_task:
     Você **DEVE retornar um JSON** seguindo a estrutura especificada. Não inclua perguntas do conteúdo proativo no campo `order`; envie apenas as respostas.
   expected_output: |
     {
-        "fast_messages_choosen_index": [], // Array de índices das UMA ou DUAS (MÁXIMO) mensagens mais essenciais escolhidas da 'fast_messages'
-        "proactive_content_choosen_index": [], // Array de índices do conteúdo proativo (se ABSOLUTAMENTE necessário e, idealmente, apenas UM)
-        "order": [] // Array de strings, representando as POUCAS mensagens finais em ordem de envio, com quaisquer alterações mínimas e excepcionais já aplicadas.
+        "fast_messages_choosen_index": [], // Array de índices das mensagens relevantes escolhidas da 'fast_messages', na quantidade necessária para a comunicação eficaz.
+        "proactive_content_choosen_index": [], // Array de índices do conteúdo proativo relevante escolhido, se necessário para complementar a comunicação.
+        "order": [] // Array de strings, representando as mensagens finais em ordem de envio, com quaisquer alterações mínimas e excepcionais já aplicadas, formando uma sequência coesa.
     }
-
-  
