@@ -5,7 +5,7 @@ triage_initial_message_task:
     - ID Contato: "{contact_id}"
     - Timestamp: "{timestamp}"
 
-    Histórico de conversação (5 ùltimas):
+    Histórico de conversação (10 ùltimas):
 
     "{history}"
 
@@ -41,7 +41,7 @@ triage_initial_message_task:
       "operational_context": "operational_context", # Deve ser preenchido mesmo para RESPONDED_DIRECTLY, se possível
     }
 
-    
+
 profile_customer_task:
   description: |
     Você é o CustomerProfiler. O TriageAgent decidiu por "INITIATE_FULL_PROCESSING".
