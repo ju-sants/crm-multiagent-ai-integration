@@ -1,12 +1,14 @@
 from flask import Flask, jsonify, request
 import json
 import requests
+import threading
 
 import os
 from time import sleep
 import datetime
 
 import logging
+
 
 from app.core.logger import get_logger
 from app.crews.conversation_crew import run_mvp_crew
@@ -27,15 +29,6 @@ redis_client = get_redis()
 
 client_description = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
 logger:  logging.Logger = get_logger(__name__)
-
-app.config.update(
-    CELERY_TASK_SERIALIZER='json',
-    CELERY_ACCEPT_CONTENT=['json'],
-    CELERY_TIMEZONE='America/Sao_Paulo',
-    CELERY_ENABLE_UTC=True,
-)
-
-celery = make_celery(app)
 
 def get_callbell_headers():
     """Retorna os headers padrão para as requisições Callbell."""
@@ -73,7 +66,6 @@ def send_callbell_message(phone_number, text):
 def get_allowed_chats():
     return ['71464be80c504971ae263d710b39dd1f']
 
-@celery.task
 def process_requisitions(payload):
     logger.info(f'[{payload.get("uuid", "N/A")}] - INICIANDO process_requisitions para payload: {payload.get("uuid", "N/A")} de {payload.get("from", "N/A")}')
 
@@ -249,8 +241,14 @@ def receive_message():
             logger.warning("Webhook: Mensagem recebida sem 'contact.uuid'. Ignorando.")
             return jsonify({"status": "ok", "message": "No contact UUID"}), 200
 
-        process_requisitions.delay(payload)
+        thread = threading.Thread(
+            target=process_requisitions,
+            args=(payload,),
+            daemon=True
+        )
         
+        thread.start()
+                
     return jsonify({'status': 'ok'}), 200
 
 
