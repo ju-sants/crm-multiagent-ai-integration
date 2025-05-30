@@ -366,6 +366,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                         else:
                             logger.info(f'[{contact_id}] - "fast_messages_choosen_index" está em response_delivery_json. Prosseguindo com a lógica de order/Final Answer.')
 
+                        payload = point_memory.payload.copy()
                         if 'order' in response_delivery_json:
                             logger.info(f'[{contact_id}] - "order" encontrado em response_delivery_json. Enviando mensagens Callbell.')
                             try:
@@ -380,21 +381,19 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                             if response_delivery_json['fast_messages_choosen_index']:
                                 logger.info(f'[{contact_id}] - "fast_messages_choosen_index" existe e não está vazio. Removendo mensagens primárias.')
                                 for index in response_delivery_json['fast_messages_choosen_index']:
-                                    if 0 <= index < len(new_payload.get('primary_messages_sequence', [])): # Verificação de limite
+                                    
                                         logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
-                                        del new_payload['primary_messages_sequence'][index]
-                                    else:
-                                        logger.warning(f'[{contact_id}] - Índice {index} fora dos limites para primary_messages_sequence. Ignorando deleção.')
+                                        new_payload['primary_messages_sequence'].remove(payload['primary_messages_sequence'][index])
+                                        
                                 logger.info(f'[{contact_id}] - Remoção de mensagens primárias concluída.')
 
                             if 'proactive_content_choosen_index' in response_delivery_json and response_delivery_json['proactive_content_choosen_index']:
                                 logger.info(f'[{contact_id}] - "proactive_content_choosen_index" existe e não está vazio. Removendo conteúdo proativo.')
                                 for index in response_delivery_json['proactive_content_choosen_index']:
-                                    if 0 <= index < len(response_delivery_json.get('proactive_content_choosen_index', [])): # Verificação de limite
+                                    
                                         logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
-                                        del response_delivery_json['proactive_content_choosen_index'][index]
-                                    else:
-                                        logger.warning(f'[{contact_id}] - Índice {index} fora dos limites para proactive_content_choosen_index. Ignorando deleção.')
+                                        response_delivery_json['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
+                                        
                                 logger.info(f'[{contact_id}] - Remoção de conteúdo proativo concluída.')
 
                             try:
@@ -433,22 +432,19 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                             if new_response_json.get('fast_messages_choosen_index'):
                                 logger.info(f'[{contact_id}] - "fast_messages_choosen_index" existe em new_response_json. Removendo mensagens primárias.')
                                 for index in new_response_json['fast_messages_choosen_index']:
-                                    if 0 <= index < len(new_payload.get('primary_messages_sequence', [])): # Verificação de limite
-                                        logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence no payload.')
-                                        del new_payload['primary_messages_sequence'][index]
-                                    else:
-                                        logger.warning(f'[{contact_id}] - Índice {index} fora dos limites para primary_messages_sequence no payload. Ignorando deleção.')
+                                    
+                                    logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
+                                    new_payload['primary_messages_sequence'].remove(payload['primary_messages_sequence'][index])
+                                    
                                 logger.info(f'[{contact_id}] - Remoção de mensagens primárias do payload concluída.')
 
                             if 'proactive_content_choosen_index' in new_response_json and new_response_json['proactive_content_choosen_index']:
                                 logger.info(f'[{contact_id}] - "proactive_content_choosen_index" existe em new_response_json. Removendo conteúdo proativo.')
                                 for index in new_response_json['proactive_content_choosen_index']:
-                                    # Mesma observação sobre modificar lista durante iteração
-                                    if 0 <= index < len(new_response_json.get('proactive_content_choosen_index', [])): # Verificação de limite
-                                        logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index em new_response_json.')
-                                        del new_response_json['proactive_content_choosen_index'][index]
-                                    else:
-                                        logger.warning(f'[{contact_id}] - Índice {index} fora dos limites para proactive_content_choosen_index em new_response_json. Ignorando deleção.')
+                                    
+                                    logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
+                                    response_delivery_json['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
+                                    
                                 logger.info(f'[{contact_id}] - Remoção de conteúdo proativo de new_response_json concluída.')
 
                             try:
