@@ -1,8 +1,10 @@
-from app.core.logger import logger
+from app.core.logger import get_logger
 
 import requests
 
 from time import sleep
+
+logger = get_logger()
 
 
 def send_telegram_report(report_lines: list, chat_id: str, job_name: str):
