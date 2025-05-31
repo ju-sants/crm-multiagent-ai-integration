@@ -66,7 +66,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
     
     history_messages = ''
     if history:
-        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', [])[:10])])
+        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' if message.get("text") else '' for message in reversed(history.get('messages', [])[:10])])
 
     inputs_triage = {
         "contact_id": contact_id,
@@ -101,7 +101,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 logger.error(f"MVP Crew: Resposta da triagem não é um JSON válido: {response_triage}")
             
             if json_response:
-                if 'operational_context' in json_response and json_response['operational_contexto'] == 'BUDGET_ACCEPTED':
+                if 'operational_context' in json_response and json_response['operational_context'] == 'BUDGET_ACCEPTED':
                     
                     qdrant_client = get_client()
                     
