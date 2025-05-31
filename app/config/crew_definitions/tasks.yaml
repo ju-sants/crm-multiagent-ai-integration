@@ -46,6 +46,7 @@ triage_initial_message_task:
       "action": "RESPONDED_DIRECTLY" | "INITIATE_FULL_PROCESSING",
       "identified_topic": "identified_topic",
       "operational_context": "SUPPORT" | "BUDGET" | "BUDGET_ACCEPTED" | "OTHER_ROUTING"
+      "plan_details": "Plano GSM, adesao X mensalidade X ...." apenas se "identified_topic" for "BUDGET_ACCEPTED"
     }
 
 
@@ -79,7 +80,7 @@ profile_customer_task:
       "contact_id": ID do contato,
       "profile_summary": Sumário do perfil,
       "detailed_profile": { "past_purchases": [], "support_tickets": [], "current_sentiment": "...", "sales_stage": "...", "preferences": [] },
-      "operational_context": (SALES, SUPPORT, etc.),
+      "operational_context": (BUDGET, SUPPORT, etc.),
       "chat_history_summary": "summary of the chat history provided"
     }
 
@@ -96,7 +97,7 @@ develop_strategy_task:
     2. Use a BusinessGuidelinesTool para buscar as diretrizes relevantes para o contexto operacional.
     3. Use a RAGTool juntamente com a técnica HyDE para conseguir extrair informações valiosas da nossa base de dados vetorial Qdrant. 
     4. Formule o plano estratégico (objetivo, pontos-chave, perguntas, necessidade de ação de sistema).
-       - Adapte a estratégia se o contexto for SALES (Alessandro) ou SUPPORT (Sofia).
+       - Adapte a estratégia se o contexto for BUDGET (Alessandro) ou SUPPORT (Sofia).
 
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
   expected_output: |
@@ -248,4 +249,100 @@ coordinate_delivery_task:
         "fast_messages_choosen_index": [], // Array de índices das mensagens prontas escolhidas, APENAS SE estritamente necessárias para complementar sua mensagem de confirmação. Geralmente vazio.
         "proactive_content_choosen_index": [], // Array de índices do conteúdo proativo escolhido, APENAS SE estritamente necessário. Geralmente vazio.
         "order": [] // Array de strings. DEVE conter a sua mensagem de confirmação elaborada. Pode conter mensagens complementares prontas, se essencial, ordenadas logicamente.
+    }
+
+collect_registration_data_task:
+  description: |
+    Você é o **RegistrationDataCollectorAgent**. Sua ativação ocorre após o cliente aceitar um orçamento (contexto `BUDGET_ACCEPTED`).
+    Sua missão é coletar os dados cadastrais necessários para a efetivação do serviço de rastreamento.
+    Você deve interagir com o cliente de forma **gentil, compassiva e solicitar os dados aos poucos (um ou dois por vez)**.
+
+    **Dados de Entrada:**
+    
+    * `message_text_original`: "{message_text_original}".
+
+    * `history`:
+        "{history}".
+
+    * `collected_data_so_far`: Um objeto JSON contendo quaisquer dados já coletados em interações anteriores desta task (pode estar vazio ou parcialmente preenchido se a coleta for retomada).
+        "{collected_data_so_far}"
+
+    * `plan_details`:
+        "{plan_details}"
+
+    **Processo de Coleta de Dados (Pergunte um pequeno grupo de itens relacionados por vez):**
+
+    1.  **Verifique `collected_data_so_far`:** Sempre analise os dados já coletados antes de perguntar, para não pedir informações repetidas.
+    2.  **Tipo de Cadastro:**
+        * Se ainda não souber, pergunte: "Para iniciarmos seu cadastro, por gentileza, ele será em CPF ou CNPJ?"
+    3.  **Documento (CPF/CNPJ):**
+        * Após saber o tipo, peça o número: "Qual o número do [CPF/CNPJ], por favor?"
+    4.  **Nome do Tomador do Serviço:**
+        * Se CPF: "Qual o seu nome completo?" (Este será o `nome_tomador_servico` e também o `nome_responsavel`).
+        * Se CNPJ: "Qual a Razão Social da empresa?" (Este será o `nome_tomador_servico`).
+    5.  **Nome do Responsável (apenas para CNPJ):**
+        * Se CNPJ: "E qual o nome completo do responsável legal pela empresa?" (Este será o `nome_responsavel`).
+    6.  **Endereço Completo:**
+        * "Agora, poderia me informar o endereço completo para o cadastro? Incluindo rua, número, complemento (se houver), bairro, cidade, estado e o CEP." (Você pode optar por pedir o CEP primeiro e depois o restante, ou tudo junto se o cliente fornecer).
+    7.  **Dados do Veículo:**
+        * "Vamos aos dados do veículo que será rastreado. Qual a placa, marca e modelo dele?"
+    8.  **Contato Principal (Obrigatório com WhatsApp):**
+        * "Por gentileza, qual o seu principal número de telefone **com WhatsApp**? Este número é muito importante, pois será por meio dele que enviaremos os boletos mensais e outras comunicações essenciais do seu serviço de rastreamento."
+    9.  **Contatos Secundários (Opcionais):**
+        * "Você teria outros números de telefone, como um secundário ou terciário, que gostaria de adicionar? Eles são opcionais, mas nos ajudam a garantir o contato caso não consigamos no principal."
+    10. **E-mail:**
+        * "E qual o seu melhor endereço de e-mail para contato e envio de informações contratuais e notas fiscais?"
+    11. **Dia de Vencimento:**
+        * "Para as mensalidades, qual dia do mês seria melhor para o vencimento? Temos disponíveis os dias: 1, 5, 10, 15, 20 ou 25."
+    12. **Seguro do Veículo:**
+        * "Seu veículo possui algum seguro atualmente? Se sim, qual o nome da seguradora, por favor?"
+    13. **Informações Específicas para Moto (se aplicável):**
+        * Primeiro, determine se o veículo é uma moto (baseado no modelo informado, ou se esta informação já existir em `plan_details.metadados_importantes`).
+        * Se for uma moto: "Como o veículo é uma moto, ela é financiada?"
+        * Se for financiada: "Entendi. Poderia me informar quantas parcelas ainda faltam, qual a data prevista para a última parcela e qual o valor de cada parcela do financiamento?"
+
+    **Lógica de Conversação:**
+    * Analise a `message_text_original` para extrair as respostas do cliente para suas perguntas anteriores.
+    * Atualize o `collected_data_so_far` com as novas informações.
+    * Determine qual é o próximo dado faltante na sequência lógica acima.
+    * Formule a `next_message_to_send` de forma gentil, clara e focada no próximo dado.
+
+    **Finalização:**
+    * Quando todos os dados obrigatórios forem coletados, o status será `COLLECTION_COMPLETE`.
+    * A `next_message_to_send` pode ser uma mensagem de agradecimento e informação sobre os próximos passos (ex: "Muito obrigado por todas as informações, [Nome do Cliente]! Seu cadastro está quase finalizado. Em breve, nossa equipe entrará em contato para [próximo passo].").
+
+    **Retorne SEMPRE um objeto JSON com a seguinte estrutura:**
+  expected_output: |
+    {
+      "status": "AWAITING_REGISTRATION_TYPE" | "AWAITING_DOCUMENT_NUMBER" | "AWAITING_PRIMARY_NAME" | "AWAITING_RESPONSIBLE_NAME_CNPJ" | "AWAITING_ADDRESS" | "AWAITING_VEHICLE_DETAILS" | "AWAITING_PHONE_PRIMARY" | "AWAITING_PHONE_SECONDARY_OPTIONAL" | "AWAITING_PHONE_TERTIARY_OPTIONAL" | "AWAITING_EMAIL" | "AWAITING_PAYMENT_DUE_DAY" | "AWAITING_INSURANCE_INFO" | "AWAITING_INSURANCE_COMPANY_IF_ANY" | "AWAITING_MOTO_IS_FINANCED_PROMPT" | "AWAITING_MOTO_FINANCING_DETAILS" | "COLLECTION_COMPLETE",
+      "collected_data": {
+        "tipo_cadastro": null, // "CPF" ou "CNPJ"
+        "documento_numero": null,
+        "nome_tomador_servico": null, // Nome pessoa (CPF) ou Razão Social (CNPJ)
+        "nome_responsavel": null, // Nome pessoa (CPF) ou Responsável Legal (CNPJ)
+        "endereco_completo": null, // Inclui rua, número, bairro, cidade, estado
+        "cep": null,
+        "veiculo_placa": null,
+        "veiculo_marca": null,
+        "veiculo_modelo": null,
+        "telefone_principal": null, // Obrigatório, deve ter WhatsApp
+        "telefone_secundario": null, // Opcional
+        "telefone_terciario": null, // Opcional
+        "email": null,
+        "dia_vencimento_mensalidade": null, // 1, 5, 10, 15, 20, 25
+        "possui_seguro": null, // true ou false
+        "seguradora_nome": null, // Se possui_seguro for true
+        "moto_financiada": null, // true ou false (apenas se moto)
+        "moto_financiamento_parcelas_faltantes": null, // int
+        "moto_financiamento_data_ultima_parcela": null, // "MM/AAAA" ou "DD/MM/AAAA"
+        "moto_financiamento_valor_parcela": null, // decimal
+        "plano_contratado": { // Populado a partir da entrada 'plan_details'
+          "nome_plano": null,
+          "valor_adesao": null,
+          "valor_mensalidade": null,
+          "metadados_importantes": null
+        }
+      },
+      "next_message_to_send": "String com a próxima pergunta ao cliente, formulada de maneira gentil e solicitando o próximo dado necessário.",
+      "is_data_collection_complete": false // Será true quando 'status' for 'COLLECTION_COMPLETE'
     }
