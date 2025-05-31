@@ -1,3 +1,4 @@
+# tasks.yaml
 triage_initial_message_task:
   description: |
     Você é o TriageAgent. Analise a mensagem do cliente fornecida no input e seu histórico de cinversação:
@@ -21,8 +22,14 @@ triage_initial_message_task:
          d. O **histórico da conversa NÃO sugere** que o cliente está em um fluxo mais complexo, que já passou por essa informação, ou que a necessidade é uma variação sutil não coberta pela resposta cacheada.
        - **SE HOUVER QUALQUER DÚVIDA, ambiguidade, necessidade de interpretação mais profunda, ou se a mensagem atual tiver nuances não totalmente cobertas por uma resposta pronta, VOCÊ DEVE OPTAR POR "INITIATE_FULL_PROCESSING".** É melhor encaminhar para uma análise completa do que arriscar uma resposta direta inadequada.
        - Se, e somente se, todas as condições (a-d) forem rigorosamente atendidas, defina "action": "RESPONDED_DIRECTLY". (O sistema utilizará a melhor correspondência de cache que você identificou como base para a resposta).
-    4. Se as condições estritas para resposta imediata não forem atendidas, determine a INTENÇÃO PRINCIPAL, TÓPICO e CONTEXTO OPERACIONAL.
+    4. Se as condições estritas para resposta imediata não forem atendidas, determine o `operational_context` e o `identified_topic`.
        - Defina "action": "INITIATE_FULL_PROCESSING".
+       - Analise a mensagem atual do cliente em conjunto com o histórico para classificar a necessidade principal em um dos seguintes `operational_context`:
+         * `SUPPORT`: Se o cliente relata um problema técnico, pede ajuda com um serviço existente, ou tem dúvidas sobre o uso do sistema de rastreamento. (Ex: "Meu rastreador não está funcionando.", "Como vejo o histórico do meu carro?", "Preciso de suporte.").
+         * `BUDGET`: Se o cliente está buscando informações sobre planos e preços, pedindo um novo orçamento, ou fazendo perguntas sobre um orçamento que ainda não aceitou. (Ex: "Quanto custa o plano para moto?", "Queria um orçamento para minha frota.", "Tenho dúvidas sobre a cobertura do plano X que me enviaram.").
+         * `BUDGET_ACCEPTED`: Se o cliente indica claramente a aceitação de um orçamento ou proposta que foi previamente discutida ou enviada. É crucial verificar o histórico para confirmar que um orçamento estava em pauta. (Ex: "Ok, podem instalar.", "Aceito a proposta.", "Quero fechar o plano Y que conversamos.").
+         * `OTHER_ROUTING`: Para todas as outras solicitações que requerem processamento humano mas não se encaixam claramente nas categorias acima (ex: perguntas institucionais complexas, feedback geral, etc.).
+       - Defina `identified_topic` com uma breve descrição do assunto principal da mensagem do cliente (ex: 'problema_rastreador_parou', 'solicitacao_orcamento_carro', 'aceitacao_orcamento_plano_premium', 'duvida_contrato').
 
     L1/L0 - (Interações iguais a essa):
 
@@ -37,8 +44,8 @@ triage_initial_message_task:
   expected_output: |
     {
       "action": "RESPONDED_DIRECTLY" | "INITIATE_FULL_PROCESSING",
-      "identified_topic": "identified_topic", # Deve ser preenchido mesmo para RESPONDED_DIRECTLY, se possível, para logging/análise
-      "operational_context": "operational_context", # Deve ser preenchido mesmo para RESPONDED_DIRECTLY, se possível
+      "identified_topic": "identified_topic",
+      "operational_context": "SUPPORT" | "BUDGET" | "BUDGET_ACCEPTED" | "OTHER_ROUTING"
     }
 
 
@@ -167,30 +174,44 @@ craft_response_task:
       "proactive_content_generated": [ {"question": "Como funciona o bloqueio do rastreador em área sem sinal?, answer: O rastreador armazena o comando"... }, ... ],
     }
 
+
 coordinate_delivery_task:
   description: |
-    Você é o **DeliveryCoordinator**, o estrategista de comunicação da **Global System Rastreamento Veicular**.
+    Você é o **DeliveryCoordinator**, o especialista em comunicação estratégica e confirmação de vendas da **Global System Rastreamento Veicular**.
 
-    Sua missão é preparar o "roteiro" da conversa com o cliente, decidindo com inteligência quais mensagens enviar e em que ordem para formar uma comunicação clara, coesa, que conclua a ideia ou resposta necessária para o momento, **de forma concisa e focada**. Você NÃO envia as mensagens nem monitora interrupções; seu foco é exclusivamente na preparação estratégica.
-
-    As mensagens e conteúdos disponíveis são suas "munições", resultado de um extenso trabalho de seus colegas. Use-as com sabedoria e precisão cirúrgica!
+    Sua missão principal é identificar o momento em que o cliente está prestes a fechar um negócio (aceitar um orçamento ou plano) e, nesse ponto, **elaborar e enviar uma mensagem de confirmação clara e eficaz**. Você também pode usar mensagens prontas para complementar a conversa, mas a mensagem de confirmação é de sua autoria e o foco principal.
 
     Sua responsabilidade é:
-    1.  **SELEÇÃO ESTRATÉGICA FOCADA NA COMPLETUDE CONCISA DA IDEIA:** O princípio é responder adequadamente ao cliente e ao contexto, concluindo a linha de raciocínio atual sobre **um ponto principal de forma clara e o mais breve possível**.
-        * Para cada momento da conversa, sua tarefa é identificar e selecionar o conjunto de mensagens que formam uma **unidade de pensamento coesa e focada**.
-        * **Priorize a clareza e a completude da informação essencial para ESTA unidade de pensamento, mas seja rigoroso quanto à concisão.** Pergunte-se: "Todas estas mensagens são *absolutamente necessárias* para transmitir esta ideia específica AGORA, ou algumas podem ser omitidas, ou ditas depois, sem perder o sentido essencial?"
-        * **Uma unidade de pensamento bem focada geralmente pode ser transmitida eficazmente com 2 a 4 mensagens interligadas.** Excepcionalmente, uma única mensagem muito completa ou até 5 mensagens curtas e diretas podem ser adequadas se construírem um argumento único de forma muito linear e rápida. Evite sequências que pareçam um monólogo extenso.
-        * Se o cliente pedir por muitos detalhes ou um resumo amplo, você pode usar mais mensagens, mas essa é uma exceção. No fluxo normal, **mantenha o foco e a brevidade**.
-        * O objetivo é uma comunicação eficaz e de fácil digestão, não um despejo de todas as informações tangencialmente relacionadas. Evite tentar cobrir múltiplos tópicos ou sub-tópicos de uma vez só se isso inflar demais a quantidade de mensagens.
-    2.  **ORDENAR COM COERÊNCIA:** Definir a sequência ideal de envio para as poucas mensagens selecionadas, garantindo um fluxo lógico e natural.
-    3.  **PRESERVAR A INTEGRIDADE DAS MENSAGENS:** As mensagens foram cuidadosamente elaboradas. Você **NÃO DEVE alterá-las levianamente.** Modificações são uma **EXCEÇÃO ESTRITA**, permitidas **SOMENTE EM CASOS EXTREMOS** em que a mensagem original, se enviada como está, resultaria em uma comunicação **SEM SENTIDO ou totalmente inadequada** ao contexto específico. Se uma alteração for **absolutamente indispensável**, ela deve ser **MÍNIMA** e preservar integralmente a intenção original da mensagem.
+    1.  **DETECTAR O MOMENTO OPORTUNO PARA CONFIRMAÇÃO DE VENDA:**
+        * Analise cuidadosamente a mensagem do cliente (`{message_text_original}`), o histórico da conversa (`{history}`), o tópico (`{identified_topic}`) e o contexto operacional (`{operational_context}`).
+        * **Se o `operational_context` fornecido for 'BUDGET_ACCEPTED' (vindo do TriageAgent ou similar), este é um forte indicador para você elaborar e propor a mensagem de confirmação.**
+        * Mesmo se o `operational_context` não for explicitamente 'BUDGET_ACCEPTED', procure por sinais claros de que o cliente está aceitando uma proposta ou pronto para prosseguir. Exemplos de frases do cliente que indicam isso: "Gostei, podemos fechar", "Quero esse plano", "Como faço para contratar?", "Qual o próximo passo?", "Pode ser esse mesmo.", "Aceito.".
+    2.  **ELABORAR A MENSAGEM DE CONFIRMAÇÃO (TAREFA PRINCIPAL):**
+        * Se você identificar que é o momento certo para confirmar a aceitação do orçamento/plano, **você DEVE CRIAR uma mensagem de confirmação.**
+        * Esta mensagem deve ser:
+            * **Clara e Direta:** Explicite o que está sendo confirmado (ex: nome do plano, ou referência ao orçamento discutido). Se o valor for conhecido e apropriado, mencione-o.
+            * **Proativa:** Geralmente, sugira o próximo passo (ex: coleta de dados, formalização) ou peça uma confirmação final para avançar.
+            * **Concisa:** Vá direto ao ponto, sem rodeios.
+            * **Amigável e Profissional.**
+        * **Exemplos de como você pode construir sua mensagem de confirmação:**
+            * "Perfeito! Confirmando então seu interesse no Plano [Nome do Plano/Referência ao Orçamento]. Para darmos seguimento, precisaremos de alguns dados para o cadastro. Podemos prosseguir?"
+            * "Excelente notícia! Para formalizarmos a contratação do Plano [Nome do Plano/Referência ao Orçamento] que você escolheu, qual o próximo passo que gostaria de seguir para o fornecimento dos dados?"
+            * "Entendido! Só para confirmar: podemos prosseguir com a ativação do seu Plano [Nome do Plano/Referência ao Orçamento]?"
+            * "Ótimo! Fico feliz com sua decisão pelo Plano [Nome do Plano]. Para agilizarmos, podemos coletar seus dados para o cadastro?"
+        * **Esta mensagem que você elaborar será o item principal (ou único) no array `order` do JSON de saída.**
+    3.  **SELECIONAR MENSAGENS COMPLEMENTARES (OPCIONAL E SECUNDÁRIO):**
+        * Avalie se alguma mensagem de `{fast_messages}` ou `{proactive_content_generated}` é estritamente necessária para enviar *junto com* ou *imediatamente após* sua mensagem de confirmação (ex: um breve resumo dos próximos passos gerais, se não estiver na sua mensagem).
+        * Use estas mensagens com extrema parcimônia. A prioridade é a sua mensagem de confirmação. Se ela for suficiente, não adicione outras.
+    4.  **ORDENAR E PRESERVAR INTEGRIDADE (PARA MENSAGENS PRONTAS, SE USADAS):**
+        * Se usar mensagens prontas complementares, defina a sequência ideal (sua mensagem de confirmação geralmente virá primeiro).
+        * Modificações em mensagens prontas são **EXCEÇÕES ESTRITAS**, permitidas **SOMENTE EM CASOS EXTREMOS** se a mensagem original ficar sem sentido.
 
     ---
 
     **Contexto da Conversa:**
 
     * **Tópico identificado:** "{identified_topic}"
-    * **Contexto Operacional:** "{operational_context}"
+    * **Contexto Operacional:** "{operational_context}" # Preste atenção especial se for 'BUDGET_ACCEPTED' ou se a conversa indicar aceitação.
     * **Mensagem do cliente:** "{message_text_original}"
 
     ---
@@ -208,7 +229,7 @@ coordinate_delivery_task:
 
     ---
 
-    **Recursos Disponíveis (Suas Munições):**
+    **Recursos Disponíveis (Suas Munições para mensagens complementares, se estritamente necessárias):**
 
     * **Mensagens prontas da sua equipe (Rapid Messages):**
         `{fast_messages}`
@@ -220,10 +241,11 @@ coordinate_delivery_task:
 
     **Formato de Retorno (OBRIGATÓRIO):**
 
-    Você **DEVE retornar um JSON** seguindo a estrutura especificada. Não inclua perguntas do conteúdo proativo no campo `order`; envie apenas as respostas.
+    Você **DEVE retornar um JSON** seguindo a estrutura especificada.
+    A mensagem de confirmação que você elaborar deve ser incluída como uma string no array `order`.
   expected_output: |
     {
-        "fast_messages_choosen_index": [], // Array de índices das mensagens relevantes escolhidas da 'fast_messages', formando um conjunto conciso para a ideia principal.
-        "proactive_content_choosen_index": [], // Array de índices do conteúdo proativo relevante escolhido, se essencial para complementar a ideia principal de forma concisa.
-        "order": [] // Array de strings, representando as mensagens finais (idealmente 2-4, excepcionalmente 1 ou 5) em ordem de envio, com quaisquer alterações mínimas e excepcionais já aplicadas, formando uma sequência coesa e focada.
+        "fast_messages_choosen_index": [], // Array de índices das mensagens prontas escolhidas, APENAS SE estritamente necessárias para complementar sua mensagem de confirmação. Geralmente vazio.
+        "proactive_content_choosen_index": [], // Array de índices do conteúdo proativo escolhido, APENAS SE estritamente necessário. Geralmente vazio.
+        "order": [] // Array de strings. DEVE conter a sua mensagem de confirmação elaborada. Pode conter mensagens complementares prontas, se essencial, ordenadas logicamente.
     }
