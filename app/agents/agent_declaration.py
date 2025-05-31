@@ -66,3 +66,11 @@ def get_delivery_coordinator_agent() -> Agent:
         verbose=True,
         allow_delegation=False,
     )
+    
+def get_registration_agent() -> Agent:
+    return Agent(
+        config=agents_config['RegistrationDataCollectorAgent'],
+        llm=reasoning_X_llm,
+        verbose=True,
+        allow_delegation=False
+    )

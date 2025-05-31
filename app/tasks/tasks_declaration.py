@@ -59,3 +59,10 @@ def create_coordinate_delivery_task(agent: Agent) -> Task:
         agent=agent,
         max_retries=settings.MAX_RETRIES_MODEL
     )
+
+def create_collect_registration_data_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['collect_registration_data_task'],
+        agent=agent,
+        max_retries=settings.MAX_RETRIES_MODEL
+    )
