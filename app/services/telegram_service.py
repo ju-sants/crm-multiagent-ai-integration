@@ -4,7 +4,7 @@ import requests
 
 from time import sleep
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 def send_telegram_report(report_lines: list, chat_id: str, job_name: str):
