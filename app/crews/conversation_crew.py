@@ -147,8 +147,8 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                     inputs_for_registration = {
                         "history": history_messages,
                         "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
-                        "collected_data_so_far": user_data_so_far,
-                        "plan_details": plan_details
+                        "collected_data_so_far": str(user_data_so_far),
+                        "plan_details": str(plan_details)
                     }
 
                     registration_crew.kickoff(inputs_for_registration)
