@@ -29,6 +29,13 @@ def create_profile_customer_task(agent: Agent) -> Task:
         max_retries=settings.MAX_RETRIES_MODEL
     )
     
+def create_profile_customer_task_purchased(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['profile_customer_task_purchased'],
+        agent=agent,
+        max_retries=settings.MAX_RETRIES_MODEL
+    )
+    
 def create_execute_system_operations_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['execute_system_operations_task'],

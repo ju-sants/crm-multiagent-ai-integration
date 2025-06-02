@@ -19,6 +19,7 @@ from app.tasks.tasks_declaration import (
     create_craft_response_task,
     create_coordinate_delivery_task,
     create_profile_customer_task,
+    create_profile_customer_task_purchased,
     create_execute_system_operations_task,
     create_collect_registration_data_task
 )
@@ -102,18 +103,75 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
             
             if json_response:
                 if 'operational_context' in json_response and json_response['operational_context'] == 'BUDGET_ACCEPTED':
-                    
                     qdrant_client = get_client()
-                    
+
+                    if not redis_client.get(f"{contact_id}:confirmed_plan"):
+                        customer_profile_agent_instance = get_customer_profile_agent()
+                        profile_task_purchased = create_profile_customer_task_purchased(customer_profile_agent_instance)
+                        
+                        scroll = qdrant_client.scroll(
+                            "UserProfiles",
+                            limit=1000000000,
+                            with_payload=True,
+                            with_vectors=False
+                        )
+                                
+                        new_profile_crew = Crew(
+                            agents=[
+                                customer_profile_agent_instance
+                            ],
+                            tasks=[
+                                profile_task_purchased
+                            ],
+                            process=Process.sequential,
+                            verbose=True
+                        )
+                        
+                        inputs_profile = {
+                            "contact_id": contact_id,
+                            "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
+                            "operational_context": json_response.get('operational_context', ''),
+                            "identified_topic": json_response.get('identified_topic', ''),
+                            "customer_profile": str(GetUserProfile()._run(contact_id)),
+                            "history": history_messages
+                        }
+                        
+                        new_profile_crew.kickoff(inputs=inputs_profile)
+                        
+                        profile_task_purchased_str = profile_task_purchased.output.raw
+                        
+                        if profile_task_purchased_str:
+                            profile = None
+                            id = str(uuid.uuid4())
+                            for point_profile in scroll[0]:
+                                if point_profile.payload.get("contact_id") == contact_id:
+                                    profile = point_profile.payload.copy()
+                                    id = str(point_profile.id)
+
+                            profile['profile_customer'] = profile_task_purchased_str
+                            
+                            qdrant_client.upsert(
+                                "UserProfile",
+                                [
+                                    models.PointStruct(
+                                        id=id,
+                                        vector={},
+                                        payload=profile
+                                    )
+                                ]
+                            )
+                            
+                            redis_client.set(f"{contact_id}:confirmed_plan", '1')
+                            
                     if not qdrant_client.collection_exists("CustomersDataForSigUp"):
                         qdrant_client.create_collection(
-                            'CustomersDataForSigUp',
+                            'CustomersDataForSignUp',
                             vectors_config=None,
                         )
                         
                         
                     scroll = qdrant_client.scroll(
-                        "CustomersDataForSigUp",
+                        "CustomersDataForSignUp",
                         limit=1000000000,
                         with_vectors=False,
                         with_payload=True
@@ -127,7 +185,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                     user_data_so_far = None
                     if point_user_data:
                         user_data_so_far = point_user_data.payload.copy()
-                        
+                    
                     plan_details = json_response.get("plan_details", "")
                     
                     registration_agent = get_registration_agent()
@@ -172,6 +230,8 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                     if registration_task_json and "next_message_to_send" in registration_task_json and registration_task_json["next_message_to_send"]:
                         CallbellSendTool().run(phone_number=phone_number, messages=[registration_task_json["next_message_to_send"]])
                 else:
+                    redis_client.delete(f"{contact_id}:confirmed_plan")
+                    
                     if 'action' and json_response['action'] == "INITIATE_FULL_PROCESSING":
                         logger.info(f"MVP Crew: Iniciando processamento completo para contact_id {contact_id}")
                         customer_profile_agent_instance = get_customer_profile_agent()
@@ -378,23 +438,19 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                         with_payload=True
                     )
                     
-                    found_profile = False
-                    point_profile = None
+                    profile = None
                     for point_profile in scroll_profile[0]:
                         if point_profile.payload.get('contact_id') == contact_id:
-                            found_profile = True
+                            profile = point_profile.payload.copy()
                             break
                         
-                    point_memory = None
-                    found_memory = False
+                    memory = None
                     for point_memory in scroll_memory[0]:
                         if point_memory.payload.get('contact_id') == contact_id:
-                            found_memory = True
+                            memory = point_memory.payload.copy()
                             break
                     
-                    if point_memory and found_memory:
-                        found_memory = False
-                        
+                    if memory and profile:
                         history_messages = ''
                         if history:
                             history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', [])[:5])])
@@ -405,16 +461,14 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                             "identified_topic": json_response.get('identified_topic', ''),
                             "operational_context": json_response.get('operational_context', ''),
                             "message_text_original": '\n'.join(last_messages_processed),
-                            "fast_messages": str(point_memory.payload.get('primary_messages_sequence', '')),
-                            "proactive_content_generated": str(point_memory.payload.get('proactive_content_generated', '')),
-                            "client_profile": str(point_profile.payload.get('profile_customer', '')) if found_profile else '',
-                            "strategic_plan": str(point_profile.payload.get('strategic_plan', '')) if found_profile else '',
+                            "fast_messages": str(memory.get('primary_messages_sequence', '')),
+                            "proactive_content_generated": str(memory.get('proactive_content_generated', '')),
+                            "client_profile": str(profile.get('profile_customer', '')),
+                            "strategic_plan": str(profile.get('strategic_plan', '')),
                             "history": history_messages
                         }
                         
                                             
-                        found_profile = False
-                        
                         delivery_crew.kickoff(inputs_delivery_crew)
                         
                         response_delivery_json = None
