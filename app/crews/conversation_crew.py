@@ -102,6 +102,9 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 logger.error(f"MVP Crew: Resposta da triagem não é um JSON válido: {response_triage}")
             
             if json_response:
+                if redis_client.get(f"{contact_id}:getting_data_from_user"):
+                    json_response['operational_context'] = 'BUDGET_ACCEPTED'
+                    
                 if 'operational_context' in json_response and json_response['operational_context'] == 'BUDGET_ACCEPTED':
                     qdrant_client = get_client()
 
@@ -224,11 +227,14 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                     except json.JSONDecodeError:
                         pass
                     
-                    if registration_task_json and all([response_craft_json.get("is_data_collection_complete"), response_craft_json.get("status") == 'COLLECTION_COMPLETE']):
+                    if registration_task_json and all([registration_task_json.get("is_data_collection_complete"), registration_task_json.get("status") == 'COLLECTION_COMPLETE']):
                         send_single_telegram_message(registration_task_str, '-4854533163')
+                        redis_client.delete(f"{contact_id}:getting_data_from_user")
                     
                     if registration_task_json and "next_message_to_send" in registration_task_json and registration_task_json["next_message_to_send"]:
                         CallbellSendTool().run(phone_number=phone_number, messages=[registration_task_json["next_message_to_send"]])
+                        
+                        redis_client.set(f"{contact_id}:getting_data_from_user", "1")
                 else:
                     redis_client.delete(f"{contact_id}:confirmed_plan")
                     
