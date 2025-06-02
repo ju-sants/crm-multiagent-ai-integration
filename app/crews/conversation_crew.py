@@ -154,7 +154,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                             profile['profile_customer'] = profile_task_purchased_str
                             
                             qdrant_client.upsert(
-                                "UserProfile",
+                                "UserProfiles",
                                 [
                                     models.PointStruct(
                                         id=id,
