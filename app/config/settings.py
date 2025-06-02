@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     XAI_API_KEY: str = "..."
     GEMINI_API_KEY: str = "..."
     CALLBELL_API_KEY: str = "..."
+    OPENAI_API_KEY: str = "..."
+    
     X_GLADIA_KEY: str = "..."
     APPID_IMAGE_DESCRIPTION: str = '...'
     SECRET_IMAGE_DESCRIPTION: str = '...'

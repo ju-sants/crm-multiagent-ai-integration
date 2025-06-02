@@ -50,12 +50,19 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
     mensagem = '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1))
     logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, mensagem: '{mensagem}'")
 
+    contact_data = redis_client.hgetall(f"contact:{contact_id}")
+    if not contact_data:
+        redis_client.hset(f"contact:{contact_id}", mapping={"system_input": "nenhum"})
+
     history_messages = ''
     if history:
         history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' if message.get("text") else '' for message in reversed(history.get('messages', [])[:10])])
          
 
     jump_to_registration_task = False
+    registration_task = False
+    
+    
     if redis_client.get(f"{contact_id}:getting_data_from_user") and redis_client.get(f"{contact_id}:plan_details"):
         jump_to_registration_task = True
     
@@ -113,9 +120,11 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 if 'operational_context' in json_response and json_response['operational_context'] == 'BUDGET_ACCEPTED':
                     registration_task = True
                     redis_client.set(f"{contact_id}:plan_details", json_response.get('plan_details', ""))
+
         else:
             logger.warning(f"MVP Crew: Nenhuma resposta gerada para contact_id {contact_id}")
-           
+    
+
     if registration_task or jump_to_registration_task:
         qdrant_client = get_client()
 
@@ -246,7 +255,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
             redis_client.set(f"{contact_id}:getting_data_from_user", "1")
     else:
         redis_client.delete(f"{contact_id}:confirmed_plan")
-        
+
         if 'action' and json_response['action'] == "INITIATE_FULL_PROCESSING":
             logger.info(f"MVP Crew: Iniciando processamento completo para contact_id {contact_id}")
             customer_profile_agent_instance = get_customer_profile_agent()
@@ -270,7 +279,6 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 process=Process.sequential,
                 verbose=True,
             )
-            
             
             inputs_profile = {
                 "contact_id": contact_id,
@@ -367,16 +375,99 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 verbose=True
             )
             
+            plans_messages = {
+                "MOTO GSM/PGS": """
+MOTO GSM/PGS
+
+🛵🏍️ Para sua moto, temos duas opções incríveis:
+
+Link do Catálogo Visual: Acesse e confira todos os detalhes:
+https://wa.me/p/9380524238652852/558006068000
+
+Adesão Única: R$ 120,00
+
+Plano Rastreamento (sem cobertura FIPE):
+Apenas R$ 60/mês, com plantão 24h incluso para sua segurança!
+
+Plano Proteção Total PGS (com cobertura FIPE):
+Com este plano, se não recuperarmos sua moto, você recebe o valor da FIPE!
+    Até R$ 15 mil: R$ 77/mês
+    De R$ 16 a 22 mil: R$ 85/mês
+    De R$ 23 a 30 mil: R$ 110/mês
+""",
+                "GSM Padrão": """
+GSM Padrão
+
+🚗 Nosso Plano GSM Padrão é ideal para seu veículo!
+
+    Adesão: R$ 200,00
+    Mensalidade:
+        Sem bloqueio: R$ 65/mês
+        Com bloqueio: R$ 75/mês
+
+Confira mais detalhes no nosso catálogo:
+https://wa.me/p/9356355621125950/558006068000""",
+                "GSM FROTA": """
+GSM FROTA
+
+🚚 Gerencie sua frota com eficiência e segurança!
+
+Conheça nosso Plano GSM FROTA: https://wa.me/p/9321097734636816/558006068000
+""",
+                "SATELITAL FROTA": """
+SATELITAL FROTA
+
+🌍 Para sua frota, conte com a alta precisão do nosso Plano SATELITAL FROTA!
+
+Confira os detalhes: https://wa.me/p/9553408848013955/558006068000
+""",
+                "HÍBRIDO": """
+HÍBRIDO
+
+📡 O melhor dos dois mundos para seu rastreamento!
+
+Descubra o Plano HÍBRIDO: https://wa.me/p/8781199928651103/558006068000
+""",
+                "GSM+WiFi": """
+GSM+WiFi
+
+📶 Conectividade e segurança aprimoradas para sua fazenda!
+
+Saiba mais sobre o Plano GSM+WiFi: https://wa.me/p/9380395508713863/558006068000
+""",
+                "Scooters/Patinetes": """
+Scooters/Patinetes
+
+🛴 Mantenha seus veículos de mobilidade pessoal sempre seguros!
+
+    Plano exclusivo para Scooters e Patinetes: https://wa.me/p/8478546275590970/558006068000
+"""
+            }
+
+            if 'json_response' in locals():
+                plan = json_response.get('actual_plan_name', "")
+                if plan in plans_messages:
+                    if not redis_client.hget(f'contact:{contact_id}', f"sendend_{plan}"):
+                        system_input = f"""
+o sistema irá enviar o catálogo do plano {plan} para o cliente, conte com isso em suas mensagens, mensagem que será enviada:
+
+{plans_messages[plan]}
+"""
+                        redis_client.hset(f'contact:{contact_id}', "system_input", system_input)
+                        redis_client.hset(f'contact:{contact_id}', "to_send_catalog", "1")
+                        redis_client.hset(f'contact:{contact_id}', "catalog_message", plans_messages[plan])
+
             inputs_craft = {
                 "develop_strategy_task_output": strategic_advise_task.output.raw,
                 "profile_customer_task_output": profile_customer_task.output.raw,
                 "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
                 "operational_context": json_response.get('operational_context', ''),
                 "identified_topic": json_response.get('identified_topic', ''),
+                "system_input": str(redis_client.hget(f"contact:{contact_id}", "system_input")),
             }
 
             
-            response_craft = crew_craft_messages.kickoff(inputs_craft)
+            crew_craft_messages.kickoff(inputs_craft)
             
             response_craft_json = None
             response_craft_str = response_craft_task.output.raw
@@ -465,6 +556,15 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 memory = point_memory.payload.copy()
                 break
         
+        if redis_client.hget((f'contact:{contact_id}', 'to_send_catalog')):
+            CallbellSendTool()._run(phone_number=phone_number, messages=[redis_client.hget(f'contact:{contact_id}', 'catalog_message')])
+
+            redis_client.set(f"contact:{contact_id}", 'system_input', 'foi enviado o catalogo para o cliente, contendo a seguinte mensagem: ' + redis_client.hget(f'contact:{contact_id}', 'catalog_message') + "adapte sua resposta para o cliente, com base no catalogo enviado pelo sistema.")
+            
+            redis_client.hdel(f'contact:{contact_id}', 'to_send_catalog')
+            redis_client.hdel(f'contact:{contact_id}', 'catalog_message')
+
+
         if memory and profile:
             history_messages = ''
             if history:
@@ -480,7 +580,8 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 "proactive_content_generated": str(memory.get('proactive_content_generated', '')),
                 "client_profile": str(profile.get('profile_customer', '')),
                 "strategic_plan": str(profile.get('strategic_plan', '')),
-                "history": history_messages
+                "history": history_messages,
+                "system_input": redis_client.get(f'contact:{contact_id}', 'system_input'),
             }
             
                                 
