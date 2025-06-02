@@ -166,7 +166,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                             
                             redis_client.set(f"{contact_id}:confirmed_plan", '1')
                             
-                    if not qdrant_client.collection_exists("CustomersDataForSigUp"):
+                    if not qdrant_client.collection_exists("CustomersDataForSignUp"):
                         qdrant_client.create_collection(
                             'CustomersDataForSignUp',
                             vectors_config=None,
