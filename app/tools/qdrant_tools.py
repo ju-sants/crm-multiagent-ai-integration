@@ -111,7 +111,7 @@ class GetUserProfile(BaseTool):
             if point is None:
                 return f"Perfil do usuário {contact_id} não encontrado."
             
-            return point.payload
+            return point.payload['profile_customer']
         
         except Exception as e:
             return f"Erro ao buscar perfil do usuário: {str(e)}"

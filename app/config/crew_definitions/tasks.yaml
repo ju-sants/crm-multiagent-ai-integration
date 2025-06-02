@@ -84,6 +84,40 @@ profile_customer_task:
       "chat_history_summary": "summary of the chat history provided"
     }
 
+profile_customer_task_purchased:
+  description: |
+    Você é o CustomerProfiler. O cliente acabou de confirmar a compra de um plano de rastreamento.
+    Dados recebidos (contexto da tarefa anterior):
+    - ID Contato: "{contact_id}" (Extraído do output da tarefa de triagem)
+    - Mensagem Original: "{message_text_original}" (Extraído do output da tarefa de triagem)
+    - Contexto Operacional: "{operational_context}" (Extraído do output da tarefa de triagem)
+
+    Siga seu FLUXO DE CONSTRUÇÃO DE PERFIL:
+    1. Analise o perfil do cliente que será proporcionado a você abaixo.
+    2. Se o perfil não existir, crie um novo perfil com base na mensagem original e no histórico, tente inferir informações relevantes.
+    3. Se o perfil já existir, atualize-o com as informações da mensagem original e do histórico.
+    4. Consolide as informações em um sumário e perfil detalhado.
+       - Inclua compras passadas, tickets de suporte, sentimento atual, estágio de vendas e preferências.
+    5. resuma o histórico de conversa para transmitir corretamente o contexto atual em comparação com o panorama geral da conversa.
+
+    Perfil (pode ser null):
+
+    "{customer_profile}"
+
+    Histórico recente de conversas:
+
+    "{history}"
+    
+    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+  expected_output: |
+    {
+      "contact_id": ID do contato,
+      "profile_summary": Sumário do perfil,
+      "detailed_profile": { "past_purchases": [], "support_tickets": [], "current_sentiment": "...", "sales_stage": "...", "preferences": [] },
+      "operational_context": (BUDGET, SUPPORT, etc.),
+      "chat_history_summary": "summary of the chat history provided"
+    }
+
 develop_strategy_task:
   description: |
     Você é o StrategicAdvisor. Dados recebidos (contexto das tarefas anteriores):
