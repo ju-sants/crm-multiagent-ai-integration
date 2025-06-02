@@ -142,8 +142,8 @@ def process_requisitions(payload):
             logger.error(f'[{contact_uuid}] - ERRO ao obter messages_before do Redis: {e}', exc_info=True)
             messages_before = []
 
-        logger.info(f'[{contact_uuid}] - Iniciando sleep de 3.5 segundos para agregação de mensagens.')
-        sleep(3.5)
+        logger.info(f'[{contact_uuid}] - Iniciando sleep de 4 segundos para agregação de mensagens.')
+        sleep(4)
         logger.info(f'[{contact_uuid}] - Sleep concluído.')
 
         try:

@@ -15,6 +15,7 @@ reasoning_X_llm = LLM(
 default_Google_llm = LLM(
     model='gemini/gemini-2.5-pro-preview-05-06',
     api_key=settings.GEMINI_API_KEY,
+    thinking={"type": "enabled", "budget": 2048},
 )
 
 default_openai_llm = LLM(
