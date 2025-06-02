@@ -54,7 +54,7 @@ def get_system_operations_agent() -> Agent:
 def get_response_craftsman_agent() -> Agent:
     return Agent(
         config=agents_config['ResponseCraftsman'],
-        llm=default_Google_llm,
+        llm=default_X_llm,
         verbose=True,
         allow_delegation=False,
     )
