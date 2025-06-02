@@ -49,7 +49,12 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
     # litellm._turn_on_debug()
     mensagem = '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1))
     logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, mensagem: '{mensagem}'")
-    
+
+    history_messages = ''
+    if history:
+        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' if message.get("text") else '' for message in reversed(history.get('messages', [])[:10])])
+         
+
     jump_to_registration_task = False
     if redis_client.get(f"{contact_id}:getting_data_from_user") and redis_client.get(f"{contact_id}:plan_details"):
         jump_to_registration_task = True
@@ -110,11 +115,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                     redis_client.set(f"{contact_id}:plan_details", json_response.get('plan_details', ""))
         else:
             logger.warning(f"MVP Crew: Nenhuma resposta gerada para contact_id {contact_id}")
-
-    history_messages = ''
-    if history:
-        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' if message.get("text") else '' for message in reversed(history.get('messages', [])[:10])])
-                    
+           
     if registration_task or jump_to_registration_task:
         qdrant_client = get_client()
 
