@@ -19,7 +19,7 @@ agents_config = yaml.safe_load(open(config_path, 'r').read())
 def get_triage_agent() -> Agent:
     return Agent(
         config=agents_config['TriageAgent'],
-        llm=default_openai_llm,
+        llm=reasoning_X_llm,
         verbose=True,
         allow_delegation=False,
         max_retry_limit=500,
@@ -37,7 +37,7 @@ def get_customer_profile_agent() -> Agent:
 def get_strategic_advisor_agent() -> Agent:
     return Agent(
         config=agents_config['StrategicAdvisor'],
-        llm=default_openai_llm,
+        llm=default_Google_llm,
         verbose=True,
         allow_delegation=False,
         max_retry_limit=500
@@ -54,7 +54,7 @@ def get_system_operations_agent() -> Agent:
 def get_response_craftsman_agent() -> Agent:
     return Agent(
         config=agents_config['ResponseCraftsman'],
-        llm=default_openai_llm,
+        llm=default_Google_llm,
         verbose=True,
         allow_delegation=False,
     )

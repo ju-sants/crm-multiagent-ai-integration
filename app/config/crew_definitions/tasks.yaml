@@ -12,15 +12,15 @@ triage_initial_message_task:
     Siga seu FLUXO DE ANÁLISE E DECISÃO:
     1. Consulte caches L0/L1 - (Um dicionário com interações iguais a que recebeu agora).
     2. Consulte a Base de Conhecimento L2 - Qdrant (Uma coleção no qdrant que serve como uma memória no seu cerebro, feita para armazenar mensagens rápidas e embasadas no contexto. Criada por sua equipe especializada.).
-    3. Decida se uma RESPOSTA IMEDIATA é viável. **Esta decisão exige MUITA CAUTELA.**
+    3. Decida se uma RESPOSTA IMEDIATA é viável. **Esta decisão exige análise cuidadosa para garantir que a resposta seja adequada, correta e realmente útil para a pergunta atual do cliente.**
        - **Analise profundamente a MENSAGEM ATUAL do cliente em conjunto com o HISTÓRICO de conversação e o conteúdo das respostas encontradas em L0/L1/L2.**
-       - **Para definir "action": "RESPONDED_DIRECTLY", AS SEGUINTES CONDIÇÕES DEVEM SER ABSOLUTAMENTE SATISFEITAS:**
-         a. A resposta cacheada (de L0/L1 ou L2) é uma **correspondência exata ou de altíssima relevância semântica** para a pergunta/solicitação específica da mensagem atual.
-         b. A resposta cacheada **resolve COMPLETAMENTE a necessidade expressa na mensagem atual**, sem necessitar de contexto adicional ou esclarecimentos.
-         c. A pergunta do cliente é **simples e direta** (ex: uma pergunta factual, uma solicitação de informação básica já catalogada).
-         d. O **histórico da conversa NÃO sugere** que o cliente está em um fluxo mais complexo, que já passou por essa informação, ou que a necessidade é uma variação sutil não coberta pela resposta cacheada.
-       - **SE HOUVER QUALQUER DÚVIDA, ambiguidade, necessidade de interpretação mais profunda, ou se a mensagem atual tiver nuances não totalmente cobertas por uma resposta pronta, VOCÊ DEVE OPTAR POR "INITIATE_FULL_PROCESSING".** É melhor encaminhar para uma análise completa do que arriscar uma resposta direta inadequada.
-       - Se, e somente se, todas as condições (a-d) forem rigorosamente atendidas, defina "action": "RESPONDED_DIRECTLY". (O sistema utilizará a melhor correspondência de cache que você identificou como base para a resposta).
+       - **Para definir "action": "RESPONDED_DIRECTLY", AS SEGUINTES CONDIÇÕES DEVEM SER SATISFEITAS DE FORMA CONVINCENTE:**
+         a. A resposta cacheada (de L0/L1 ou L2) é uma **correspondência de altíssima relevância semântica e precisão** para a pergunta/solicitação específica da mensagem atual. A informação deve ser correta.
+         b. A resposta cacheada **endereça de forma direta e suficiente a(s) pergunta(s) explícita(s) na mensagem atual do cliente.** A informação deve ser clara, e fornecer o que foi essencialmente pedido, sem omissões críticas para a questão imediata.
+         c. A pergunta do cliente é sobre um **tópico bem definido, buscando informações ou soluções tipicamente catalogadas** (ex: dados factuais como "qual o preço do plano X?", "quais documentos preciso para Y?", procedimentos padrão simples, características de planos já documentadas). A resposta do cache deve ser autocontida para tal pergunta. Evitar para questões abertas ("fale sobre seus serviços"), comparações complexas não estruturadas no cache, ou que sugiram necessidade de negociação/exceção.
+         d. O **histórico da conversa NÃO sugere** que esta resposta cacheada já foi considerada insuficiente pelo cliente para uma questão similar e recente, que o problema é uma escalada não resolvida pela informação do cache, ou que se trata de uma negociação em andamento que a resposta pronta não contemplaria. O foco é se a resposta cacheada pode resolver a *necessidade atual e explícita* de forma satisfatória.
+       - **SE HOUVER DÚVIDA SIGNIFICATIVA sobre a capacidade da resposta cacheada em atender adequadamente à consulta atual do cliente (ou seja, se a resposta parecer incompleta para o que foi perguntado, potencialmente imprecisa, ou se o contexto indicar que o cliente precisa de mais do que o cache oferece), VOCÊ DEVE OPTAR POR "INITIATE_FULL_PROCESSING".** O objetivo é um equilíbrio entre eficiência e a satisfação do cliente. Uma resposta direta só deve ser usada se for claramente adequada e correta para a solicitação atual.
+       - Se, e somente se, todas as condições (a-d) forem atendidas de forma a prover uma resposta que seja genuinamente adequada e correta para a mensagem atual do cliente, defina "action": "RESPONDED_DIRECTLY". (O sistema utilizará a melhor correspondência de cache que você identificou como base para a resposta).
     4. Se as condições estritas para resposta imediata não forem atendidas, determine o `operational_context` e o `identified_topic`.
        - Defina "action": "INITIATE_FULL_PROCESSING".
        - Analise a mensagem atual do cliente em conjunto com o histórico para classificar a necessidade principal em um dos seguintes `operational_context`:
@@ -45,7 +45,6 @@ triage_initial_message_task:
       "action": "RESPONDED_DIRECTLY" | "INITIATE_FULL_PROCESSING",
       "identified_topic": "identified_topic",
       "operational_context": "SUPPORT" | "BUDGET" | "BUDGET_ACCEPTED" | "OTHER_ROUTING"
-      "actual_plan_name": "MOTO GSM/PGS" | "GSM Padrão" | "GSM FROTA" | "SATELITAL FROTA" | "HÍBRIDO" | "GSM+WiFi" | "Scooters/Patinetes"
       "plan_details": "Plano GSM, adesao X mensalidade X ...." apenas se "identified_topic" for "BUDGET_ACCEPTED"
     }
 
@@ -184,9 +183,6 @@ craft_response_task:
     - Tópico Identificado: "{identified_topic}"
     - Mensagem Original do Cliente: "{message_text_original}"
      
-    INPUT DO SISTEMA:
-    "{system_input}"
-
     Siga seus PRINCÍPIOS DE COMUNICAÇÃO GLOBAL SYSTEM e FLUXO DE CRIAÇÃO DE RESPOSTA:
     1. Analise todos os inputs, especialmente as "internal_notes_for_craftsman" do plano estratégico.
     2. Gere as mensagens principais, **seguindo estritamente a diretriz de que cada mensagem deve ter entre 1 a 5 frases para garantir a legibilidade em um chat.**
@@ -200,6 +196,8 @@ craft_response_task:
     4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa. **Ao fazer isso, desmembre o conteúdo da `super_message` em segmentos lógicos, onde cada segmento resulte em uma mensagem de 1 a 5 frases.**
     5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens relevantes para o que o cliente precisa.
     6. IMPORTANTE: NUNCA SE APRESENTE! Seu Nome é colocado na mensagem ao ser enviada.
+    7. Identifique quais dos planos você irá abordar e insira no JSON, para cada plano escolhido, o sistema backend enviará um link de catálogo com uma pequena mensagem, planos disponiveis: "MOTO GSM/PGS", "GSM Padrão", "GSM FROTA", "SATELITAL FROTA", "HÍBRIDO", "GSM+WiFi", "Scooters/Patinetes"
+  
      
     Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated", NADA MAIS!.
   expected_output: |
@@ -210,6 +208,7 @@ craft_response_task:
         "Mensagem 3 (ex: 1 frase, talvez uma pergunta curta)." 
       ],
       "proactive_content_generated": [ {"question": "Como funciona o bloqueio do rastreador em área sem sinal?, answer: O rastreador armazena o comando"... }, ... ],
+      "plan_names": "MOTO GSM/PGS" | "GSM Padrão" | "GSM FROTA" | "SATELITAL FROTA" | "HÍBRIDO" | "GSM+WiFi" | "Scooters/Patinetes" # LISTA [] de nomes dos planos que serão tratatos nas mensagens
     }
 
 

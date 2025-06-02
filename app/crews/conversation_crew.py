@@ -249,7 +249,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
             send_single_telegram_message(registration_task_str, '-4854533163')
             redis_client.delete(f"{contact_id}:getting_data_from_user")
         
-        if registration_task_json and "next_message_to_send" in registration_task_json and registration_task_json["next_message_to_send"]:
+        elif registration_task_json and "next_message_to_send" in registration_task_json and registration_task_json["next_message_to_send"]:
             CallbellSendTool().run(phone_number=phone_number, messages=[registration_task_json["next_message_to_send"]])
             
             redis_client.set(f"{contact_id}:getting_data_from_user", "1")
@@ -374,8 +374,113 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 process=Process.sequential,
                 verbose=True
             )
+
+            inputs_craft = {
+                "develop_strategy_task_output": strategic_advise_task.output.raw,
+                "profile_customer_task_output": profile_customer_task.output.raw,
+                "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
+                "operational_context": json_response.get('operational_context', ''),
+                "identified_topic": json_response.get('identified_topic', ''),
+            }
+
             
-            plans_messages = {
+            crew_craft_messages.kickoff(inputs_craft)
+            
+            response_craft_json = None
+            response_craft_str = response_craft_task.output.raw
+            try:
+                if '```json' in response_craft_str:
+                    response_craft_str = response_craft_str.split('```json')[-1].split('```')[0]
+                    
+                if '```' in response_craft_str:
+                    response_craft_str = response_craft_str.replace('```', '')
+                    
+                response_craft_json = json.loads(response_craft_str)
+                
+            except json.JSONDecodeError:
+                logger.error('Não foi possível parsear o json de respostas finais')
+                
+            redo = False
+            if response_craft_json:
+                if 'Final Answer' in response_craft_json:
+                    if not 'primary_messages_sequence' in response_craft_json.get('Final Answer', {}):
+                        redo = True
+                    
+                    if not 'primary_messages_sequence' in response_craft_json:
+                        redo = True
+
+                    else:
+                        primary_messages = response_craft_json['Final Answer']['primary_messages_sequence']
+                        proactive_content = response_craft_json['Final Answer'].get('proactive_content_generated', [])
+                        
+                        del response_craft_json['Final Answer']
+                        
+                        response_craft_json['primary_messages_sequence'] = primary_messages
+                        response_craft_json['proactive_content_generated'] = proactive_content
+                
+                plan = response_craft_json.get('plan_names', [])
+                if plan:
+                    redis_client.hset(f'contact:{contact_id}', 'plan', ', '.join(plan))
+                    
+            else:
+                redo = True
+                
+            
+            if redo:
+                run_mvp_crew(contact_id, phone_number, redis_client, history)
+            
+            else:
+                response_craft_json['contact_id'] = contact_id
+                
+                SaveFastMemoryMessages()._run(
+                    response_craft_json
+                )
+        
+        delivery_coordinator_instance = get_delivery_coordinator_agent()
+        delivery_coordinator_task = create_coordinate_delivery_task(delivery_coordinator_instance)
+        
+        delivery_crew = Crew(
+            agents=[
+                delivery_coordinator_instance
+            ],
+            tasks=[
+                delivery_coordinator_task   
+            ],
+            process=Process.sequential,
+            verbose=True
+        )
+        
+        qdrant_client = get_client()
+        
+        scroll_memory = qdrant_client.scroll(
+            collection_name="FastMemoryMessages",
+            limit=1000000000,
+            with_vectors=False,
+            with_payload=True
+            )
+        
+        scroll_profile = qdrant_client.scroll(
+            collection_name='UserProfiles',
+            limit=1000000000,
+            with_vectors=False,
+            with_payload=True
+        )
+        
+        profile = None
+        for point_profile in scroll_profile[0]:
+            if point_profile.payload.get('contact_id') == contact_id:
+                profile = point_profile.payload.copy()
+                break
+            
+        memory = None
+        for point_memory in scroll_memory[0]:
+            if point_memory.payload.get('contact_id') == contact_id:
+                memory = point_memory.payload.copy()
+                break
+        
+        for plan in redis_client.hget(f'contact:{contact_id}', 'plan').split(', '):
+            if not redis_client.hget(f'contact:{contact_id}', f"sendend_catalog_{plan}"):
+                plans_messages = {
                 "MOTO GSM/PGS": """
 MOTO GSM/PGS
 
@@ -443,127 +548,19 @@ Scooters/Patinetes
     Plano exclusivo para Scooters e Patinetes: https://wa.me/p/8478546275590970/558006068000
 """
             }
-
-            if 'json_response' in locals():
-                plan = json_response.get('actual_plan_name', "")
+                messages_plans_to_send = []
+                plans_names_to_send = []
                 if plan in plans_messages:
-                    if not redis_client.hget(f'contact:{contact_id}', f"sendend_{plan}"):
-                        system_input = f"""
-o sistema irá enviar o catálogo do plano {plan} para o cliente, conte com isso em suas mensagens, mensagem que será enviada:
+                    messages_plans_to_send.append(plans_messages[plan])
+                    plans_names_to_send.append(plan)
 
-{plans_messages[plan]}
-"""
-                        redis_client.hset(f'contact:{contact_id}', "system_input", system_input)
-                        redis_client.hset(f'contact:{contact_id}', "to_send_catalog", "1")
-                        redis_client.hset(f'contact:{contact_id}', "catalog_message", plans_messages[plan])
+                system_input = f"""
+    o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_send)} para o cliente, conte com isso em suas mensagens, mensagem que será enviada:
 
-            inputs_craft = {
-                "develop_strategy_task_output": strategic_advise_task.output.raw,
-                "profile_customer_task_output": profile_customer_task.output.raw,
-                "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
-                "operational_context": json_response.get('operational_context', ''),
-                "identified_topic": json_response.get('identified_topic', ''),
-                "system_input": str(redis_client.hget(f"contact:{contact_id}", "system_input")),
-            }
-
+{'\n\n'.join(messages_plans_to_send)}
+"""             
+                redis_client.hset(f"contact:{contact_id}", 'system_input', system_input)    
             
-            crew_craft_messages.kickoff(inputs_craft)
-            
-            response_craft_json = None
-            response_craft_str = response_craft_task.output.raw
-            try:
-                if '```json' in response_craft_str:
-                    response_craft_str = response_craft_str.split('```json')[-1].split('```')[0]
-                    
-                if '```' in response_craft_str:
-                    response_craft_str = response_craft_str.replace('```', '')
-                    
-                response_craft_json = json.loads(response_craft_str)
-                
-            except json.JSONDecodeError:
-                logger.error('Não foi possível parsear o json de respostas finais')
-                
-            redo = False
-            if response_craft_json and 'Final Answer' in response_craft_json:
-                if not 'primary_messages_sequence' in response_craft_json.get('Final Answer', {}):
-                    redo = True
-                
-                else:
-                    primary_messages = response_craft_json['Final Answer']['primary_messages_sequence']
-                    proactive_content = response_craft_json['Final Answer'].get('proactive_content_generated', [])
-                    
-                    del response_craft_json['Final Answer']
-                    
-                    response_craft_json['primary_messages_sequence'] = primary_messages
-                    response_craft_json['proactive_content_generated'] = proactive_content
-                    
-            else:
-                if not response_craft_json:
-                    redo = True
-                    
-                if not 'primary_messages_sequence' in response_craft_json:
-                    redo = True
-            
-            if redo:
-                run_mvp_crew(contact_id, phone_number, redis_client, history)
-            
-            else:
-                response_craft_json['contact_id'] = contact_id
-                
-                SaveFastMemoryMessages()._run(
-                    response_craft_json
-                )
-        
-        delivery_coordinator_instance = get_delivery_coordinator_agent()
-        delivery_coordinator_task = create_coordinate_delivery_task(delivery_coordinator_instance)
-        
-        delivery_crew = Crew(
-            agents=[
-                delivery_coordinator_instance
-            ],
-            tasks=[
-                delivery_coordinator_task   
-            ],
-            process=Process.sequential,
-            verbose=True
-        )
-        
-        qdrant_client = get_client()
-        
-        scroll_memory = qdrant_client.scroll(
-            collection_name="FastMemoryMessages",
-            limit=1000000000,
-            with_vectors=False,
-            with_payload=True
-            )
-        
-        scroll_profile = qdrant_client.scroll(
-            collection_name='UserProfiles',
-            limit=1000000000,
-            with_vectors=False,
-            with_payload=True
-        )
-        
-        profile = None
-        for point_profile in scroll_profile[0]:
-            if point_profile.payload.get('contact_id') == contact_id:
-                profile = point_profile.payload.copy()
-                break
-            
-        memory = None
-        for point_memory in scroll_memory[0]:
-            if point_memory.payload.get('contact_id') == contact_id:
-                memory = point_memory.payload.copy()
-                break
-        
-        if redis_client.hget((f'contact:{contact_id}', 'to_send_catalog')):
-            CallbellSendTool()._run(phone_number=phone_number, messages=[redis_client.hget(f'contact:{contact_id}', 'catalog_message')])
-
-            redis_client.set(f"contact:{contact_id}", 'system_input', 'foi enviado o catalogo para o cliente, contendo a seguinte mensagem: ' + redis_client.hget(f'contact:{contact_id}', 'catalog_message') + "adapte sua resposta para o cliente, com base no catalogo enviado pelo sistema.")
-            
-            redis_client.hdel(f'contact:{contact_id}', 'to_send_catalog')
-            redis_client.hdel(f'contact:{contact_id}', 'catalog_message')
-
 
         if memory and profile:
             history_messages = ''
@@ -581,7 +578,7 @@ o sistema irá enviar o catálogo do plano {plan} para o cliente, conte com isso
                 "client_profile": str(profile.get('profile_customer', '')),
                 "strategic_plan": str(profile.get('strategic_plan', '')),
                 "history": history_messages,
-                "system_input": redis_client.get(f'contact:{contact_id}', 'system_input'),
+                "system_input": str(redis_client.hget(f'contact:{contact_id}', 'system_input')),
             }
             
                                 
@@ -707,6 +704,9 @@ o sistema irá enviar o catálogo do plano {plan} para o cliente, conte com isso
                     except Exception as e:
                         logger.error(f'[{contact_id}] - ERRO ao fazer upsert no Qdrant para FastMemoryMessages (Final Answer): {e}', exc_info=True)
 
+                if 'messages_plans_to_send' in locals() and messages_plans_to_send:
+                    CallbellSendTool()._run(phone_number=phone_number, messages=messages_plans_to_send)
+                
                 logger.info(f'[{contact_id}] - Iniciando processamento de mensagens restantes no Redis.')
                 try:
                     all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
