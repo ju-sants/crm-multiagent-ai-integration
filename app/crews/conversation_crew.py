@@ -479,7 +479,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 break
         
         for plan in redis_client.hget(f'contact:{contact_id}', 'plan').split(', '):
-            if not redis_client.hget(f'contact:{contact_id}', f"sendend_catalog_{plan}"):
+            if not redis_client.get(f"contact:{contact_id}:sendend_catalog_{plan}"):
                 plans_messages = {
                 "MOTO GSM/PGS": """
 MOTO GSM/PGS
@@ -644,7 +644,7 @@ Scooters/Patinetes
                             [
                                 models.PointStruct(
                                     id=str(point_memory.id),
-                                    vector={}, # Se o vetor não for atualizado, pode ser um dicionário vazio
+                                    vector={},
                                     payload=new_payload
                                 )
                             ]
@@ -704,9 +704,12 @@ Scooters/Patinetes
                     except Exception as e:
                         logger.error(f'[{contact_id}] - ERRO ao fazer upsert no Qdrant para FastMemoryMessages (Final Answer): {e}', exc_info=True)
 
-                if 'messages_plans_to_send' in locals() and messages_plans_to_send:
+                if 'messages_plans_to_send' in locals() and 'plans_names_to_send' in locals() and messages_plans_to_send and plans_names_to_send:
                     CallbellSendTool()._run(phone_number=phone_number, messages=messages_plans_to_send)
-                
+
+                    for plan in plans_names_to_send:
+                        redis_client.set(f"contact:{contact_id}:sendend_catalog_{plan}", "1", ex=86400)
+
                 logger.info(f'[{contact_id}] - Iniciando processamento de mensagens restantes no Redis.')
                 try:
                     all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
