@@ -49,7 +49,8 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
     # litellm._turn_on_debug()
     mensagem = '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1))
     logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, mensagem: '{mensagem}'")
-
+    
+    jump_to_registration_task = False
     if redis_client.get(f"{contact_id}:getting_data_from_user") and redis_client.get(f"{contact_id}:plan_details"):
         jump_to_registration_task = True
     
@@ -179,7 +180,6 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 'CustomersDataForSignUp',
                 vectors_config=None,
             )
-            
             
         scroll = qdrant_client.scroll(
             "CustomersDataForSignUp",
