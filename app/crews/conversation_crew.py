@@ -555,7 +555,7 @@ Scooters/Patinetes
                     plans_names_to_send.append(plan)
 
                 system_input = f"""
-    o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_send)} para o cliente, conte com isso em suas mensagens, mensagem que será enviada:
+o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_send)} para o cliente, conte com isso em suas mensagens, mensagem que será enviada:
 
 {'\n\n'.join(messages_plans_to_send)}
 """             
