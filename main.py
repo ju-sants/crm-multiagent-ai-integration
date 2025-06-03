@@ -64,7 +64,7 @@ def send_callbell_message(phone_number, text):
         return False
 
 def get_allowed_chats():
-    return ['71464be80c504971ae263d710b39dd1f']
+    return ['71464be80c504971ae263d710b39dd1f', '2fa9529f9c1e4ed9b8ddea6c6a4272e8', '7b337e574d63473ba0aba7e7de543a48']
 
 def process_requisitions(payload):
     logger.info(f'[{payload.get("uuid", "N/A")}] - INICIANDO process_requisitions para payload: {payload.get("uuid", "N/A")} de {payload.get("from", "N/A")}')
@@ -75,7 +75,7 @@ def process_requisitions(payload):
         return
 
     contact_uuid = contact_info.get("uuid")
-    phone_number = contact_info.get("phoneNumber").replace('+', '')
+    phone_number = contact_info.get("phoneNumber", "").replace('+', '')
     logger.info(f'[{contact_uuid}] - Extraídas informações do contato: UUID={contact_uuid}, Telefone={phone_number}')
 
     allowed_chats = get_allowed_chats()
