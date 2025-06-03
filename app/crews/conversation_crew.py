@@ -554,11 +554,12 @@ Scooters/Patinetes
                     messages_plans_to_send.append(plans_messages[plan])
                     plans_names_to_send.append(plan)
 
+                messages_join = '\n\n'.join(messages_plans_to_send)
                 system_input = f"""
 o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_send)} para o cliente, conte com isso em suas mensagens, mensagem que será enviada:
 
-{'\n\n'.join(messages_plans_to_send)}
-"""             
+{messages_join}
+"""
                 redis_client.hset(f"contact:{contact_id}", 'system_input', system_input)    
             
 

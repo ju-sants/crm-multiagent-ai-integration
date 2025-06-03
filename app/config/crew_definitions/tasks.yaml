@@ -40,6 +40,7 @@ triage_initial_message_task:
 
 
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+    SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
       "action": "RESPONDED_DIRECTLY" | "INITIATE_FULL_PROCESSING",
@@ -74,6 +75,7 @@ profile_customer_task:
     "{history}"
     
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+    SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
       "contact_id": ID do contato,
@@ -108,6 +110,7 @@ profile_customer_task_purchased:
     "{history}"
     
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+    SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
       "contact_id": ID do contato,
@@ -133,6 +136,7 @@ develop_strategy_task:
        - Adapte a estratégia se o contexto for BUDGET (Alessandro) ou SUPPORT (Sofia).
 
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+    SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
       "strategy_type": (ex: "SALES_QUALIFICATION", "SUPPORT_TROUBLESHOOTING"),
@@ -158,6 +162,7 @@ execute_system_operations_task:
     1. Mapeie o `action_type` para a ferramenta InternalAPITool_* correta.
     2. Execute a ferramenta com os `parameters`.
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+    SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
       "action_type_executed": O `action_type` que foi processado,
@@ -200,6 +205,7 @@ craft_response_task:
   
      
     Retorne APENAS um objeto JSON com "primary_messages_sequence" e "proactive_content_generated", NADA MAIS!.
+    SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
       "primary_messages_sequence": [ 
@@ -283,6 +289,7 @@ coordinate_delivery_task:
 
     Você **DEVE retornar um JSON** seguindo a estrutura especificada.
     A mensagem de confirmação que você elaborar deve ser incluída como uma string no array `order`.
+    SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
         "fast_messages_choosen_index": [], // Array de índices das mensagens prontas escolhidas, APENAS SE estritamente necessárias para complementar sua mensagem de confirmação. Geralmente vazio.
@@ -361,6 +368,7 @@ collect_registration_data_task:
     * A `next_message_to_send` pode ser uma mensagem de agradecimento e informação sobre os próximos passos (ex: "Muito obrigado por todas as informações, [Nome do Cliente]! Seu cadastro está quase finalizado. Em breve, nossa equipe entrará em contato para [próximo passo].").
 
     **Retorne SEMPRE um objeto JSON com a seguinte estrutura:**
+    SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
       "status": "AWAITING_REGISTRATION_TYPE" | "AWAITING_DOCUMENT_NUMBER" | "AWAITING_PRIMARY_NAME" | "AWAITING_RESPONSIBLE_NAME_CNPJ" | "AWAITING_ADDRESS" | "AWAITING_VEHICLE_DETAILS" | "AWAITING_PHONE_PRIMARY" | "AWAITING_PHONE_SECONDARY_OPTIONAL" | "AWAITING_PHONE_TERTIARY_OPTIONAL" | "AWAITING_EMAIL" | "AWAITING_PAYMENT_DUE_DAY" | "AWAITING_INSURANCE_INFO" | "AWAITING_INSURANCE_COMPANY_IF_ANY" | "AWAITING_MOTO_IS_FINANCED_PROMPT" | "AWAITING_MOTO_FINANCING_DETAILS" | "COLLECTION_COMPLETE",
