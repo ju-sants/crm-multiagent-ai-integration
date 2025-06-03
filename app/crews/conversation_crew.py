@@ -627,7 +627,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                             try:
                                 logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
                                 new_payload['primary_messages_sequence'].remove(payload['primary_messages_sequence'][index])
-                            except ValueError:
+                            except (ValueError, IndexError) as e:
                                 logger.error(f"[{contact_id}] - Índice {payload['primary_messages_sequence'][index]} não encontrado em primary_messages_sequence.")
 
                         logger.info(f'[{contact_id}] - Remoção de mensagens primárias concluída.')
@@ -639,7 +639,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                             try:
                                 logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
                                 response_delivery_json['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
-                            except ValueError:
+                            except (ValueError, IndexError) as e:
                                 logger.error(f"[{contact_id}] - Erro ao remover índice {index} de proactive_content_choosen_index: {e}", exc_info=True)
 
                         logger.info(f'[{contact_id}] - Remoção de conteúdo proativo concluída.')
