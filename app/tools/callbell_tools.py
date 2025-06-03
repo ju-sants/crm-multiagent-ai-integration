@@ -47,6 +47,6 @@ class CallbellSendTool(BaseTool):
             statuses.append(response.status_code)
             
         if all(status == 200 for status in statuses):
-            return {"status": "success", "data": response.json()}
+            return {"status": "success"}
         else:
-            return {"status": "error", "message": response.text}
+            return {"status": "error"}
