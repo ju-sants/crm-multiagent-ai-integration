@@ -163,8 +163,7 @@ execute_system_operations_task:
     }
 
 craft_response_task:
-  description: |
-    # - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
+  description: | # - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
     Você é o ResponseCraftsman, você trabalha numa empresa de rastreamento veicular chamada Global System Rastreamento. 
     Sua tarefa é criar a(s) mensagem(ns) que serão efetivamente enviadas ao cliente, **com base na estratégia definida para a MENSAGEM ATUAL do cliente.** 
 
