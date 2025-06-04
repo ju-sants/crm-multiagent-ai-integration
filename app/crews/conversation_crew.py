@@ -639,9 +639,9 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                             
                             try:
                                 logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
-                                new_payload['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
+                                new_payload['proactive_content_generated'].remove(payload['proactive_content_generated'][index])
                             except (ValueError, IndexError) as e:
-                                logger.error(f"[{contact_id}] - Erro ao remover índice {index} de proactive_content_choosen_index: {e}", exc_info=True)
+                                logger.error(f"[{contact_id}] - Erro ao remover índice {index} de proactive_content_generated: {e}", exc_info=True)
 
                         logger.info(f'[{contact_id}] - Remoção de conteúdo proativo concluída.')
 
@@ -696,9 +696,9 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                             
                             try:
                                 logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
-                                new_payload['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
+                                new_payload['proactive_content_generated'].remove(payload['proactive_content_generated'][index])
                             except (ValueError, IndexError) as e:
-                                logger.error(f"[{contact_id}] - Índice {index} não encontrado em proactive_content_choosen_index.")
+                                logger.error(f"[{contact_id}] - Índice {index} não encontrado em proactive_content_generated.")
 
                         logger.info(f'[{contact_id}] - Remoção de conteúdo proativo de new_response_json concluída.')
 
