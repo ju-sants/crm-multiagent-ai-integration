@@ -433,7 +433,8 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 response_craft_json['contact_id'] = contact_id
                 
                 SaveFastMemoryMessages()._run(
-                    response_craft_json
+                    response_craft_json,
+                    contact_id
                 )
         
         delivery_coordinator_instance = get_delivery_coordinator_agent()
@@ -638,7 +639,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                             
                             try:
                                 logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
-                                response_delivery_json['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
+                                new_payload['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
                             except (ValueError, IndexError) as e:
                                 logger.error(f"[{contact_id}] - Erro ao remover índice {index} de proactive_content_choosen_index: {e}", exc_info=True)
 
@@ -673,7 +674,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                     logger.info(f'[{contact_id}] - Payload de point_memory copiado para new_payload.')
 
                     logger.info(f'[{contact_id}] - Copiando itens de response_craft_json["Final Answer"] para new_response_json.')
-                    for k, v in response_craft_json['Final Answer'].items(): # Use .items() para iterar sobre dicionário
+                    for k, v in response_craft_json['Final Answer'].items():
                         new_response_json[k] = v
                     logger.info(f'[{contact_id}] - Cópia para new_response_json concluída. Conteúdo: {list(new_response_json.keys())}.')
 
@@ -691,7 +692,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                         for index in new_response_json['proactive_content_choosen_index']:
                             
                             logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
-                            response_delivery_json['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
+                            new_payload['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
                             
                         logger.info(f'[{contact_id}] - Remoção de conteúdo proativo de new_response_json concluída.')
 

@@ -232,7 +232,7 @@ class SaveFastMemoryMessages(BaseTool):
     description: str = "Usado para salvar mensagens rápidas no Qdrant."
     args_schema: Type[BaseModel] = SaveFastMemoryMessagesInput
     
-    def _run(self, payload: str | dict) -> str:
+    def _run(self, payload: str | dict, contact_id: str) -> str:
         client = get_client()
         if not client:
             return "Erro ao conectar ao Qdrant."
@@ -244,11 +244,24 @@ class SaveFastMemoryMessages(BaseTool):
                 )
             
             payload = payload if isinstance(payload, dict) else json.loads(payload)
+
+            id = str(uuid.uuid4())
+            scroll = client.scroll(
+                collection_name="FastMemoryMessages",
+                limit=1000000000,
+                with_payload=True,
+                with_vectors=True,
+            )
+
+            for point in scroll[0]:
+                if point.payload.get("contact_id") == contact_id:
+                    id = str(point.id)
+
             client.upsert(
                 collection_name="FastMemoryMessages",
                 points=[
                     models.PointStruct(
-                        id='0fa08b3c-3b14-42cc-a04f-4fcaa3742da1', # ID fixo para mensagens rápidas
+                        id=id,
                         payload=payload,
                         vector={'default': SentenceTransformer('all-mpnet-base-v2').encode(str(payload), show_progress_bar=False).tolist()}
                     )
