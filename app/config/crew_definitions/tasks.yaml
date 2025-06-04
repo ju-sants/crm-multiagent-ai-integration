@@ -118,15 +118,15 @@ develop_strategy_task:
     - Mensagem Original do Cliente: "{message_text_original}" # Esta é a mensagem ATUAL do cliente e deve ser o DRIVER PRINCIPAL da sua estratégia.
     - Contexto Operacional: "{operational_context}"
     - Tópico Identificado: "{identified_topic}" # Derivado da mensagem atual do cliente.
-
     Siga sua FILOSOFIA DE CONSULTORIA ESTRATÉGICA e FLUXO DE DEFINIÇÃO DE ESTRATÉGIA:
     1. Analise todos os inputs, **dando prioridade máxima à `Mensagem Original do Cliente` para entender a necessidade imediata.**
     2. Use a BusinessGuidelinesTool para buscar as diretrizes relevantes para o contexto operacional, **filtrando ou aplicando-as no contexto da solicitação atual do cliente.**
     3. Use a RAGTool juntamente com a técnica HyDE para conseguir extrair informações valiosas da nossa base de dados vetorial Qdrant, **formulando sua query HyDE para responder à necessidade expressa na `Mensagem Original do Cliente`.**
-    4. Formule o plano estratégico (objetivo, pontos-chave, perguntas, necessidade de ação de sistema). **O `conversation_goal` DEVE abordar diretamente a `Mensagem Original do Cliente`. Os `key_talking_points` e `questions_to_ask_client` devem ser relevantes para essa mensagem atual.**
-    - Adapte a estratégia se o contexto for BUDGET (Alessandro) ou SUPPORT (Sofia), sempre com foco na interação corrente.
-    5. A `super_message` gerada deve ser rica em informações, mas **estritamente focada em responder ou dar seguimento à `Mensagem Original do Cliente`**, utilizando o histórico e o perfil apenas como contexto de apoio.
-
+    4. Formule o plano estratégico (objetivo, pontos-chave, perguntas, necessidade de ação de sistema).
+        **O `conversation_goal` DEVE abordar diretamente a `Mensagem Original do Cliente`.
+        Os `key_talking_points` e `questions_to_ask_client` devem ser relevantes para essa mensagem atual.**
+        - Adapte a estratégia se o contexto for BUDGET (Alessandro) ou SUPPORT (Sofia), sempre com foco na interação corrente.
+    5. A `super_message` gerada deve ser rica em informações, mas **estritamente focada em responder ou dar seguimento à `Mensagem Original do Cliente`**, utilizando o histórico e o perfil apenas como contexto de apoio. **Ao construir a `super_message`, lembre-se de estruturá-la pensando na futura fragmentação pelo ResponseCraftsman: use parágrafos curtos e, se possível, bullet points internos, para facilitar a quebra em mensagens de 1-3 frases.** 
     Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
     SEM COMENTÁRIOS NO JSON!
   expected_output: |
@@ -136,9 +136,9 @@ develop_strategy_task:
       "key_talking_points": ["argumentos/informações relevantes para a mensagem atual"],
       "questions_to_ask_client": ["perguntas para esclarecer a mensagem atual ou guiar para a solução/venda"],
       "system_action_request": { "action_type": "...", "parameters": {...} } # ou null, se aplicável à necessidade atual
-      "internal_notes_for_craftsman": "Instruções de tom, estilo, foco na mensagem atual do cliente.",
+      "internal_notes_for_craftsman": "Instruções de tom, estilo, foco na mensagem atual do cliente. Ex: linguagem_preferencial: simples_e_direta",
       "empathy_statement_suggestion": "(Opcional, para Suporte) Sugestão de frase empática inicial, relacionada ao problema expresso na mensagem atual.",
-      "super_message": "(OBRIGATÓRIO) Uma super mensagem de muitos parágrafos rica em informação para ser meticulosamente usada pelo ResponseCraftsman, focada em responder à necessidade da MENSAGEM ATUAL do cliente."
+      "super_message": "(OBRIGATÓRIO) Uma super mensagem rica em informação, já semi-organizada para facilitar a fragmentação em mensagens curtas (1-3 frases) pelo ResponseCraftsman, focada em responder à necessidade da MENSAGEM ATUAL do cliente."
     }
 
 execute_system_operations_task:
@@ -163,44 +163,48 @@ execute_system_operations_task:
     }
 
 craft_response_task:
-  description: | # - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
-    Você é o ResponseCraftsman, você trabalha numa empresa de rastreamento veicular chamada Global System Rastreamento.
-    Sua tarefa é criar a(s) mensagem(ns) que serão efetivamente enviadas ao cliente, **com base na estratégia definida para a MENSAGEM ATUAL do cliente.**
+  description: |
+    # - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
+    Você é o ResponseCraftsman, você trabalha numa empresa de rastreamento veicular chamada Global System Rastreamento. 
+    Sua tarefa é criar a(s) mensagem(ns) que serão efetivamente enviadas ao cliente, **com base na estratégia definida para a MENSAGEM ATUAL do cliente.** 
 
     Dados recebidos (contexto das tarefas anteriores):
     - Plano Estratégico (JSON):
-    "{develop_strategy_task_output}" # Contém a estratégia focada na mensagem atual do cliente.
+    "{develop_strategy_task_output}" # Contém a estratégia focada na mensagem atual do cliente. 
     - Perfil do Cliente (JSON):
-    "{profile_customer_task_output}" # Perfil atualizado com ênfase na última interação.
-    - Contexto Operacional: "{operational_context}"
-    - Tópico Identificado: "{identified_topic}" # Tópico da mensagem atual.
-    - Mensagem Original do Cliente: "{message_text_original}" # A mensagem que você deve focar em responder.
-
+    "{profile_customer_task_output}" # Perfil atualizado com ênfase na última interação. 
+    - Contexto Operacional: "{operational_context}" 
+    - Tópico Identificado: "{identified_topic}" # Tópico da mensagem atual. 
+    - Mensagem Original do Cliente: "{message_text_original}" # A mensagem que você deve focar em responder. 
     Siga seus PRINCÍPIOS DE COMUNICAÇÃO GLOBAL SYSTEM e FLUXO DE CRIAÇÃO DE RESPOSTA:
-    1. Analise todos os inputs, especialmente as "internal_notes_for_craftsman" e a "super_message" do plano estratégico, **interpretando-os sempre sob a ótica da `Mensagem Original do Cliente`.**
-    2. Gere as mensagens principais. **Seu foco deve ser em UM plano principal, ou NO MÁXIMO DOIS se forem altamente correlacionados e diretamente relevantes para a `Mensagem Original do Cliente`.**
-        * **Conteúdo Estratégico:** As mensagens devem responder à `Mensagem Original do Cliente`, incorporando informações importantes, curiosidades pertinentes (sempre sobre rastreamento veicular da Global System) ou elementos persuasivos que engajem o cliente e o guiem no funil de vendas, conforme a estratégia definida para esta interação.
-        * **Diretriz de Tamanho:** Siga estritamente a diretriz de que cada mensagem deve ter entre 1 a 5 frases (idealmente 1-3 frases) para garantir a legibilidade em um chat.
-        * **Objetivo Principal:** Criar um fluxo conversacional que seja fácil de ler e responder em um chat, e que **atenda à necessidade expressa na `Mensagem Original do Cliente`.**
-        * **Variação Controlada:** Dentro da faixa de 1-5 frases, varie o comprimento para soar natural.
-        * **Não Crie Blocos de Texto:** Se uma ideia, para ser completa, precisar de mais do que ~5 frases, você DEVE dividi-la em múltiplas mensagens sequenciais, cada uma respeitando o limite de 1-5 frases.
-        * **A prioridade é a experiência do cliente no chat:** Mensagens muito longas são difíceis de acompanhar e desencorajam a interação.
-    3. Gere conteúdo proativo (perguntas/respostas) para a Base de Conhecimento sobre rastreamento veicular, **inspirado pela `Mensagem Original do Cliente` e sua resposta a ela.**
+    1. Analise todos os inputs, especialmente as "internal_notes_for_craftsman" e a "super_message" do plano estratégico, **interpretando-os sempre sob a ótica da `Mensagem Original do Cliente`.** 
+    2. Gere as mensagens principais.
+        **Seu foco deve ser em UM plano principal, ou NO MÁXIMO DOIS se forem altamente correlacionados e diretamente relevantes para a `Mensagem Original do Cliente`.** 
+        * **Conteúdo Estratégico:** As mensagens devem responder à `Mensagem Original do Cliente`, incorporando informações importantes, curiosidades pertinentes (sempre sobre rastreamento veicular da Global System) ou elementos persuasivos que engajem o cliente e o guiem no funil de vendas, conforme a estratégia definida para esta interação. 
+        * **Diretriz de Tamanho:** Siga estritamente a diretriz de que cada mensagem deve ter **idealmente 1 a 2 frases, e no máximo absoluto 3 frases curtas.** Isso é crucial para garantir a legibilidade em um chat. 
+        * **Objetivo Principal:** Criar um fluxo conversacional que seja fácil de ler e responder em um chat, e que **atenda à necessidade expressa na `Mensagem Original do Cliente`.** 
+        * **Variação Controlada:** Dentro da faixa de 1-3 frases curtas, varie o comprimento para soar natural. 
+        * **Não Crie Blocos de Texto:** Se uma ideia, para ser completa, precisar de mais do que ~3 frases curtas, você DEVE dividi-la em múltiplas mensagens sequenciais, cada uma respeitando o limite de 1-3 frases curtas. 
+        * **A prioridade é a experiência do cliente no chat:** Mensagens muito longas são difíceis de acompanhar e desencorajam a interação. 
+    3. Gere conteúdo proativo (perguntas/respostas) para a Base de Conhecimento sobre rastreamento veicular, **inspirado pela `Mensagem Original do Cliente` e sua resposta a ela.** 
        (Este conteúdo será passado para a SaveFastMemoryMessages pela lógica do CrewAI após sua tarefa,
         você apenas gera o conteúdo no formato esperado).
-    4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa. **Ao fazer isso, desmembre o conteúdo da `super_message` em segmentos lógicos, onde cada segmento resulte em uma mensagem de 1-5 frases. Selecione e priorize as partes da `super_message` mais relevantes para responder à `Mensagem Original do Cliente` e ao(s) plano(s) focado(s) para esta interação, omitindo detalhes excessivos ou sobre planos não explicitamente selecionados.**
-    5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens **altamente relevantes e estratégicas** para o que o cliente precisa **NESTA INTERAÇÃO ATUAL** em relação ao(s) plano(s) de rastreamento em discussão.
-    6. IMPORTANTE: NUNCA SE APRESENTE! Seu Nome (Alessandro ou Sofia, conforme o tom) é colocado na mensagem ao ser enviada pelo sistema.
-    7. Identifique qual plano de rastreamento (ou no máximo dois, se estritamente correlacionados e altamente relevantes para a `Mensagem Original do Cliente`, como por exemplo, um plano de moto e uma proteção adicional específica para ele) você irá abordar em suas mensagens. Insira os nomes exatos desses planos como uma **lista de strings** no campo `plan_names` do JSON de saída. Para cada plano escolhido, o sistema backend enviará um link de catálogo com uma pequena mensagem.
-       **Nomes Exatos dos Planos Disponíveis (para sua referência):** "MOTO GSM/PGS", "GSM Padrão", "GSM FROTA", "SATELITAL FROTA", "HÍBRIDO", "GSM+WiFi", "Scooters/Patinetes", "Proteção Total PGS com cobertura FIPE".
-
-    Retorne APENAS um objeto JSON com "primary_messages_sequence", "proactive_content_generated" e "plan_names", NADA MAIS!.
+    4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa. 
+        **Ao fazer isso, desmembre o conteúdo da `super_message` em segmentos lógicos, onde cada segmento resulte em uma mensagem de 1-3 frases curtas.** 
+        **Selecione e priorize as partes da `super_message` mais relevantes para responder à `Mensagem Original do Cliente` e ao(s) plano(s) focado(s) para esta interação, omitindo detalhes excessivos ou sobre planos não explicitamente selecionados.** 
+    5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens **altamente relevantes e estratégicas** para o que o cliente precisa **NESTA INTERAÇÃO ATUAL** em relação ao(s) plano(s) de rastreamento em discussão. 
+    6. IMPORTANTE: NUNCA SE APRESENTE! Seu Nome (Alessandro ou Sofia, conforme o tom) é colocado na mensagem ao ser enviada pelo sistema. 
+    7. Identifique qual plano de rastreamento (ou no máximo dois, se estritamente correlacionados e altamente relevantes para a `Mensagem Original do Cliente`, como por exemplo, um plano de moto e uma proteção adicional específica para ele) você irá abordar em suas mensagens. 
+    Insira os nomes exatos desses planos como uma **lista de strings** no campo `plan_names` do JSON de saída. 
+    Para cada plano escolhido, o sistema backend enviará um link de catálogo com uma pequena mensagem. 
+    **Nomes Exatos dos Planos Disponíveis (para sua referência):** "MOTO GSM/PGS", "GSM Padrão", "GSM FROTA", "SATELITAL FROTA", "HÍBRIDO", "GSM+WiFi", "Scooters/Patinetes", "Proteção Total PGS com cobertura FIPE". 
+    Retorne APENAS um objeto JSON com "primary_messages_sequence", "proactive_content_generated" e "plan_names", NADA MAIS!. 
     SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
       "primary_messages_sequence": [
-        "Mensagem 1 (ex: 2 frases, introduzindo o plano focado em resposta à solicitação atual).",
-        "Mensagem 2 (ex: 3 frases, destacando um benefício chave ou uma curiosidade persuasiva do plano, relevante para a conversa atual).",
+        "Mensagem 1 (ex: 1-2 frases, introduzindo o plano focado em resposta à solicitação atual).",
+        "Mensagem 2 (ex: 2-3 frases curtas, destacando um benefício chave ou uma curiosidade persuasiva do plano, relevante para a conversa atual).",
         "Mensagem 3 (ex: 1 frase, talvez uma pergunta curta para engajamento ou próximo passo, relacionada à interação atual)."
       ],
       "proactive_content_generated": [
@@ -210,80 +214,93 @@ craft_response_task:
       "plan_names": ["MOTO GSM/PGS"]
     }
 
+
 coordinate_delivery_task:
   description: |
-    Você é o **DeliveryCoordinator**, o Coordenador Estratégico do Fluxo de Comunicação com o Cliente da **Global System Rastreamento Veicular**.
-    Sua missão principal é gerenciar o fluxo de comunicação, analisando o contexto da conversa (com **foco na `message_text_original` mais recente**) para escolher, ordenar e garantir a entrega eficaz da(s) mensagem(ns) mais apropriada(s) ao cliente. Isso inclui identificar quando uma única mensagem é suficiente ou quando uma sequência curta de mensagens (idealmente 2-3) é necessária para uma comunicação completa, clara e interessante, **respondendo à interação atual.**
-    Você utilizará mensagens prontas (`fast_messages`, `proactive_content_generated`) e, em situações específicas como a aceitação de um orçamento (indicada pela `message_text_original` ou `operational_context`), **elaborará mensagens contextuais, como uma confirmação de venda.** O cliente não pode ficar sem resposta, nem receber respostas sem sentido, incompletas ou que não atendam à sua solicitação atual.
-
+    Você é o **DeliveryCoordinator**, o Coordenador Estratégico do Fluxo de Comunicação com o Cliente da **Global System Rastreamento Veicular**. 
+    Sua missão principal é gerenciar o fluxo de comunicação, analisando o contexto da conversa (com **foco na `message_text_original` mais recente**) para escolher, ordenar e garantir a entrega eficaz da(s) mensagem(ns) mais apropriada(s) ao cliente. 
+    Isso inclui identificar quando uma única mensagem é suficiente ou quando uma sequência de mensagens (idealmente 2-3 mensagens muito curtas, ou potencialmente 4 se forem frases extremamente concisas e sequenciais para um ponto específico) é necessária para uma comunicação completa, clara e interessante, **respondendo à interação atual.** 
+    Você utilizará mensagens prontas (`fast_messages`, `proactive_content_generated`) e, em situações específicas como a aceitação de um orçamento (indicada pela `message_text_original` ou `operational_context`), **elaborará mensagens contextuais, como uma confirmação de venda.** O cliente não pode ficar sem resposta, nem receber respostas sem sentido, incompletas ou que não atendam à sua solicitação atual. 
     Sua responsabilidade é:
     1.  **ANÁLISE DO CONTEXTO E DEFINIÇÃO DA NECESSIDADE DE COMUNICAÇÃO (FOCADA NA MENSAGEM ATUAL):**
-        * Analise cuidadosamente todos os dados de entrada: mensagem do cliente (`{message_text_original}`), histórico (`{history}`), tópico (`{identified_topic}`), contexto operacional (`{operational_context}`), perfil do cliente (`{client_profile}`), plano de vendas (`{strategic_plan}`), input do sistema (`{system_input}`), e os recursos disponíveis (`{fast_messages}`, `{proactive_content_generated}`). **A `message_text_original` é seu principal guia para a ação imediata.**
-        * Determine o objetivo principal da próxima interação com base na `message_text_original`: Responder uma pergunta? Confirmar um aceite recente? Fornecer informações sequenciais relevantes para a última mensagem? Guiar o cliente a partir de sua última interação?
+        * Analise cuidadosamente todos os dados de entrada: mensagem do cliente (`{message_text_original}`), histórico (`{history}`), tópico (`{identified_topic}`), contexto operacional (`{operational_context}`), perfil do cliente (`{client_profile}`), plano de vendas (`{strategic_plan}`), input do sistema (`{system_input}`), e os recursos disponíveis (`{fast_messages}`, `{proactive_content_generated}`). 
+        **A `message_text_original` é seu principal guia para a ação imediata.** 
+        * Determine o objetivo principal da próxima interação com base na `message_text_original`: Responder uma pergunta? 
+        Confirmar um aceite recente? Fornecer informações sequenciais relevantes para a última mensagem? 
+        Guiar o cliente a partir de sua última interação? 
     2.  **SELEÇÃO E/OU ELABORAÇÃO ESTRATÉGICA DE MENSAGEM(ENS) (PARA A MENSAGEM ATUAL):**
         * **Cenário Prioritário - Aceite de Orçamento/Plano (Detectado na Interação Atual):**
-            * **Se o `operational_context` for 'BUDGET_ACCEPTED' (baseado na triagem da mensagem atual) ou se a `message_text_original` contiver sinais inequívocos de aceitação** (Ex: "Gostei, podemos fechar", "Quero esse plano", "Como faço para contratar?", "Aceito."), então:
-                * **VOCÊ DEVE, OBRIGATORIAMENTE, ELABORAR UMA MENSAGEM DE CONFIRMAÇÃO.** Esta mensagem é de sua autoria.
-                * Ela deve ser clara, direta, concisa, amigável, profissional e recapitular o que foi aceito (plano/orçamento, valor se apropriado) e sugerir próximos passos.
-                * Exemplos: "Perfeito! Confirmando seu interesse no Plano [Nome do Plano/Referência]. Para seguirmos, precisaremos de alguns dados. Podemos prosseguir?", "Excelente! Para formalizarmos o Plano [Nome do Plano] que você escolheu, como prefere nos fornecer os dados?"
-                * Esta mensagem de confirmação elaborada por você terá alta prioridade na ordem de envio.
+            * **Se o `operational_context` for 'BUDGET_ACCEPTED' (baseado na triagem da mensagem atual) ou se a `message_text_original` contiver sinais inequívocos de aceitação** (Ex: "Gostei, podemos fechar", "Quero esse plano", "Como faço para contratar?", "Aceito."), então: 
+                * **VOCÊ DEVE, OBRIGATORIAMENTE, ELABORAR UMA MENSAGEM DE CONFIRMAÇÃO.** Esta mensagem é de sua autoria. 
+                * Ela deve ser clara, direta, concisa, amigável, profissional e recapitular o que foi aceito (plano/orçamento, valor se apropriado) e sugerir próximos passos. 
+                * Exemplos: "Perfeito! Confirmando seu interesse no Plano [Nome do Plano/Referência]. Para seguirmos, precisaremos de alguns dados. Podemos prosseguir?", "Excelente! Para formalizarmos o Plano [Nome do Plano] que você escolheu, como prefere nos fornecer os dados?" 
+                * Esta mensagem de confirmação elaborada por você terá alta prioridade na ordem de envio. 
         * **Outros Cenários de Comunicação (Respondendo à Mensagem Atual):**
-            * Com base na necessidade comunicacional identificada no passo 1 (a partir da `message_text_original`), avalie os recursos disponíveis: `{fast_messages}` e `{proactive_content_generated}`.
-            * Selecione o índice (ou índices) da(s) mensagem(ns) que melhor se adequa(m) e responde(m) à situação atual. Esteja especialmente atento se algumas `fast_messages` ou `proactive_content_generated` parecem ser partes de uma sequência lógica ou se complementam, devendo ser enviadas juntas para formar uma resposta completa e coesa para a `message_text_original`.
-            * **Ao usar um item de `proactive_content_generated`:** Se a *resposta* desse item for uma excelente correspondência para a necessidade do cliente, mas a *pergunta original* do conteúdo proativo não for idêntica à interação do cliente, **você deverá fazer um pequeno ajuste contextual na resposta selecionada** para que ela flua naturalmente na conversa e se alinhe com as demais mensagens no `order`. O ajuste deve ser mínimo, apenas para garantir a coesão e relevância direta, sem alterar a informação principal.
-            * A ausência de uma mensagem de aceite NÃO significa que nenhuma mensagem deva ser enviada. Sua função é coordenar a comunicação em geral, sempre respondendo à interação mais recente.
+            * Com base na necessidade comunicacional identificada no passo 1 (a partir da `message_text_original`), avalie os recursos disponíveis: `{fast_messages}` e `{proactive_content_generated}`. 
+            * Selecione o índice (ou índices) da(s) mensagem(ns) que melhor se adequa(m) e responde(m) à situação atual. 
+            Esteja especialmente atento se algumas `fast_messages` ou `proactive_content_generated` (que agora serão compostas por frases de 1-3 palavras) parecem ser partes de uma sequência lógica ou se complementam, devendo ser enviadas juntas para formar uma resposta completa e coesa para a `message_text_original`. 
+            * **Ao usar um item de `proactive_content_generated`:** Se a *resposta* desse item for uma excelente correspondência para a necessidade do cliente, mas a *pergunta original* do conteúdo proativo não for idêntica à interação do cliente, **você deverá fazer um pequeno ajuste contextual na resposta selecionada** para que ela flua naturalmente na conversa e se alinhe com as demais mensagens no `order`. 
+            O ajuste deve ser mínimo, apenas para garantir a coesão e relevância direta, sem alterar a informação principal. 
+            * A ausência de uma mensagem de aceite NÃO significa que nenhuma mensagem deva ser enviada. 
+            Sua função é coordenar a comunicação em geral, sempre respondendo à interação mais recente. 
         * **Combinação e Priorização:**
-            * Se uma mensagem de confirmação foi elaborada (para um aceite atual), ela geralmente será a primeira ou a única. Mensagens prontas podem complementá-la se agregarem valor essencial e imediato a essa confirmação.
-            * Em outros cenários, escolha a mensagem pronta ou a sequência de mensagens prontas mais relevante para a `message_text_original`.
+            * Se uma mensagem de confirmação foi elaborada (para um aceite atual), ela geralmente será a primeira ou a única. 
+            Mensagens prontas podem complementá-la se agregarem valor essencial e imediato a essa confirmação. 
+            * Em outros cenários, escolha a mensagem pronta ou a sequência de mensagens prontas mais relevante para a `message_text_original`. 
     3.  **ORDENAÇÃO, QUANTIDADE E INTEGRIDADE DAS MENSAGENS:**
-        * Defina a sequência lógica para as mensagens no array `order`. Se uma mensagem de confirmação foi criada, ela tipicamente vem primeiro.
-        * **Determine a quantidade de mensagens a serem enviadas, exercendo sua autonomia e bom senso para garantir uma comunicação completa, mas concisa, para a interação atual:**
-            * **Uma única mensagem (1):** Perfeita para muitas situações. Se uma mensagem é clara e suficiente para a `message_text_original`, envie apenas uma.
-            * **Sequência curta (2-3 mensagens):** Ideal quando necessário para desenvolver uma ideia completa, responder a múltiplos pontos interligados da `message_text_original`, ou guiar o cliente através de um pequeno conjunto de informações. **Analise ativamente se as mensagens prontas selecionadas compõem uma sequência que deve ser enviada junta para máxima clareza e eficácia em resposta à `message_text_original`.** Esta é a faixa preferencial para a maioria das respostas que não são um simples "sim/não" ou dado factual único.
-            * **Não force o envio de múltiplas mensagens se não for necessário.** Sua meta é clareza e concisão, não atingir um número específico de mensagens. O cliente ODEIA mensagens demais. Envie o suficiente para fechar uma ideia e manter a conversa interessante, respondendo à `message_text_original`.
-            * **Máximo em Casos Extremos (até 5 mensagens):** Somente para situações **EXCEPCIONAIS** que exijam uma explicação detalhada e sequencial em resposta à `message_text_original` que é absolutamente crítica e não pode ser evitada ou resumida. Use este limite com extrema parcimônia e apenas se a ausência dessa sequência prejudicar gravemente a compreensão do cliente.
-            * Mensagens prontas (`fast_messages`, `proactive_content_generated`) devem ser usadas preferencialmente em seu formato original. São bens valiosos criados por sua equipe.
-            * **Ajustes contextuais mínimos nas respostas de `proactive_content_generated` são permitidos e encorajados** (conforme instruído no passo 2) para garantir que se encaixem perfeitamente na conversa.
-            * Outras modificações em `fast_messages` ou na estrutura fundamental do `proactive_content_generated` são exceções extremas e apenas se a mensagem original ficar sem sentido no contexto.
-        * Mensagens prontas (`fast_messages`, `proactive_content_generated`) devem ser usadas preferencialmente em seu formato original. São bens valiosos criados por sua equipe; modificações são exceções extremas e apenas se a mensagem original ficar sem sentido no contexto.
+        * Defina a sequência lógica para as mensagens no array `order`. 
+        Se uma mensagem de confirmação foi criada, ela tipicamente vem primeiro. 
+        * **Determine a quantidade de mensagens a serem enviadas, exercendo sua autonomia e bom senso para garantir uma comunicação completa, mas concisa, para a interação atual:** 
+            * **Uma única mensagem (1) (de 1-3 frases curtas):** Perfeita para muitas situações. 
+            Se uma mensagem é clara e suficiente para a `message_text_original`, envie apenas uma. 
+            * **Sequência curta (idealmente 2-3 mensagens muito curtas, podendo ser 4 se cada uma for extremamente breve e essencial para a lógica):** Ideal quando necessário para desenvolver uma ideia completa, responder a múltiplos pontos interligados da `message_text_original`, ou guiar o cliente através de um pequeno conjunto de informações. 
+            **Analise ativamente se as mensagens prontas selecionadas compõem uma sequência que deve ser enviada junta para máxima clareza e eficácia em resposta à `message_text_original`.** Esta é a faixa preferencial para a maioria das respostas que não são um simples "sim/não" ou dado factual único. 
+            * **Não force o envio de múltiplas mensagens se não for necessário.** Sua meta é clareza e concisão, não atingir um número específico de mensagens. 
+            O cliente ODEIA mensagens demais. Envie o suficiente para fechar uma ideia e manter a conversa interessante, respondendo à `message_text_original`. 
+            * **Máximo em Casos Extremos (até 5 mensagens no total da sequência):** Somente para situações **EXCEPCIONAIS** que exijam uma explicação detalhada e sequencial em resposta à `message_text_original` que é absolutamente crítica e não pode ser evitada ou resumida, e onde cada mensagem individual ainda respeita o limite de 1-3 frases curtas. 
+            Use este limite com extrema parcimônia e apenas se a ausência dessa sequência prejudicar gravemente a compreensão do cliente. 
+        * Mensagens prontas (`fast_messages`, `proactive_content_generated`) devem ser usadas preferencialmente em seu formato original. São bens valiosos criados por sua equipe. 
+        * **Ajustes contextuais mínimos nas respostas de `proactive_content_generated` são permitidos e encorajados** (conforme instruído no passo 2) para garantir que se encaixem perfeitamente na conversa. 
+        * Outras modificações em `fast_messages` ou na estrutura fundamental do `proactive_content_generated` são exceções extremas e apenas se a mensagem original ficar sem sentido no contexto. 
     4.  **GARANTIR UMA SAÍDA JSON VÁLIDA E COMPLETA:**
-        * O array `order` no JSON de saída **DEVE conter as strings das mensagens a serem enviadas**, na ordem correta.
-        * **Um array `order` vazio é considerado uma falha na sua função de coordenar a entrega de mensagens, a menos que uma diretiva explícita no `{system_input}` ou uma lógica de altíssimo nível (fora do seu escopo usual) determine o silêncio.** Sua função padrão é facilitar a comunicação e garantir que o cliente receba uma resposta adequada à sua última mensagem.
+        * O array `order` no JSON de saída **DEVE conter as strings das mensagens a serem enviadas**, na ordem correta. 
+        * **Um array `order` vazio é considerado uma falha na sua função de coordenar a entrega de mensagens, a menos que uma diretiva explícita no `{system_input}` ou uma lógica de altíssimo nível (fora do seu escopo usual) determine o silêncio.** Sua função padrão é facilitar a comunicação e garantir que o cliente receba uma resposta adequada à sua última mensagem. 
     ---
 
     **Contexto da Conversa:**
-    * **Tópico identificado:** "{identified_topic}"
-    * **Contexto Operacional:** "{operational_context}" # Define a estratégia geral. 'BUDGET_ACCEPTED' tem tratamento especial.
-    * **Mensagem do cliente:** "{message_text_original}"
+    * **Tópico identificado:** "{identified_topic}" 
+    * **Contexto Operacional:** "{operational_context}" # Define a estratégia geral. 
+    'BUDGET_ACCEPTED' tem tratamento especial. 
+    * **Mensagem do cliente:** "{message_text_original}" 
     * **Perfil do Cliente:**
-        `{client_profile}`
+        `{client_profile}` 
     * **Plano de Vendas Estratégico:**
-        `{strategic_plan}`
+        `{strategic_plan}` 
     * **Histórico de conversação (5 Últimas mensagens):**
-        `{history}`
+        `{history}` 
     * **INPUT DO SISTEMA:**
-        `{system_input}`
+        `{system_input}` 
 
     ---
 
     **Recursos Disponíveis (Suas Munições para mensagens):**
     * **Mensagens prontas da sua equipe (Rapid Messages):**
-        `{fast_messages}`
+        `{fast_messages}` 
     * **Conteúdo Proativo Gerado (apenas respostas para cenários):**
-        `{proactive_content_generated}`
+        `{proactive_content_generated}` 
 
     ---
 
     **Formato de Retorno (OBRIGATÓRIO):**
 
-    Você **DEVE retornar um JSON** seguindo a estrutura especificada.
-    O array `order` DEVE conter a(s) string(s) da(s) mensagem(ns) a ser(em) enviada(s).
+    Você **DEVE retornar um JSON** seguindo a estrutura especificada. 
+    O array `order` DEVE conter a(s) string(s) da(s) mensagem(ns) a ser(em) enviada(s). 
     SEM COMENTÁRIOS ADICIONAIS DENTRO DO JSON FINAL!
   expected_output: |
     {
-        "fast_messages_choosen_index": [], // Array de índices de `{fast_messages}` escolhidas. Preenchido se mensagens prontas forem selecionadas.
-        "proactive_content_choosen_index": [], // Array de índices de `{proactive_content_generated}` escolhidas. Preenchido se conteúdo proativo for selecionado.
-        "order": ["Mensagem 1 (pode ser a confirmação elaborada, uma mensagem pronta, ou o início de uma sequência, sempre focada na mensagem atual do cliente)", "Mensagem 2 (se fizer parte de uma sequência lógica e necessária para a mensagem atual)"] // Array de strings. DEVE conter pelo menos uma mensagem na maioria dos cenários. Pode conter uma sequência de até 3 (ou excepcionalmente 5) mensagens.
+        "fast_messages_choosen_index": [], // Array de índices de `{fast_messages}` escolhidas. Preenchido se mensagens prontas forem selecionadas. 
+        "proactive_content_choosen_index": [], // Array de índices de `{proactive_content_generated}` escolhidas. Preenchido se conteúdo proativo for selecionado. 
+        "order": ["Mensagem 1 (ex: 1-2 frases, pode ser a confirmação elaborada, uma mensagem pronta, ou o início de uma sequência, sempre focada na mensagem atual do cliente)", "Mensagem 2 (ex: 2-3 frases curtas, se fizer parte de uma sequência lógica e necessária para a mensagem atual)"] // Array de strings. 
     }
 
 collect_registration_data_task:
