@@ -629,7 +629,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                                 logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
                                 new_payload['primary_messages_sequence'].remove(payload['primary_messages_sequence'][index])
                             except (ValueError, IndexError) as e:
-                                logger.error(f"[{contact_id}] - Índice {payload['primary_messages_sequence'][index]} não encontrado em primary_messages_sequence.")
+                                logger.error(f"[{contact_id}] - Índice {index} não encontrado em primary_messages_sequence.")
 
                         logger.info(f'[{contact_id}] - Remoção de mensagens primárias concluída.')
 
@@ -682,18 +682,24 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                         logger.info(f'[{contact_id}] - "fast_messages_choosen_index" existe em new_response_json. Removendo mensagens primárias.')
                         for index in new_response_json['fast_messages_choosen_index']:
                             
-                            logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
-                            new_payload['primary_messages_sequence'].remove(payload['primary_messages_sequence'][index])
-                            
+                            try:
+                                logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
+                                new_payload['primary_messages_sequence'].remove(payload['primary_messages_sequence'][index])
+                            except (ValueError, IndexError) as e:
+                                logger.error(f"[{contact_id}] - Índice {index} não encontrado em primary_messages_sequence.")
+
                         logger.info(f'[{contact_id}] - Remoção de mensagens primárias do payload concluída.')
 
                     if 'proactive_content_choosen_index' in new_response_json and new_response_json['proactive_content_choosen_index']:
                         logger.info(f'[{contact_id}] - "proactive_content_choosen_index" existe em new_response_json. Removendo conteúdo proativo.')
                         for index in new_response_json['proactive_content_choosen_index']:
                             
-                            logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
-                            new_payload['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
-                            
+                            try:
+                                logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
+                                new_payload['proactive_content_choosen_index'].remove(payload['proactive_content_choosen_index'][index])
+                            except (ValueError, IndexError) as e:
+                                logger.error(f"[{contact_id}] - Índice {index} não encontrado em proactive_content_choosen_index.")
+
                         logger.info(f'[{contact_id}] - Remoção de conteúdo proativo de new_response_json concluída.')
 
                     try:
