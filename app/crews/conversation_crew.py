@@ -46,7 +46,9 @@ logger = get_logger(__name__)
 
 
 def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, history: Any):
+
     # litellm._turn_on_debug()
+
     mensagem = '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1))
     logger.info(f"MVP Crew: Iniciando processamento para contact_id: {contact_id}, mensagem: '{mensagem}'")
 
