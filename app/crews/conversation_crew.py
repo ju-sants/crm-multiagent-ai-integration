@@ -43,7 +43,16 @@ import redis
 
 logger = get_logger(__name__)
 
+original_completition = litellm.completion
 
+def patched_completition(*args, **kwargs):
+    
+    if 'stop' in kwargs:
+        kwargs.pop('stop')
+
+    return original_completition(*args, **kwargs)
+
+litellm.completion = patched_completition
 
 def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, history: Any):
 
@@ -377,12 +386,17 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 verbose=True
             )
 
+            recently_sent_catalogs = []
+            for k in redis_client.keys(f"contact:{contact_id}:sendend_catalog_*"):
+                recently_sent_catalogs.append(k.split("sendend_catalog_")[-1])
+            
             inputs_craft = {
                 "develop_strategy_task_output": strategic_advise_task.output.raw,
                 "profile_customer_task_output": profile_customer_task.output.raw,
                 "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
                 "operational_context": json_response.get('operational_context', ''),
                 "identified_topic": json_response.get('identified_topic', ''),
+                "recently_sent_catalogs": ', '.join(recently_sent_catalogs)
             }
 
             
@@ -724,7 +738,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                     CallbellSendTool()._run(phone_number=phone_number, messages=messages_plans_to_send)
 
                     for plan in plans_names_to_send:
-                        redis_client.set(f"contact:{contact_id}:sendend_catalog_{plan}", "1", ex=86400)
+                        redis_client.set(f"contact:{contact_id}:sendend_catalog_{plan}", "1")
 
                 logger.info(f'[{contact_id}] - Iniciando processamento de mensagens restantes no Redis.')
                 try:
