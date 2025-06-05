@@ -1,7 +1,7 @@
 from crewai import Agent
 import yaml
 
-from app.config.llm_config import default_X_llm, reasoning_X_llm, pro_Google_llm, pro_Google_llm, default_openai_llm, flash_Google_llm
+from app.config.llm_config import default_X_llm, reasoning_X_llm, fast_reasoning_X_llm, pro_Google_llm, pro_Google_llm, default_openai_llm, flash_Google_llm
 
 from app.tools.callbell_tools import CallbellSendTool
 from app.tools.cache_tools import L1CacheQueryTool
@@ -19,7 +19,7 @@ agents_config = yaml.safe_load(open(config_path, 'r').read())
 def get_triage_agent() -> Agent:
     return Agent(
         config=agents_config['TriageAgent'],
-        llm=reasoning_X_llm,
+        llm=fast_reasoning_X_llm,
         verbose=True,
         allow_delegation=False,
         max_retry_limit=500,
@@ -54,7 +54,7 @@ def get_system_operations_agent() -> Agent:
 def get_response_craftsman_agent() -> Agent:
     return Agent(
         config=agents_config['ResponseCraftsman'],
-        llm=default_X_llm,
+        llm=fast_reasoning_X_llm,
         verbose=True,
         allow_delegation=False,
     )
@@ -70,7 +70,7 @@ def get_delivery_coordinator_agent() -> Agent:
 def get_registration_agent() -> Agent:
     return Agent(
         config=agents_config['RegistrationDataCollectorAgent'],
-        llm=reasoning_X_llm,
+        llm=fast_reasoning_X_llm,
         verbose=True,
         allow_delegation=False
     )
