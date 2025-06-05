@@ -64,7 +64,12 @@ def send_callbell_message(phone_number, text):
         return False
 
 def get_allowed_chats():
-    return ['71464be80c504971ae263d710b39dd1f', '2fa9529f9c1e4ed9b8ddea6c6a4272e8', '7b337e574d63473ba0aba7e7de543a48']
+    return [
+        '71464be80c504971ae263d710b39dd1f', 
+        '2fa9529f9c1e4ed9b8ddea6c6a4272e8', 
+        '7b337e574d63473ba0aba7e7de543a48',
+        'd3c9a42068b44b47bfbf6fc8adf62f71',
+        ]
 
 def process_requisitions(payload):
     logger.info(f'[{payload.get("uuid", "N/A")}] - INICIANDO process_requisitions para payload: {payload.get("uuid", "N/A")} de {payload.get("from", "N/A")}')
