@@ -71,7 +71,6 @@ def get_allowed_chats():
         'd3c9a42068b44b47bfbf6fc8adf62f71',
         'e426520a46f54bbeb5b98a76e95b1bbb',
         'ff1b97c206e544f89127600a1a074d27',
-        '8544e093bcdd4f47bb3a5d7da1ac1ad7'
         ]
 
 def process_requisitions(payload):
