@@ -495,9 +495,16 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 memory = point_memory.payload.copy()
                 break
         
-        for plan in redis_client.hget(f'contact:{contact_id}', 'plan').split(', '):
-            if not redis_client.get(f"contact:{contact_id}:sendend_catalog_{plan}"):
-                plans_messages = {
+        plans = redis_client.hget(f'contact:{contact_id}', 'plan')
+        if plans:
+            if ', ' in plans:
+                plans = plans.split(', ')
+            else:
+                plans = [plans]
+                
+            for plan in plans:
+                if not redis_client.get(f"contact:{contact_id}:sendend_catalog_{plan}"):
+                    plans_messages = {
                 "MOTO GSM/PGS": """
 MOTO GSM/PGS
 
