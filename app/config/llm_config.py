@@ -23,7 +23,6 @@ fast_reasoning_X_llm = LLM(
 pro_Google_llm = LLM(
     model='gemini/gemini-2.5-pro-preview-05-06',
     api_key=settings.GEMINI_API_KEY,
-    thinking={"type": "enabled", "budget": 2048},
 )
 
 flash_Google_llm = LLM(
