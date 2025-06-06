@@ -164,6 +164,8 @@ def process_requisitions(payload):
         if messages_after == messages_before:
             logger.info(f'[{contact_uuid}] - NENHUMA nova mensagem chegou durante o período de espera. Tentando obter lock de processamento.')
 
+            if contact_uuid == "71464be80c504971ae263d710b39dd1f":
+                redis_client.delete(f'processing:{contact_uuid}')
             contact_lock = None
             try:
                 contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True, ex=300)

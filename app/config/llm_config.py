@@ -28,7 +28,7 @@ pro_Google_llm = LLM(
 flash_Google_llm = LLM(
     model='gemini/gemini-2.5-flash-preview-05-20',
     api_key=settings.GEMINI_API_KEY,
-    thinking={"type": "enabled", "budget": 4096},
+    thinking={"type": "enabled", "budget": 8192},
 )
 
 default_openai_llm = LLM(
