@@ -65,13 +65,16 @@ def send_callbell_message(phone_number, text):
 
 def get_allowed_chats():
     return [
-        '71464be80c504971ae263d710b39dd1f', 
-        '2fa9529f9c1e4ed9b8ddea6c6a4272e8', 
-        '7b337e574d63473ba0aba7e7de543a48',
-        'd3c9a42068b44b47bfbf6fc8adf62f71',
-        'e426520a46f54bbeb5b98a76e95b1bbb',
-        'ff1b97c206e544f89127600a1a074d27',
-        '8544e093bcdd4f47bb3a5d7da1ac1ad7'
+        '71464be80c504971ae263d710b39dd1f', # Juan
+        '2fa9529f9c1e4ed9b8ddea6c6a4272e8', # valdir ou ana paula
+        '7b337e574d63473ba0aba7e7de543a48', # valdir ou ana paula
+        'd3c9a42068b44b47bfbf6fc8adf62f71', # deibisson empresa
+        'e426520a46f54bbeb5b98a76e95b1bbb', # cristiane
+        'ff1b97c206e544f89127600a1a074d27', # aila
+        '8544e093bcdd4f47bb3a5d7da1ac1ad7', # jenifer
+        '7fee5fb4c62d41f98e027e86f57c16c8' # deibisson pessoal
+        'acfe198b10254da0b8c6f1b46df07c94', # Roberta
+        'ecad1a70b0004d7580398f96f8074489'
         ]
 
 def process_requisitions(payload):
@@ -164,8 +167,6 @@ def process_requisitions(payload):
         if messages_after == messages_before:
             logger.info(f'[{contact_uuid}] - NENHUMA nova mensagem chegou durante o período de espera. Tentando obter lock de processamento.')
 
-            if contact_uuid == "71464be80c504971ae263d710b39dd1f":
-                redis_client.delete(f'processing:{contact_uuid}')
             contact_lock = None
             try:
                 contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True, ex=300)
