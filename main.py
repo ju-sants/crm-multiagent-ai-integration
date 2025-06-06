@@ -72,9 +72,9 @@ def get_allowed_chats():
         'e426520a46f54bbeb5b98a76e95b1bbb', # cristiane
         'ff1b97c206e544f89127600a1a074d27', # aila
         '8544e093bcdd4f47bb3a5d7da1ac1ad7', # jenifer
-        '7fee5fb4c62d41f98e027e86f57c16c8' # deibisson pessoal
+        '7fee5fb4c62d41f98e027e86f57c16c8', # deibisson pessoal
         'acfe198b10254da0b8c6f1b46df07c94', # Roberta
-        'ecad1a70b0004d7580398f96f8074489'
+        'ecad1a70b0004d7580398f96f8074489' # Gisele
         ]
 
 def process_requisitions(payload):
