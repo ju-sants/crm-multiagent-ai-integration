@@ -501,7 +501,9 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 plans = plans.split(', ')
             else:
                 plans = [plans]
-                
+            
+            messages_plans_to_send = []
+            plans_names_to_send = []
             for plan in plans:
                 if not redis_client.get(f"contact:{contact_id}:sendend_catalog_{plan}"):
                     plans_messages = {
@@ -572,11 +574,10 @@ Scooters/Patinetes
     Plano exclusivo para Scooters e Patinetes: https://wa.me/p/8478546275590970/558006068000
 """
             }
-                messages_plans_to_send = []
-                plans_names_to_send = []
-                if plan in plans_messages:
-                    messages_plans_to_send.append(plans_messages[plan])
-                    plans_names_to_send.append(plan)
+                    
+                    if plan in plans_messages:
+                        messages_plans_to_send.append(plans_messages[plan])
+                        plans_names_to_send.append(plan)
 
                 messages_join = '\n\n'.join(messages_plans_to_send)
                 system_input = f"""
