@@ -33,7 +33,7 @@ def get_customer_profile_agent() -> Agent:
 def get_strategic_advisor_agent() -> Agent:
     return Agent(
         config=agents_config['StrategicAdvisor'],
-        llm=pro_Google_llm,
+        llm=flash_Google_llm,
         verbose=True,
         allow_delegation=False,
         max_retry_limit=500
