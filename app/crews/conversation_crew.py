@@ -180,7 +180,8 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
                 "operational_context": json_response.get('operational_context', ''),
                 "identified_topic": json_response.get('identified_topic', ''),
                 "customer_profile": str(GetUserProfile()._run(contact_id)),
-                "history": history_messages
+                "history": history_messages,
+                "contact_id": contact_id
             }
             
             new_profile_crew.kickoff(inputs=inputs_profile)
