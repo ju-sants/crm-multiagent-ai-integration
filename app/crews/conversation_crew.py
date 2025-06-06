@@ -46,8 +46,22 @@ logger = get_logger(__name__)
 original_completition = litellm.completion
 
 def patched_completition(*args, **kwargs):
-    
-    if 'stop' in kwargs:
+    """
+    Patch robusto para litellm.completion.
+    Identifica o nome do modelo se foi passado como argumento posicional (args)
+    ou nomeado (kwargs) e remove o parâmetro 'stop' APENAS para modelos 'grok'.
+    """
+    model_name = None
+
+    if 'model' in kwargs:
+        model_name = kwargs['model']
+    elif args:
+        model_name = args[0]
+
+    model_name_str = str(model_name).lower() if model_name else ""
+
+    if 'grok' in model_name_str and 'stop' in kwargs:
+        print(f"PATCH ATIVO: Removendo parâmetro 'stop' para o modelo '{model_name}'.")
         kwargs.pop('stop')
 
     return original_completition(*args, **kwargs)
