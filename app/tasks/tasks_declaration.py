@@ -3,7 +3,7 @@ from crewai import Task, Agent
 from app.utils.funcs.funcs import obter_caminho_projeto
 
 from app.tools.qdrant_tools import RAGTool
-from app.tools.knowledge_tools import BusinessGuidelinesTool
+from app.tools.knowledge_tools import BusinessGuidelinesTool, KnowledgeServiceTool
 
 from app.config.settings import settings
 
@@ -47,7 +47,8 @@ def create_develop_strategy_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['develop_strategy_task'],
         tools=[
-            BusinessGuidelinesTool(), RAGTool()
+            # BusinessGuidelinesTool(), RAGTool(),
+            KnowledgeServiceTool(),
         ],
         agent=agent,
         max_retries=settings.MAX_RETRIES_MODEL
