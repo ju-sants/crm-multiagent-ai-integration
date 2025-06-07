@@ -1,0 +1,461 @@
+# business_rules.yaml
+# Fonte de Verdade para Regras de Negócio, Políticas, Produtos e Procedimentos da Global System.
+# Versão 5.0 - Criado em 07/06/2025 (Consolidado com Contratos PGS, Não-PGS, Planos de Frota e Diretrizes de Atendimento)
+
+# 1. Informações da Empresa
+company_info:
+  name: "Global System Rastreamento"
+  legal_name: "Global System Rastreamento 24h LTDA - ME"
+  cnpj: "11.879.606/0001-65"
+  address: "Av. Juscelino Kubistchek, N° 2499, Centro, Luís Eduardo Magalhães - Ba"
+  website: "www.globalsystem24h.com"
+  support_whatsapp: "0800 606 8000"
+
+# 2. Filosofia e Diretrizes de Comunicação
+communication_guidelines:
+  # 2.1. Regras para o Contexto de Vendas (Consultor Alessandro)
+  sales:
+    philosophy:
+      - "Comunicação deve ser consultiva, concisa e formalizada."
+      - "Toda informação comercial, operacional e contratual deve ser registrada e acordada antes da instalação."
+      - "Linguagem em Português Brasileiro: cordial, confiante, persuasiva e precisa."
+      - "Abordagem direta, sem apresentações formais prolongadas, mas sempre construindo rapport."
+      - "Foco total no cliente e na segurança jurídica, oferecendo a melhor solução com transparência. Lembre-se: 'Se não está no papel, não existe.'"
+    principles:
+      - "Empatia Estratégica: Vá além do 'entendo', mostre compreensão do impacto do problema."
+      - "Flexibilidade Informada: Para questões complexas, reconheça, analise e retorne com uma resposta embasada."
+      - "Gestão de Saudações: Apresente-se como 'Alessandro, consultor da Global System' apenas na primeira interação da conversa."
+      - "Sem Referências Internas: NUNCA mencione 'base de conhecimento', 'Qdrant', 'ferramentas internas', ou que é uma IA."
+    legal_security_principle:
+      motto: "Não importa quão animado o cliente esteja na hora da venda. O que importa é o que está formalizado, documentado e arquivado. Isso é o que vale juridicamente."
+    rules:
+        - "Nunca permitir a continuidade da venda sem um orçamento detalhado por escrito, seguido pelo contrato."
+        - "Nada pode ser dito verbalmente que não esteja formalizado por escrito."
+    sales_flow:
+      - "ETAPA 1: Conexão e Sondagem Profunda (Verificar cidade, tipo de veículo, finalidade, área de circulação, etc.)."
+      - "ETAPA 2: Diagnóstico e Escolha do Produto (Considerar as recomendações por tipo de frota e região)."
+      - "ETAPA 3: Apresentação da Proposta e Orçamento Detalhado (Resumo inicial, oferta de detalhamento, explicação dos pontos chave)."
+      - "ETAPA 4: Confirmação e Solicitação de Acordo Explícito."
+      - "ETAPA 5: Fechamento e Próximos Passos (Coleta de dados para o contrato)."
+    strategic_points:
+        - "PGS Moto Recovery Rate: Afirmar que a Global System tem 100% de taxa de recuperação para o plano PGS, com atuação dedicada 24h."
+        - "Mixed Fleet Flexibility: Destacar que o cliente pode ter um mix de rastreadores (Satelital, GSM, Moto) em uma única frota, com a solução sendo personalizada para cada tipo de veículo."
+        - "SIM Card Verification: É uma regra operacional obrigatória verificar a região do cliente para selecionar a operadora (Vivo, Claro, TIM) com a melhor cobertura, evitando problemas de sinal."
+    sales_recommendations:
+      motorcycles_pf:
+        primary_offer: "Plano PGS - Proteção da Global System."
+        justification: "99% dos clientes pessoa física buscam proteção contra roubo e furto com garantia de recuperação ou reembolso."
+      truck_fleets:
+        primary_offer: "Plano Satelital Híbrido, por ter maior cobertura e confiabilidade."
+        secondary_offer: "Plano GSM-4G para Frotas, como alternativa de menor custo se o cliente achar o satelital elevado."
+      light_vehicle_fleets:
+        offer_both: true
+        option_1: "GSM 4G (custo menor, ideal para áreas com sinal)."
+        option_2: "Satelital Híbrido (mais robusto, para áreas sem sinal com necessidade de tempo real)."
+      farm_fleets:
+        primary_offer: "GSM 4G com Wi-Fi (para fazendas sem cobertura de operadora, usa roteadores na sede para descarregar dados)."
+        secondary_offer: "GSM 4G (para fazendas com boa cobertura de operadora)."
+        tertiary_offer: "Satelital Híbrido (se as opções GSM não atenderem)."
+    theft_communication_scripts:
+      moto_pgs:
+        message: "Para o Plano PGS, a Global System assume total responsabilidade pela recuperação. Se não for recuperada, a empresa paga a indenização conforme a FIPE, seguindo as regras do contrato. O cliente deve ligar imediatamente para nosso plantão 24h."
+      moto_rastreamento:
+        message: "Para o plano de apenas Rastreamento, atuaremos intensamente na busca e recuperação com todos os nossos recursos. Porém, como este é um serviço de rastreamento e não de seguro, não há obrigação de indenização em caso de não recuperação."
+      veiculo_pf_nao_pgs:
+        message: "Se o senhor busca uma garantia total contra perda do veículo, o ideal é contratar um seguro veicular. Nosso serviço é de rastreamento e, embora façamos nosso máximo na recuperação com nosso plantão 24h, não somos uma seguradora e não temos obrigação de indenizar."
+      frotas:
+        message: "Para frotas, nosso serviço é focado em gestão logística e redução de custos. Em caso de roubo, nosso plantão 24h atua no apoio à busca, mas não há garantia de recuperação nem qualquer tipo de indenização."
+
+  # 2.2. Regras para o Contexto de Suporte
+  support:
+    principles:
+      - "Linguagem acessível e precisa em Português Brasileiro."
+      - "Seja direto ao ponto com cordialidade, sem apresentações formais."
+      - "Demonstre compreensão através da ação, evitando frases genéricas como 'entendo sua preocupação'."
+      - "Foco na solução: seja prático, objetivo e resolutivo."
+      - "Evite comportamento robótico: 'Olá' apenas na primeira interação. Use 'entendo' somente quando necessário."
+      - "Construa um relacionamento: seja caridoso, gentil e bem-humorado."
+    procedures:
+      quick_diagnostics:
+        - "GSM: Falhas em áreas remotas, interferência em prédios."
+        - "SATELITAL: Problemas em cidades densas, sob estruturas metálicas."
+        - "BATERIA: Verificar conexões, curtos-circuitos."
+        - "APP: Limpar cache, reinstalação, verificar requisitos (Android 8+/iOS 12+)."
+      password_reset: "O usuário e senha não são alterados fora do horário comercial. O cliente pode usar a função 'ESQUECEU SENHA' no aplicativo, desde que os dados de contato estejam atualizados."
+      third_party_access_removal: "O suporte não pode remover o acesso de terceiros diretamente. O titular deve alterar a senha do aplicativo para revogar o acesso. O suporte pode auxiliar o titular neste processo."
+
+# 3. Catálogo de Produtos e Planos
+products:
+  # 3.1. Planos para Motos
+  - category: "Motos"
+    plans:
+      - name: "Plano Rastreamento Moto"
+        type: "Rastreamento"
+        pricing:
+          adesao: 120.00
+          mensalidade: 60.00
+        includes:
+          - "Plantão 24 horas para rastreamento."
+        technology:
+          update_frequency_moving: "A cada 30 segundos."
+          update_frequency_stopped: "A cada 8 horas (para economia de bateria)."
+        contract_type: "moto_standard"
+        catalog_link: "https://wa.me/p/9380524238652852/558006068000"
+      - name: "Plano Proteção Total PGS"
+        type: "Rastreamento com Cobertura (Reembolso FIPE)"
+        pricing:
+          adesao: 120.00
+          reinstalacao: 100.00
+          reativacao_inadimplencia: 200.00
+          desinstalacao: 120.00
+          faixas_mensalidade:
+            - fipe_range: "Até R$ 15.000,00"
+              valor: 77.00
+              reembolso_maximo: 15000.00
+            - fipe_range: "De R$ 16.000,00 a R$ 22.000,00"
+              valor: 85.00
+              reembolso_maximo: 22000.00
+            - fipe_range: "De R$ 23.000,00 a R$ 30.000,00"
+              valor: 110.00
+              reembolso_maximo: 30000.00
+        benefits:
+          - "Se a moto não for recuperada em até 90 dias, o cliente recebe o valor da Tabela FIPE."
+          - "Se a moto não for recuperada em até uma semana, a Global System disponibiliza uma moto reserva até o recebimento da indenização."
+        contract_rules:
+            - "É possível contratar o plano sem possuir CNH."
+            - "É possível transferir o contrato para outro veículo, mediante pagamento de desinstalação e nova instalação."
+        technology:
+          update_frequency_moving: "A cada 30 segundos."
+          update_frequency_stopped: "A cada 8 horas (para economia de bateria)."
+        contract_type: "moto_pgs_com_cobertura"
+        catalog_link: "https://wa.me/p/9380524238652852/558006068000"
+        regional_restrictions:
+          - "Plano PGS NÃO está disponível para localidades com DDD 66 (Mato Grosso)."
+        faq:
+          - question: "É um seguro?"
+            answer: "Não, mas para o Plano PGS, há o reembolso do valor conforme a Tabela FIPE se a moto não for recuperada em 90 dias, cumpridas as condições contratuais."
+          - question: "E se eu atrasar a mensalidade?"
+            answer: "A cobertura é suspensa com 1 dia de atraso. Se o roubo ocorrer com o plano em inadimplência, o cliente perde o direito ao rastreamento e ao eventual reembolso."
+          - question: "Perco a garantia da moto?"
+            answer: "A instalação não anula a garantia completa. Pode impactar a garantia de partes elétricas específicas (bateria, etc.), a critério da concessionária. A garantia de componentes principais (motor, chassi, câmbio) permanece válida. A Global System oferece garantia por qualquer dano comprovadamente causado pelo rastreador."
+          - question: "O rastreador descarrega a bateria da moto?"
+            answer: "Para uso regular, a chance é mínima. Para uso esporádico (moto parada por longos períodos), pode haver risco. O rastreador possui modo de economia de bateria (atualiza a cada 8h quando parada) para mitigar isso. Recomenda-se dar recargas semanais na bateria em caso de uso esporádico."
+          - question: "Se a moto for financiada e roubada, continuo pagando?"
+            answer: "Sim. O cliente se compromete a continuar o pagamento do financiamento. Após o pagamento da indenização do plano PGS, os direitos sobre o veículo passam para a Global System."
+
+  # 3.2. Planos Padrão (Carros, Frotas, etc.)
+  - category: "Frotas e Veículos Leves"
+    plans:
+      - name: "Rastreador GSM 4G"
+        type: "Rastreamento de Frotas"
+        pricing:
+          adesao: 200.00
+          mensalidade:
+            sem_bloqueio: 65.00
+            com_bloqueio: 75.00
+        technology:
+          network: "GSM 4G (Vivo, Claro ou TIM)."
+          offline_storage: "Em locais sem sinal, dados (trajetos, paradas) são retidos e enviados automaticamente ao reconectar."
+          update_frequency_moving: "A cada 30 segundos."
+          update_frequency_stopped: "A cada 30 minutos."
+        contract_terms:
+          vigencia: "24 meses."
+          cancellation_policy: "Isento de multa. Taxa de desinstalação de R$ 200,00 se cancelado antes de 24 meses. Gratuita após 24 meses em unidades próprias."
+          maintenance_policy: "Manutenção gratuita para defeitos de fabricação. Danos externos são avaliados e cobrados à parte."
+          contract_transfer: "É possível transferir o contrato para um novo titular em caso de venda do veículo."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
+        catalog_link: "https://wa.me/p/9321097734636816/558006068000"
+
+      - name: "Rastreador GSM (2G+3G+4G) + WI-FI"
+        target_audience: "Fazendas ou locais remotos."
+        pricing:
+          adesao: 300.00
+          mensalidade:
+            sem_bloqueio: 75.00
+            com_bloqueio: 85.00
+        technology:
+          network: "GSM (Vivo, Claro, TIM) e Wi-Fi local."
+          offline_storage: "Memória interna para até 50.000 posições (aproximadamente 3 meses de histórico), com descarregamento automático via GSM ou Wi-Fi. O sistema prioriza a rede GSM e usa o Wi-Fi como backup."
+        includes:
+          - "2 roteadores Wi-Fi pré-configurados que funcionam como repetidores do sinal de internet existente no local (ex: Starlink, rádio, fibra)."
+          - "Suporte técnico para configuração de roteadores adicionais."
+        blocker_functionality:
+          recommendation: "Não recomendamos a instalação do bloqueio para veículos em fazendas ou áreas remotas devido à dificuldade de assistência em caso de falha elétrica ou pane."
+          availability: "A instalação é possível se o cliente estiver ciente dos riscos operacionais e os assumir."
+        contract_terms:
+          vigencia: "24 meses."
+          cancellation_policy: "Sem multa. Taxa de desinstalação de R$ 300,00 se cancelado antes de 24 meses. Gratuita após 24 meses."
+          cancellation_fee_justification: "A taxa de desinstalação não é uma multa, mas sim o pagamento pelo serviço técnico especializado de remoção do equipamento."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
+        catalog_link: "https://wa.me/p/9380395508713863/558006068000"
+
+# 4. Políticas e Procedimentos Operacionais
+operational_procedures:
+  installation:
+    general_policy:
+      - "A instalação deve ser realizada exclusivamente pela Global System ou por quem ela determinar."
+      - "A instalação só será feita se houver viabilidade técnica e o veículo apresentar condições normais de funcionamento."
+      - "O serviço de instalação pode levar de 1 a 3 horas."
+      - "Instalações adicionais em outros veículos são cobradas à parte."
+      - "Fazemos instalações aos sábados (via deslocamento de técnico de LEM para Barreiras, por exemplo)."
+    location_policy:
+      default: "O local da instalação é sigiloso, considerado segredo comercial, e determinado pela Global System, não sendo divulgado ao cliente para dificultar a localização do equipamento."
+      exception_moto: "A instalação de rastreadores em motocicletas é feita EXCLUSIVAMENTE em uma de nossas lojas autorizadas para garantir a segurança e a vedação correta do equipamento."
+  maintenance:
+    policy: "A revisão pode ser solicitada pela Global System ou pelo cliente. É gratuita, exceto se o deslocamento exceder 10km da base mais próxima ou se for constatada avaria por terceiros."
+    client_obligation:
+      - "O cliente deve verificar diariamente o funcionamento do rastreador e solicitar manutenção em caso de mau funcionamento."
+      - "O cliente deve agendar uma revisão caso o veículo se envolva em acidente que implique em manutenção estrutural ou elétrica."
+  scheduling:
+    arrival: "O cliente deve comparecer com 10 minutos de antecedência. Atraso máximo tolerado de 15 minutos."
+    no_show_policy: "Caso não possa comparecer, o cliente deve avisar com no mínimo 2 horas de antecedência (contrato padrão) ou 24 horas (contrato moto). O não comparecimento pode gerar multa de R$ 100,00."
+  technical_limitations:
+    general: "O serviço depende de fatores externos. A Global System não se responsabiliza por falhas de sinal (GSM ou Satélite), internet, ou eventos de força maior. A empresa também não se responsabiliza, civil ou criminalmente, caso as autoridades competentes não atuem de forma hábil."
+    gsm_gprs: "Funciona apenas em áreas com cobertura de operadora de celular. O equipamento possui memória interna que armazena dados offline e transmite ao restabelecer o sinal."
+    satelital: "Possui cobertura em todo o território nacional, mas requer visada constante para o céu para comunicação com os satélites."
+  compatibility:
+    john_deere_autopilot:
+      is_compatible: false
+      explanation: "Rastreador Satelital Híbrido PODE gerar interferência em maquinários John Deere que utilizam piloto automático."
+      recommendation: "NÃO instalar rastreadores satelitais nestes casos. A alternativa é o plano GSM 4G com Wi-Fi."
+      exception: "Se o cliente possui máquinas John Deere MAS NÃO utiliza o piloto automático, a instalação PODE ser feita normalmente."
+  blocker_installation_rules:
+    in_house_technicians: "A ativação de bloqueio remoto para clientes em cidades com técnicos próprios requer a assinatura prévia do Termo de Responsabilidade de Bloqueio."
+    outsourced_technicians: "NÃO são instalados bloqueios em veículos por técnicos terceirizados, como medida de segurança e garantia da qualidade do serviço."
+    motorcycles: "A função de bloqueio NÃO está disponível no aplicativo para motos. O acionamento é feito exclusivamente pela central da Global System, mediante solicitação validada do cliente."
+  regional_service_rules:
+    contact_origin_indicators:
+      - origin: "Instagram"
+        inferred_location: "Oeste da Bahia (região de Luís Eduardo Magalhães)."
+        plan_availability: "Todos os planos são válidos, incluindo Proteção Total para moto."
+      - origin: "WhatsApp (DDDs 77, 71, 74, etc.)"
+        inferred_location: "Oeste da Bahia."
+        plan_availability: "Todos os planos estão disponíveis."
+      - origin: "Telefone (DDD 66)"
+        inferred_location: "Regiões de Confresa, Vila Rica, Sorriso, Sinop, Lucas do Rio Verde (MT)."
+        plan_availability: "Plano PGS para moto NÃO está disponível. Demais planos podem ser oferecidos."
+    technician_availability:
+      - city: "Luís Eduardo Magalhães (BA)"
+        type: "Matriz"
+        team: "Quatro técnicos próprios disponíveis."
+        service_level: "Atendimento rápido e direto."
+      - city: "Barreiras (BA)"
+        team: "Um técnico fixo."
+        availability: "Segundas, quartas e sextas (dia todo). Terças, quintas e sábados pela manhã (pode haver deslocamento de técnico de LEM)."
+      - city: "Sorriso (MT)"
+        type: "Loja Física"
+        team: "Técnico fixo."
+        availability: "Atendimento diário, sujeito à agenda e deslocamentos."
+      - city: "Sinop (MT) / Lucas do Rio Verde (MT)"
+        team: "Atendimento realizado pelo técnico de Sorriso."
+        scheduling: "Obrigatório agendamento com pelo menos 1 dia de antecedência."
+    outsourced_service_policy:
+      execution: "Realizado por técnicos terceirizados."
+      additional_fee: 150.00
+      fee_covers: "Envio do equipamento via Correios e mão de obra do técnico."
+      equipment_logistics: "Envio via Correios, prazo de 7 a 10 dias úteis. Geralmente NÃO há estoque local."
+    outsourced_cities_with_local_stock:
+      - "Confresa (MT)"
+      - "Vila Rica (MT)"
+    outsourced_cities_list:
+      - "ANÁPOLIS - GO"
+      - "BALSAS - MA"
+      - "BARRA DO GARÇAS - MT"
+      - "BELO HORIZONTE - MG"
+      - "BETIM - MG"
+      - "BOA VISTA - RR"
+      - "CAMAÇARI - BA"
+      - "CONTAGEM - MG"
+      - "CUIABÁ – MT"
+      - "CURITIBA - PR"
+      - "ERECHIM - RS"
+      - "FEIRA DE SANTANA – ΒΑ"
+      - "FORTALEZA - CE"
+      - "GARANHUNS - PE"
+      - "GOIÂNIA - GO"
+      - "GUANAMBI - BA"
+      - "ITABERAÍ – GO"
+      - "JANAUBA - MG"
+      - "MARABÁ - PA"
+      - "MARINGÁ - PR"
+      - "ORÓS - CE"
+      - "PALMAS - TO"
+      - "PETROLINA - PE"
+      - "RECIFE - PE"
+      - "REDENÇÃO - PA"
+      - "SÃO BERNARDO - SP"
+      - "SÃO LUÍS - MA"
+      - "SEABRA - BA"
+      - "SIMÕES FILHO - BA"
+      - "TOLEDO - PR"
+      - "URUÇUÍ - PI"
+      - "VOLTA REDONDA - RJ"
+    procedure_for_unlisted_cities:
+      status: "Não significa impossibilidade de atendimento."
+      action: "Setor interno realiza busca e análise de viabilidade técnica."
+      steps:
+        - "1. Localizar técnico na região."
+        - "2. Consultar valores de mão de obra."
+        - "3. Confirmar disponibilidade do técnico."
+        - "4. Calcular custos operacionais envolvidos e responder ao cliente."
+      required_info_from_client: "Nome exato da cidade."
+
+# 5. Funcionalidades do Aplicativo Global System
+application_features:
+  overview: "Plataforma robusta para monitoramento em tempo real, gestão de alertas operacionais, criação de cercas eletrônicas, relatórios analíticos e acompanhamento completo de trajetos e atividades."
+  access_and_setup:
+    - "Download na Play Store (Android) e App Store (iOS)."
+    - "Acesso via login e senha fornecidos pela Global System."
+    - "Na primeira utilização, o usuário pode configurar uma senha de segurança opcional."
+    - "A interface inicial exibe todos os veículos vinculados com ferramentas de busca e filtros."
+    - "Menu Principal: Acesso a alteração de senha, dados do veículo, status financeiro e suporte."
+    - "Ao selecionar um veículo, exibe: localização, status da ignição, velocidade, horário da última atualização e nível da bateria do rastreador."
+  notifications:
+    types: "Ignition ON/OFF, Entrada/Saída de cercas, Excesso de velocidade, Operação fora de horário."
+    storage: "As notificações ficam registradas na barra do dispositivo e no histórico interno do aplicativo."
+    configuration_options:
+      - "Definição de limite de velocidade."
+      - "Programação de horários de operação permitidos."
+      - "Habilitação/desabilitação de tipos de alerta."
+      - "Filtros para visualização seletiva de eventos."
+    interactivity: "Ao clicar em uma notificação, o mapa exibe o ponto exato do evento com data, horário e placa."
+  security_zones_and_locations:
+    temporary_zone: "Criada automaticamente no local onde o veículo para e se desativa quando o veículo se move."
+    fixed_locations: "Permite definir e nomear locais (casa, trabalho) e configurar alertas de entrada/saída."
+    management: "Permite redimensionar, mover, renomear ou excluir zonas diretamente no mapa interativo."
+  geofencing_and_routes:
+    creation: "Definição livre de perímetros no mapa (polígonos, rotas, áreas circulares)."
+    functionality: "Gera alertas automáticos de entrada/saída para segurança e gestão logística."
+    specific_speed_limit: "É possível adicionar um limite de velocidade a uma cerca específica, mediante solicitação à central técnica."
+  reports:
+    trail_report: # Rastreamento Histórico
+      objective: "Visualizar a rota percorrida em um intervalo de tempo definido."
+      timeline_tool: "Permite avançar e retroceder no percurso para análise sequencial."
+    trip_report: # Análise Detalhada de Viagem
+      info_available: "Endereço e horário de partida/chegada, duração, distância, velocidade média/máxima."
+      example:
+        saida: "Rua São Francisco, 10h51"
+        chegada: "Av. Juscelino Kubitschek, 10h57"
+        distancia: "2 km"
+        duracao: "6 minutos"
+        velocidade_maxima: "36 km/h"
+        velocidade_media: "15 km/h"
+  video_tutorials:
+    - "Primeiro acesso: https://www.tiktok.com/@globalsystem24h/video/7486843959570894086"
+    - "Configuração de notificações: https://www.tiktok.com/@globalsystem24h/video/7486843049679621381"
+    - "Zona de segurança e locais: https://www.tiktok.com/@globalsystem24h/video/7486842891252288774"
+    - "Criação de cerca eletrônica: https://www.tiktok.com/@globalsystem24h/video/7486842696829603077"
+    - "Visualização de rotas e trilhas: https://www.tiktok.com/@globalsystem24h/video/7486842532379282694"
+    
+# 6. Termos Contratuais e Jurídicos (Consolidado)
+legal_and_contractual:
+  # 6.1. Definições Gerais (Aplicável a todos os contratos)
+  general_terms:
+    service_object: "Prestação de serviços de instalação, revisão e desinstalação de equipamentos de rastreamento (GSM/GPRS e/ou SATELITAL) para coleta de dados de localização e telemetria."
+    legal_disclaimer: "O serviço de rastreamento é uma ferramenta para auxiliar na localização do veículo e NÃO É UM CONTRATO DE SEGURO. Não há garantia de recuperação do veículo em caso de roubo ou furto."
+    recovery_responsibility: "A recuperação do veículo é atividade única e exclusiva das autoridades policiais."
+    client_monitoring_responsibility: "A Global System garante o funcionamento do equipamento. O monitoramento e acompanhamento do veículo são de responsabilidade exclusiva do CLIENTE."
+    non_liability_clauses:
+      - "A Global System não se responsabiliza por danos emergentes ou lucros cessantes do cliente relacionados a interrupções ou falhas no serviço."
+      - "A Global System não se responsabiliza pela perda de garantia do veículo decorrente da instalação do rastreador."
+      - "A Global System não se responsabiliza por falhas de hardware ou software do rastreador utilizado pelo cliente."
+    equipment_handling:
+      rule: "O cliente não pode, sob qualquer pretexto, manusear ou permitir que terceiros manuseiem o equipamento."
+      penalty: "Caso o cliente identifique o local do equipamento ou o manuseie, deverá solicitar imediatamente uma revisão da instalação, cujo custo será o valor de uma nova adesão."
+    client_confidentiality_obligation: "O cliente se compromete a não deixar ou carregar no veículo documentos que indiquem que ele é rastreado (boletos, manual do usuário, etc.)."
+    service_start: "A prestação de serviço tem início em até 24 horas após a instalação do equipamento."
+    contract_renewal:
+      policy: "A renovação do contrato é automática por períodos iguais."
+      cancellation_notice: "A renovação pode ser impedida mediante manifestação por escrito de qualquer das partes, com antecedência mínima de 30 dias do término do prazo contratual."
+      price_adjustment: "Os valores poderão ser atualizados monetariamente pelo menor período permitido em lei, utilizando como base o IGPM/FGV ou índice substituto."
+    data_privacy_and_lgpd:
+      retention_period: "Os dados pessoais serão mantidos por até 5 anos após o encerramento do contrato para cumprimento de obrigações legais."
+      dpo_contact: "dpo@globalsystem24h.com"
+      data_types_collected:
+        - "Dados de Identificação: Nome completo, nome empresarial, data de nascimento, RG, CPF, CNH, CNPJ, Fotografia 3x4."
+        - "Dados de Contato: Endereço completo, telefones, WhatsApp, e-mails."
+        - "Dados Financeiros: Dados de contas bancárias, dados de cartões de crédito."
+        - "Dados de Acesso: Nome de usuário e senha para sistemas da empresa."
+        - "Comunicações: Registros de comunicação verbal e escrita entre o Titular e a empresa."
+      processing_purposes:
+        - "Identificação e contato para fins comerciais."
+        - "Elaboração de contratos, emissão de cobranças e notas fiscais."
+        - "Alimentação de banco de dados interno de clientes."
+        - "Realização de pesquisas de mercado e oferta de novos produtos/serviços."
+        - "Realização de cobranças e cadastro em órgãos de proteção ao crédito (SPC, Serasa)."
+      data_sharing: "A empresa fica autorizada a compartilhar dados com outros agentes de tratamento, se necessário para as finalidades do contrato, em conformidade com a LGPD."
+      security_incident: "Em caso de incidente de segurança que possa acarretar risco, o Controlador comunicará o Titular e a Autoridade Nacional de Proteção de Dados (ANPD)."
+      data_subject_rights: "O titular tem direito à confirmação de tratamento, acesso, correção, anonimização, bloqueio ou eliminação dos dados, entre outros previstos na LGPD, mediante requisição."
+    jurisdiction: "Fica eleito o Foro da Comarca de Luís Eduardo Magalhães - BA, podendo a parte que promove a ação optar pelo foro do domicílio do cliente."
+
+  # 6.2. Termos Específicos do Contrato Padrão (Não-PGS)
+  standard_contract:
+    contract_id: "GSM_SATELITAL_NAO_PGS"
+    inadimplencia:
+      late_fee: "Juros de 0,033% ao dia e multa de 3% sobre o valor inadimplente."
+      consequences:
+        - "Suspensão do acesso ao sistema após 10 dias de atraso."
+        - "Cancelamento da linha GSM ou suspensão do link Satelital, com custos de reativação para o cliente."
+        - "Rescisão contratual após 90 dias de inadimplência (comodato) ou 60 dias (venda)."
+        - "Interrupção do serviço pela Global System requer notificação prévia ao cliente via WhatsApp com 5 dias de antecedência."
+    cancellation:
+      policy: "Não há multa contratual para rescisão, mas o cliente é responsável pelo pagamento proporcional da mensalidade e custos de serviços já realizados (instalação, desinstalação, deslocamento)."
+      procedure: "A solicitação de cancelamento deve ser feita via WhatsApp (0800 606 8000) ou presencialmente, com 30 dias de antecedência."
+      prepaid_refund: "Caso existam valores pagos antecipadamente, o cliente pode solicitar reembolso proporcional."
+    fees_and_penalties:
+      unauthorized_uninstallation_penalty:
+        - "Rastreador GSM: R$ 800,00"
+        - "Rastreador Satelital: R$ 1.800,00"
+      misuse_penalty: "Cobrança de multa no valor de 10 vezes a taxa de adesão."
+      equipment_loss_value:
+        - "GSM: R$ 350,00"
+        - "Satelital Global Star: R$ 800,00"
+      displacement_cost_per_km: "R$ 1,50"
+    administrative_procedures:
+      payment_slip_request_obligation: "Se o cliente não receber o boleto, é sua responsabilidade solicitar a segunda via antes do vencimento."
+      vehicle_sale_procedure: "Em caso de venda do veículo, o cliente é obrigado a agendar a desinstalação. A Global System não tem obrigação de contatar o novo proprietário."
+    fiscal_information:
+      description: "Serviço de Gestão Operacional de Equipamentos de Segurança Eletrônica"
+      cnae: "8020001"
+      tax_code: "8020001"
+      service_code: "31.01"
+
+  # 6.3. Termos Específicos do Contrato Moto com Cobertura (PGS)
+  moto_pgs_contract:
+    contract_id: "MOTO_PGS_COBERTURA"
+    reimbursement_clause:
+      description: "Este contrato NÃO é um seguro, mas em caso de NÃO recuperação da motocicleta, haverá REEMBOLSO do valor da motocicleta de acordo com a tabela FIPE, respeitando o valor máximo do plano contratado."
+      payment_deadline: "O pagamento da cobertura será realizado no período máximo de 90 dias após o roubo, caso a motocicleta não seja recuperada."
+    coverage_exclusions:
+      - "Avarias e violações na motocicleta recuperada que não excedam 30% do valor de tabela FIPE."
+      - "Bens ou acessórios subtraídos da motocicleta."
+    client_obligations_for_coverage:
+      - "Comunicar o roubo nos primeiros 60 minutos (para roubo) ou 24 horas (para furto). O não cumprimento elimina a cobertura."
+      - "Não manusear o equipamento, sob pena de cancelamento da cobertura."
+      - "Informar a Global System sempre que a motocicleta for para uma oficina mecânica."
+      - "Manter a documentação da motocicleta (IPVA, licenciamento) rigorosamente em dia. Débitos serão descontados do reembolso."
+      - "Manter os pagamentos do financiamento em dia, caso o veículo seja financiado."
+      - "Para receber o valor, entregar o documento da motocicleta preenchido, assinado e autenticado, transferindo a propriedade para a Global System."
+    inadimplencia:
+      late_fee: "Juros de 0,3% ao mês 'pro rata die' e multa de 3% sobre o valor inadimplente."
+      consequences:
+        - "Suspensão dos serviços e da cobertura após o 1º dia de atraso."
+        - "Ocorrido o roubo/furto com mensalidades em atraso, a cobertura é CANCELADA e não será aceito pagamento para restabelecer."
+        - "Inclusão em órgãos de proteção ao crédito após 30 dias de atraso."
+        - "Na cobrança judicial do débito, incidirão honorários advocatícios de 20% do montante devido, mais custas judiciais."
+    fees_and_penalties:
+      false_alarm_penalty: "Será cobrada uma multa no valor de 50% do valor total do contrato em caso de alarme falso."
+      non_return_penalty: "Caso o cliente não compareça por duas vezes ao agendamento de desinstalação, ficará obrigado ao pagamento de multa de 30% do valor do equipamento, mais o valor integral do equipamento não devolvido."
+    administrative_procedures:
+      contract_transfer: "É possível transferir os serviços para um terceiro (novo proprietário) mediante assinatura de um novo Termo de Adesão."
+
+# 7. Scripts de Venda e Gatilhos de Perfil de Cliente
+customer_profiles_and_triggers:
+  - profile: "Foco em Custo"
+    script: "Entendo perfeitamente que o orçamento é um ponto crucial. Muitos dos nossos clientes inicialmente pensam no custo, mas rapidamente percebem que a Global System é um investimento estratégico. Para seu caso, o plano {plano} tem adesão de R${adesao} e mensalidade de R${mensalidade}. Importante ressaltar que este é um serviço de rastreamento para auxílio na localização, e não um seguro. Podemos detalhar todos os termos e como ele se encaixa no seu orçamento?"
+  - profile: "Medo da Perda"
+    script: "A sensação de insegurança é desgastante, não é? Nossa solução de rastreamento {plano} é projetada para maximizar as chances de localização. Embora nosso serviço não seja um seguro e não ofereça indenização (exceto no plano PGS sob condições específicas), nossa tecnologia é robusta. Como seria para você ter essa ferramenta ao seu dispor? Gostaria de ver todos os detalhes e limitações operacionais?"
+  - profile: "Já teve o bem roubado"
+    script: "Sinto muito pela sua experiência anterior, imagino a frustração. Situações assim nos motivam ainda mais na Global System. Nosso diferencial é {diferencial_1} e {diferencial_2}. É crucial entender que nosso serviço é de rastreamento, não um seguro, mas focamos em tecnologia de ponta para localização. Gostaria de entender como nossa proposta formalizada pode te ajudar?"
