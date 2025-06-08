@@ -1,422 +1,663 @@
 triage_initial_message_task:
   description: |
-    Você é o TriageAgent. Analise a mensagem do cliente fornecida no input e seu histórico de conversação. **Sua prioridade é entender e classificar a intenção da MENSAGEM ATUAL do cliente.**
-    - Mensagem: "{message_text}"
+    Você é o TriageAgent. Sua prioridade é analisar o ESTADO ATUAL DA CONVERSA em conjunto com a MENSAGEM MAIS RECENTE para classificar a intenção do cliente.
+
+    **DADOS PARA SUA ANÁLISE:**
+      
+    - **Estado da Conversa (O Contexto Principal):**   # Use este objeto JSON como sua principal fonte de verdade sobre o que já foi discutido, o que o cliente já informou e em que estágio a conversa está.
+    
+    `{conversation_state}`
+   
+    - **Mensagem Atual do Cliente (O Gatilho):** "{message_text}"
+    - **Histórico Bruto (Contexto Adicional):** "{history}"
     - ID Contato: "{contact_id}"
     - Timestamp: "{timestamp}"
-
-    Histórico de conversação (10 ùltimas):
-    "{history}" # Use este histórico para contexto, mas a mensagem atual define a necessidade imediata.
-
-    Siga seu FLUXO DE ANÁLISE E DECISÃO:
-    1. Consulte caches L0/L1 - (Um dicionário com interações iguais a que recebeu agora).
-    2. Consulte a Base de Conhecimento L2 - Qdrant (Uma coleção no qdrant que serve como uma memória no seu cerebro, feita para armazenar mensagens rápidas e embasadas no contexto. Criada por sua equipe especializada.).
-    3. Decida se uma RESPOSTA IMEDIATA é viável. **Esta decisão exige análise cuidadosa para garantir que a resposta seja adequada, correta e realmente útil para a PERGUNTA ATUAL do cliente.**
-       - **Analise profundamente a MENSAGEM ATUAL do cliente em conjunto com o HISTÓRICO de conversação e o conteúdo das respostas encontradas em L0/L1/L2.** A mensagem atual é o principal guia.
-       - **Para definir "action": "RESPONDED_DIRECTLY", AS SEGUINTES CONDIÇÕES DEVEM SER SATISFEITAS DE FORMA CONVINCENTE (focadas na mensagem atual):**
-         a. A resposta cacheada (de L0/L1 ou L2) é uma **correspondência de altíssima relevância semântica e precisão** para a pergunta/solicitação específica da mensagem atual. A informação deve ser correta.
-         b. A resposta cacheada **endereça de forma direta e suficiente a(s) pergunta(s) explícita(s) na mensagem atual do cliente.** A informação deve ser clara, e fornecer o que foi essencialmente pedido, sem omissões críticas para a questão imediata.
-         c. A pergunta do cliente na mensagem atual é sobre um **tópico bem definido, buscando informações ou soluções tipicamente catalogadas** (ex: dados factuais como "qual o preço do plano X?", "quais documentos preciso para Y?", procedimentos padrão simples, características de planos já documentadas). A resposta do cache deve ser autocontida para tal pergunta. Evitar para questões abertas ("fale sobre seus serviços"), comparações complexas não estruturadas no cache, ou que sugiram necessidade de negociação/exceção.
-         d. O **histórico da conversa NÃO sugere** que esta resposta cacheada já foi considerada insuficiente pelo cliente para uma questão similar e recente, que o problema é uma escalada não resolvida pela informação do cache, ou que se trata de uma negociação em andamento que a resposta pronta não contemplaria. **Mensagens automáticas de sistema no histórico sobre tópicos não relacionados à consulta atual não devem impedir uma resposta direta se as outras condições forem satisfeitas para a mensagem atual.** O foco é se a resposta cacheada pode resolver a *necessidade atual e explícita* de forma satisfatória.
-       - **SE HOUVER DÚVIDA SIGNIFICATIVA sobre a capacidade da resposta cacheada em atender adequadamente à consulta atual do cliente (ou seja, se a resposta parecer incompleta para o que foi perguntado, potencialmente imprecisa, ou se o contexto indicar que o cliente precisa de mais do que o cache oferece PARA SUA MENSAGEM ATUAL), VOCÊ DEVE OPTAR POR "INITIATE_FULL_PROCESSING".** O objetivo é um equilíbrio entre eficiência e a satisfação do cliente. Uma resposta direta só deve ser usada se for claramente adequada e correta para a solicitação atual.
-       - Se, e somente se, todas as condições (a-d) forem atendidas de forma a prover uma resposta que seja genuinamente adequada e correta para a mensagem atual do cliente, defina "action": "RESPONDED_DIRECTLY". (O sistema utilizará a melhor correspondência de cache que você identificou como base para a resposta).
-    4. Se as condições estritas para resposta imediata não forem atendidas, determine o `operational_context` e o `identified_topic` **baseados primariamente na MENSAGEM ATUAL do cliente.**
-       - Defina "action": "INITIATE_FULL_PROCESSING".
-       - Analise a mensagem atual do cliente em conjunto com o histórico para classificar a necessidade principal em um dos seguintes `operational_context`:
-         * `SUPPORT`: Se o cliente relata um problema técnico, pede ajuda com um serviço existente, ou tem dúvidas sobre o uso do sistema de rastreamento NA SUA MENSAGEM ATUAL.
-         * `BUDGET`: Se o cliente está buscando informações sobre planos e preços, pedindo um novo orçamento, ou fazendo perguntas sobre um orçamento que ainda não aceitou NA SUA MENSAGEM ATUAL.
-         * `BUDGET_ACCEPTED`: Se o cliente indica claramente NA SUA MENSAGEM ATUAL a aceitação de um orçamento ou proposta que foi previamente discutida ou enviada. É crucial verificar o histórico para confirmar que um orçamento estava em pauta.
-         * `OTHER_ROUTING`: Para todas as outras solicitações NA MENSAGEM ATUAL que requerem processamento humano mas não se encaixam claramente nas categorias acima (ex: perguntas institucionais complexas, feedback geral, etc.).
-       - Defina `identified_topic` com uma breve descrição do assunto principal da mensagem ATUAL do cliente (ex: 'problema_rastreador_parou_AGORA', 'solicitacao_orcamento_carro_NOVA', 'aceitacao_orcamento_plano_premium_RECENTE', 'duvida_contrato_ESPECIFICA').
-
-    L1/L0 - (Interações iguais a essa):
+    - Turn: "{turn}"
+    - Cache L0/L1: 
+    
     "{l0l1_cache}"
-
-    L2 - (Memória de mensagens imediatas para serem enviadas):
+    
+    - Cache L2: 
+    
     "{l2_cache}"
 
-    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
-    SEM COMENTÁRIOS NO JSON!
+    **SEU FLUXO DE DECISÃO:**
+    1.  **PRIMEIRO, ANALISE O `{conversation_state}`:** Entenda o que já aconteceu. O cliente já está em um funil de `BUDGET`? Ele já forneceu o tipo de veículo em `entities_extracted`?
+    2.  **DEPOIS, ANALISE A `{message_text}`:** A mensagem atual confirma, continua ou muda o estado da conversa?
+    3.  **DECIDA O PRÓXIMO PASSO (`action`):**
+        - Use "RESPOND_DIRECTLY" com extrema cautela, apenas para perguntas factuais que não conflitem com o estado da conversa.
+        - Na maioria dos casos, especialmente se o `{conversation_state}` já estiver populado, a ação correta será "INITIATE_FULL_PROCESSING" para dar continuidade ao fluxo com os especialistas.
+    4.  **CLASSIFIQUE O CONTEXTO (`operational_context`):**
+        - Baseie sua decisão primariamente no `{conversation_state}` e use a mensagem atual para refinar a classificação.
+        - Se a última ação no estado foi uma proposta de orçamento e o cliente diz "sim", classifique como `BUDGET_ACCEPTED`.
+        - Se o estado mostra uma discussão sobre planos e o cliente pede mais um detalhe, mantenha o contexto `BUDGET`.
+    5.  **ATUALIZE O ESTADO:** Modifique o objeto `{conversation_state}` com suas novas conclusões. O novo `current_context` deve ser o `operational_context` que você definiu. Extraia novas entidades se houver.
+
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    NÃO adicione comentários no JSON final.
   expected_output: |
     {
-      "action": "RESPONDED_DIRECTLY" | "INITIATE_FULL_PROCESSING",
-      "identified_topic": "identified_topic",
-      "operational_context": "SUPPORT" | "BUDGET" | "BUDGET_ACCEPTED" | "OTHER_ROUTING",
-      "plan_details": "Plano GSM, adesao X mensalidade X ...." # Apenas se "identified_topic" estiver relacionado a um BUDGET_ACCEPTED e o cliente mencionar detalhes do plano que podem ser extraídos. O TriageAgent não gera esses detalhes, apenas repassa se identificados na mensagem de aceite.
+      "task_output": {
+        "action": "INITIATE_FULL_PROCESSING",
+        "identified_topic": "aceite_orcamento_plano_PGS",
+        "operational_context": "BUDGET_ACCEPTED",
+        "plan_details": "Plano Proteção Total PGS, cliente mencionou aceite."
+      },
+      "updated_state": {
+        "metadata": {
+          "contact_id": "{contact_id}",
+          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "last_updated": "{timestamp}",
+          "current_turn_number": 5
+        },
+        "current_context": {
+            "context_type": "BUDGET_ACCEPTED",
+            "last_topic": "aceite_orcamento_plano_PGS",
+            "updated_at": "{timestamp}"
+        },
+        "session_summary": "Conversa iniciou com interesse em planos para moto. Cliente recebeu informações sobre o plano PGS, tirou dúvidas sobre o contrato e, na última mensagem, confirmou que deseja prosseguir com a contratação.",
+        "entities_extracted": [
+          { "entity": "vehicle_type", "value": "moto", "source_turn": 1 },
+          { "entity": "interest", "value": "cobertura_FIPE", "source_turn": 3 },
+          { "entity": "decision", "value": "aceite", "source_turn": 5 }
+        ],
+        "products_discussed": [
+          {
+            "plan_name": "Plano Proteção Total PGS",
+            "details_provided": ["pricing", "contract_terms", "installation_policy"],
+            "presented_at_turn": 3
+          }
+        ],
+        "last_agent_action": {
+          "agent_name": "TriageAgent",
+          "goal": "Classificar aceite do cliente e atualizar estado.",
+          "action_timestamp": "{timestamp}"
+        },
+        "user_sentiment_history": [
+          { "turn": 1, "sentiment": "curioso" },
+          { "turn": 3, "sentiment": "considerando" },
+          { "turn": 5, "sentiment": "decidido" }
+        ]
+      }
     }
+
 
 profile_customer_task:
   description: |
-    Você é o CustomerProfiler. O TriageAgent decidiu por "INITIATE_FULL_PROCESSING".
-    Dados recebidos (contexto da tarefa anterior):
-    - ID Contato: "{contact_id}" (Extraído do output da tarefa de triagem)
-    - Mensagem Original: "{message_text_original}" (Extraído do output da tarefa de triagem) # Esta é a mensagem MAIS RECENTE do cliente e deve guiar sua análise de necessidades atuais.
-    - Contexto Operacional: "{operational_context}" (Extraído do output da tarefa de triagem)
+    Você é o CustomerProfiler. O fluxo de interação com o cliente acaba de ser concluído. Sua missão é atualizar a memória de longo prazo do cliente.
 
-    Siga seu FLUXO DE CONSTRUÇÃO DE PERFIL:
-    1. Analise o perfil do cliente que será proporcionado a você abaixo.
-    2. Se o perfil não existir, crie um novo perfil com base na mensagem original e no histórico, tente inferir informações relevantes, **dando prioridade à intenção e necessidade expressas na MENSAGEM ORIGINAL mais recente.**
-    3. Se o perfil já existir, atualize-o com as informações da mensagem original e do histórico, **garantindo que as informações da MENSAGEM ORIGINAL mais recente sejam destacadas e, se necessário, sobreponham inferências de sentimento ou estágio de vendas baseadas em histórico mais antigo (especialmente se o histórico contiver mensagens automáticas não relacionadas à interação atual).**
-    4. Consolide as informações em um sumário e perfil detalhado.
-    - Inclua compras passadas, tickets de suporte, **sentimento ATUAL (fortemente baseado na MENSAGEM ORIGINAL)**, estágio de vendas (influenciado pela MENSAGEM ORIGINAL) e preferências (com destaque para as expressas na MENSAGEM ORIGINAL).
-    5. Resuma o histórico de conversa para transmitir corretamente o contexto atual, **enfatizando a natureza e o tópico da MENSAGEM ORIGINAL mais recente em comparação com o panorama geral da conversa. Se a MENSAGEM ORIGINAL introduz um novo tema ou necessidade, isso deve ser o foco do resumo do histórico recente.**
+    Timestamp: "{timestamp}"
+    Turn: "{turn}"
+    
 
-    Perfil (pode ser null):
-    "{customer_profile}"
+    **DADOS PARA SUA ANÁLISE:**
+    - **Estado da Conversa Concluída (Sua Fonte de Verdade):** 
+    
+    `{conversation_state}`
 
-    Histórico recente de conversas:
+      # Use este objeto para entender TUDO o que aconteceu na última sessão.
+
+    - **Perfil Antigo do Cliente (Pode ser nulo):** "
+
+    {customer_profile}"
+
+    - ID Contato: "{contact_id}"
+    - Histórico Bruto (Para contexto adicional, se necessário): 
+    
     "{history}"
 
-    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
+    **SEU FLUXO DE TRABALHO:**
+    1.  **Sintetize o `{conversation_state}`:** Extraia as entidades, os produtos discutidos, o resumo da sessão e o sentimento final.
+    2.  **Atualize o Perfil de Longo Prazo:** Use as informações da sessão para enriquecer o perfil antigo. Se não houver perfil antigo, crie um novo.
+    3.  **Gere o Novo Perfil Estruturado:** O seu output deve ser o perfil completo e atualizado do cliente, refletindo o conhecimento mais recente que temos sobre ele. Certifique-se de que o `profile_summary` destaque a conclusão da última sessão.
+
+    Retorne APENAS um objeto JSON com o perfil atualizado, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     SEM COMENTÁRIOS NO JSON!
   expected_output: |
     {
-      "contact_id": "ID do contato",
-      "profile_summary": "Sumário do perfil, com ênfase na interação mais recente do cliente.",
-      "detailed_profile": { "past_purchases": [], "support_tickets": [], "current_sentiment": "Sentimento inferido primariamente da última mensagem", "sales_stage": "Estágio de vendas baseado na interação atual", "preferences": ["Preferências expressas recentemente"] },
-      "operational_context": "BUDGET, SUPPORT, etc.",
-      "chat_history_summary": "Resumo do histórico de chat, destacando o contexto e a intenção da última mensagem do cliente."
+      "task_output": {
+        "contact_id": "{contact_id}",
+        "profile_summary": "Perfil atualizado após interação sobre planos para moto. Cliente demonstrou interesse em cobertura FIPE e aceitou o orçamento para o Plano PGS.",
+        "detailed_profile": {
+          "past_purchases": ["Plano Proteção Total PGS"],
+          "support_tickets": [],
+          "current_sentiment": "Positivo",
+          "sales_stage": "Venda Concluída",
+          "preferences": ["rastreamento de moto", "cobertura_FIPE"]
+        },
+        "operational_context": "BUDGET_ACCEPTED",
+        "chat_history_summary": "Sessão focada na apresentação do Plano PGS, culminando no aceite do cliente."
+      },
+      "updated_state": {
+        "metadata": {
+          "contact_id": "{contact_id}",
+          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "last_updated": "2025-06-07T22:10:00.000Z",
+          "current_turn_number": 6
+        },
+        "current_context": {
+            "context_type": "BUDGET_ACCEPTED",
+            "last_topic": "aceite_orcamento_plano_PGS",
+            "updated_at": "2025-06-07T22:10:00.000Z"
+        },
+        "session_summary": "Conversa evoluiu para o aceite do orçamento do plano PGS.",
+        "entities_extracted": [
+          { "entity": "vehicle_type", "value": "moto", "source_turn": 1 },
+          { "entity": "decision", "value": "aceite", "source_turn": 6 }
+        ],
+        "products_discussed": [
+          {
+            "plan_name": "Plano Proteção Total PGS",
+            "details_provided": ["pricing", "contract_terms", "installation_policy"],
+            "presented_at_turn": 3
+          }
+        ],
+        "last_agent_action": {
+          "agent_name": "CustomerProfiler",
+          "goal": "Consolidar estado da sessão no perfil de longo prazo.",
+          "action_timestamp": "2025-06-07T22:10:00.000Z"
+        },
+        "user_sentiment_history": [
+          { "turn": 1, "sentiment": "curioso" },
+          { "turn": 6, "sentiment": "decidido" }
+        ]
+      }
     }
 
 profile_customer_task_purchased:
   description: |
-    Você é o CustomerProfiler. O cliente acabou de confirmar a compra de um plano de rastreamento.
-    Dados recebidos (contexto da tarefa anterior):
-    - ID Contato: "{contact_id}" (Extraído do output da tarefa de triagem)
-    - Mensagem Original: "{message_text_original}" (Extraído do output da tarefa de triagem) # Mensagem de confirmação do cliente.
-    - Contexto Operacional: "{operational_context}" (Extraído do output da tarefa de triagem)
+    Você é o CustomerProfiler. O cliente acaba de confirmar a compra de um plano, e o contexto operacional é `BUDGET_ACCEPTED`.
+    Sua missão é usar os dados da sessão para criar ou atualizar o perfil de longo prazo do cliente, marcando a venda como concluída.
 
-    Siga seu FLUXO DE CONSTRUÇÃO DE PERFIL:
-    1. Analise o perfil do cliente que será proporcionado a você abaixo.
-    2. Se o perfil não existir, crie um novo perfil com base na mensagem original e no histórico, focando no aceite.
-    3. Se o perfil já existir, atualize-o com as informações da mensagem original (aceite) e do histórico. **Marque o estágio de vendas como 'CONCLUÍDO' ou similar e o sentimento como 'POSITIVO' devido à compra.**
-    4. Consolide as informações em um sumário e perfil detalhado.
-    - Inclua compras passadas (adicionando a atual), tickets de suporte, sentimento atual, estágio de vendas e preferências.
-    5. Resuma o histórico de conversa, focando na confirmação da compra.
+    Timestamp: "{timestamp}"
+    Turn: "{turn}"
 
-    Perfil (pode ser null):
-    "{customer_profile}"
 
-    Histórico recente de conversas:
-    "{history}"
+    **DADOS PARA SUA ANÁLISE:**
+    - **Estado da Conversa Concluída (Sua Fonte de Verdade):**   # Use este objeto para extrair os detalhes do plano que foi aceito e o resumo final da negociação.
+    
+    `{conversation_state}`
+      
+    - **Perfil Antigo do Cliente (Pode ser nulo):** "{customer_profile}"
+    - ID Contato: "{contact_id}"
+    - Histórico Bruto (Para contexto adicional): "{history}"
 
-    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
-    SEM COMENTÁRIOS NO JSON!
+    **SEU FLUXO DE TRABALHO:**
+    1.  **Sintetize o `{conversation_state}`:** Identifique o plano que foi aceito e os detalhes finais da conversa a partir do `session_summary` e `products_discussed`.
+    2.  **Atualize o Perfil de Longo Prazo:** Use as informações da sessão para enriquecer o perfil antigo (ou criar um novo).
+        - **Obrigatório:** Adicione o plano comprado à lista `past_purchases`.
+        - **Obrigatório:** Marque o `sales_stage` como 'Venda Concluída'.
+        - **Obrigatório:** Defina o `current_sentiment` como 'Positivo (compra realizada)'.
+    3.  **Gere o Novo Perfil Estruturado:** Seu `task_output` deve ser o perfil completo e atualizado do cliente.
+    4.  **Retorne o Estado:** No `updated_state`, passe o `{conversation_state}` que você recebeu, apenas atualizando o campo `last_agent_action` para refletir sua própria ação de consolidação.
+
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    NÃO adicione comentários no JSON final.
   expected_output: |
     {
-      "contact_id": "ID do contato",
-      "profile_summary": "Sumário do perfil, destacando a recente confirmação de compra.",
-      "detailed_profile": { "past_purchases": ["Detalhes da nova compra adicionados aqui"], "support_tickets": [], "current_sentiment": "Positivo (compra realizada)", "sales_stage": "Venda Concluída", "preferences": [] },
-      "operational_context": "BUDGET_ACCEPTED",
-      "chat_history_summary": "Resumo do histórico de chat, focado na aceitação do orçamento e próximos passos."
+      "task_output": {
+        "contact_id": "{contact_id}",
+        "profile_summary": "Perfil atualizado após a confirmação de compra do 'Plano Proteção Total PGS'. Cliente finalizou o processo de venda e iniciará o cadastro para instalação.",
+        "detailed_profile": {
+          "past_purchases": [
+            {
+              "plan_name": "Plano Proteção Total PGS",
+              "purchase_date": "{timestamp}",
+              "details": "Mensalidade de R$85 para FIPE entre R$16-22k."
+            }
+          ],
+          "support_tickets": [],
+          "current_sentiment": "Positivo (compra realizada)",
+          "sales_stage": "Venda Concluída",
+          "preferences": ["rastreamento de moto", "cobertura_FIPE"]
+        },
+        "operational_context": "BUDGET_ACCEPTED",
+        "chat_history_summary": "Sessão focada na apresentação do Plano PGS, que culminou no aceite explícito do cliente para a contratação do serviço."
+      },
+      "updated_state": {
+        "metadata": {
+          "contact_id": "{contact_id}",
+          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "last_updated": "{timestamp}",
+          "current_turn_number": 7
+        },
+        "current_context": {
+            "context_type": "BUDGET_ACCEPTED",
+            "last_topic": "aceite_orcamento_plano_PGS",
+            "updated_at": "{timestamp}"
+        },
+        "session_summary": "Cliente aceitou o orçamento para o plano PGS. Próximo passo é a coleta de dados cadastrais.",
+        "entities_extracted": [
+          { "entity": "vehicle_type", "value": "moto", "source_turn": 1 },
+          { "entity": "decision", "value": "aceite", "source_turn": 6 }
+        ],
+        "products_discussed": [
+          {
+            "plan_name": "Plano Proteção Total PGS",
+            "details_provided": ["pricing", "contract_terms", "installation_policy"],
+            "presented_at_turn": 3
+          }
+        ],
+        "last_agent_action": {
+          "agent_name": "CustomerProfiler",
+          "goal": "Consolidar aceite da venda no perfil de longo prazo do cliente.",
+          "action_timestamp": "{timestamp}"
+        },
+        "user_sentiment_history": [
+          { "turn": 1, "sentiment": "curioso" },
+          { "turn": 6, "sentiment": "decidido" }
+        ]
+      }
     }
 
-develop_strategy_task:
-  description: |
-    Você é o StrategicAdvisor. Dados recebidos (contexto das tarefas anteriores):
-    - Perfil do Cliente (JSON): 
-    "{profile_customer_task_output}"
-    
-    - Mensagem Original do Cliente: "{message_text_original}"
-    - Contexto Operacional: "{operational_context}"
-    - Tópico Identificado: "{identified_topic}"
-    
-    Siga sua FILOSOFIA DE CONSULTORIA ESTRATÉGICA e FLUXO DE DEFINIÇÃO DE ESTRATÉGIA:
-    1.  Analise todos os inputs, **dando prioridade máxima à `Mensagem Original do Cliente` para entender a necessidade imediata.**
-    2.  **Consulte a `KnowledgeServiceTool` para obter TODAS as informações de negócio necessárias.** Analise a necessidade do cliente e formule uma query JSON precisa, usando o "Cardápio de Tópicos" definido em seu `backstory`.
-    3.  **Se a referência do cliente a um produto for ambígua, aplique a estratégia de desambiguação:** primeiro, use o tópico 'list_all_products' para obter a lista de planos; depois, raciocine para identificar o nome exato do plano e, então, faça uma segunda consulta para obter os detalhes.
-    4.  **Use as informações PRECISAS retornadas pela ferramenta** para formular o plano estratégico (objetivo, pontos-chave, perguntas). O plano deve ser 100% alinhado com os dados obtidos.
-    5.  A `super_message` gerada deve ser rica em informações, mas **estritamente focada em responder à `Mensagem Original do Cliente`**, utilizando o histórico como contexto e os dados da `KnowledgeServiceTool` como conteúdo. Lembre-se de estruturá-la pensando na futura fragmentação pelo ResponseCraftsman.
-    
-    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
-    SEM COMENTÁRIOS NO JSON!
+
+  develop_strategy_task:
+    description: |
+      Você é o StrategicAdvisor. Dados recebidos (contexto das tarefas anteriores):
+
+      Timestamp: "{timestamp}"
+      Turn: "{turn}"
+
+      - Perfil do Cliente (JSON): 
+      "{profile_customer_task_output}"
+
+      - Mensagem Original do Cliente: "{message_text_original}"
+      - Contexto Operacional: "{operational_context}"
+      - Tópico Identificado: "{identified_topic}"
+      
+      Siga sua FILOSOFIA DE CONSULTORIA ESTRATÉGICA e FLUXO DE DEFINIÇÃO DE ESTRATÉGIA:
+      1.  Analise todos os inputs, **dando prioridade máxima à `Mensagem Original do Cliente` para entender a necessidade imediata.**
+      2.  **Consulte a `KnowledgeServiceTool` para obter TODAS as informações de negócio necessárias.** Analise a necessidade do cliente e formule uma query JSON precisa, usando o "Cardápio de Tópicos" definido em seu `backstory`.
+      3.  **Se a referência do cliente a um produto for ambígua, aplique a estratégia de desambiguação:** primeiro, use o tópico 'list_all_products' para obter a lista de planos; depois, raciocine para identificar o nome exato do plano e, então, faça uma segunda consulta para obter os detalhes.
+      4.  **Use as informações PRECISAS retornadas pela ferramenta** para formular o plano estratégico (objetivo, pontos-chave, perguntas). O plano deve ser 100% alinhado com os dados obtidos.
+      5.  A `super_message` gerada deve ser rica em informações, mas **estritamente focada em responder à `Mensagem Original do Cliente`**, utilizando o histórico como contexto e os dados da `KnowledgeServiceTool` como conteúdo. Lembre-se de estruturá-la pensando na futura fragmentação pelo ResponseCraftsman.
+      6.  **Atualização do Estado:** Modifique o objeto `{conversation_state}` com o resultado da sua análise. Atualize o `session_summary`, adicione os `products_discussed` e registre sua ação no `last_agent_action`.
+      
+      Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    NÃO adicione comentários no JSON final.
   expected_output: |
     {
-      "strategy_type": "ex: SALES_QUALIFICATION_CURRENT_NEED ou SUPPORT_TROUBLESHOOTING_REPORTED_ISSUE",
-      "conversation_goal": "Descrição do objetivo, focado em resolver/atender a mensagem original do cliente",
-      "key_talking_points": ["argumentos/informações relevantes para a mensagem atual"],
-      "questions_to_ask_client": ["perguntas para esclarecer a mensagem atual ou guiar para a solução/venda"],
-      "system_action_request": { "action_type": "...", "parameters": {...} },
-      "internal_notes_for_craftsman": "Instruções de tom, estilo, foco na mensagem atual do cliente.",
-      "empathy_statement_suggestion": "(Opcional, para Suporte) Sugestão de frase empática inicial.",
-      "super_message": "(OBRIGATÓRIO) Uma super mensagem rica em informação, focada em responder à necessidade da MENSAGEM ATUAL do cliente."
+      "task_output": {
+        "strategy_type": "SALES_QUALIFICATION_CURRENT_NEED",
+        "conversation_goal": "Apresentar as opções de rastreamento para a moto do cliente, entender sua necessidade (segurança vs. rastreamento básico) e avançar para o agendamento.",
+        "key_talking_points": [
+          "Benefícios do Plano Proteção Total PGS (cobertura FIPE).",
+          "Diferença para o Plano Rastreamento Moto (foco em localização).",
+          "Detalhes de adesão e mensalidade para ambos.",
+          "Processo de instalação sigiloso na loja."
+        ],
+        "questions_to_ask_client": [
+          "Sua principal busca é por proteção completa com garantia de reembolso em caso de não recuperação, ou o rastreamento para gestão e localização já atende sua necessidade?",
+          "Para eu te passar o valor exato do plano com proteção, qual o valor aproximado da sua moto na tabela FIPE?"
+        ],
+        "system_action_request": null,
+        "internal_notes_for_craftsman": "Tom consultivo, focado em ajudar o cliente a escolher. Seja claro sobre a diferença entre os dois planos de moto. Use a resposta sobre a prioridade do cliente para focar a conversa em um dos planos.",
+        "empathy_statement_suggestion": null,
+        "super_message": "Juan, para sua moto, temos duas ótimas opções. O Plano Rastreamento Moto foca na localização em tempo real. Já o Plano Proteção Total PGS, além de rastrear, garante o reembolso do valor da moto pela tabela FIPE caso ela não seja recuperada. Para entender qual se encaixa melhor, me conta: sua prioridade é a proteção financeira completa ou o rastreamento essencial?"
+      },
+      "updated_state": {
+        "metadata": {
+          "contact_id": "{contact_id}",
+          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "last_updated": "{timestamp}",
+          "current_turn_number": 3
+        },
+        "current_context": {
+          "context_type": "BUDGET",
+          "last_topic": "apresentacao_planos_moto",
+          "updated_at": "{timestamp}"
+        },
+        "session_summary": "Sessão iniciada com interesse em planos para moto. Estratégia definida para apresentar as duas opções (PGS e Rastreamento Básico) e qualificar a necessidade do cliente.",
+        "entities_extracted": [
+          { "entity": "vehicle_type", "value": "moto", "source_turn": 2 }
+        ],
+        "products_discussed": [
+          {
+            "plan_name": "Plano Proteção Total PGS",
+            "details_provided": [],
+            "presented_at_turn": 3
+          },
+          {
+            "plan_name": "Plano Rastreamento Moto",
+            "details_provided": [],
+            "presented_at_turn": 3
+          }
+        ],
+        "last_agent_action": {
+          "agent_name": "StrategicAdvisor",
+          "goal": "Definir estratégia para apresentar planos de moto.",
+          "action_timestamp": "{timestamp}"
+        },
+        "user_sentiment_history": [
+          { "turn": 2, "sentiment": "curioso" }
+        ]
+      }
     }
+
+
+# tasks.yaml (versão atualizada e alinhada com a nova arquitetura)
 
 execute_system_operations_task:
   description: |
-    Você é o SystemOperationsAgent. Dados recebidos (contexto da tarefa anterior):
-    - Solicitação de Ação de Sistema (JSON): "{develop_strategy_task.output.system_action_request}"
+    Você é o SystemOperationsAgent, um executor de tarefas de sistema.
 
-    Verifique se `system_action_request` não é nulo e contém `action_type` e `parameters`.
-    Se for nulo ou inválido, retorne: {"action_type_executed": "NONE", "status": "no_action_requested", "data": null, "error_message": null}
+    Timestamp: "{timestamp}"
+    Turno: "{turn}"
 
-    Caso contrário, siga seu FLUXO DE EXECUÇÃO DE AÇÃO DE SISTEMA:
-    1. Mapeie o `action_type` para a ferramenta InternalAPITool_* correta.
-    2. Execute a ferramenta com os `parameters`.
-    Retorne APENAS um objeto JSON com os campos especificados na sua SAÍDA ESPERADA.
-    SEM COMENTÁRIOS NO JSON!
+    **DADOS PARA SUA ANÁLISE:**
+    - **Solicitação de Ação de Sistema (Seu Gatilho):** "{develop_strategy_task.task_output.system_action_request}"
+      # Este é o comando que você deve executar.
+    - **Estado da Conversa (Contexto para Repassar):** `{conversation_state}`
+      # Você não precisa analisar este estado, mas DEVE retorná-lo intacto na sua saída para manter a continuidade do fluxo.
+
+    **SEU FLUXO DE TRABALHO:**
+    1.  Verifique se a `system_action_request` não é nula. Se for, retorne um status de "no_action_requested".
+    2.  Caso contrário, mapeie o `action_type` para a ferramenta interna correta.
+    3.  Execute a ferramenta com os `parameters` fornecidos.
+    4.  Estruture o resultado da sua execução (sucesso ou falha) no campo `task_output` da sua resposta.
+    5.  Inclua o objeto `{conversation_state}` que você recebeu, sem modificações, no campo `updated_state` da sua resposta.
+
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    NÃO adicione comentários no JSON final.
   expected_output: |
     {
-      "action_type_executed": "O `action_type` que foi processado",
-      "status": "success" ou "error",
-      "data": { } # ...dados retornados pela API... (se sucesso)
-      "error_message": "Detalhes do erro" # (se error)
+      "task_output": {
+        "action_type_executed": "GET_TRACKING_PLAN_DETAILS",
+        "status": "success",
+        "data": {
+          "plan_name": "Plano Proteção Total PGS",
+          "details": "Adesão de R$120,00. Mensalidade baseada na FIPE. Inclui reembolso em caso de não recuperação."
+        },
+        "error_message": null
+      },
+      "updated_state": {
+        "metadata": {
+          "contact_id": "71464be80c504971ae263d710b39dd1f",
+          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "last_updated": "2025-06-07T22:15:00.000Z",
+          "current_turn_number": 4
+        },
+        "current_context": {
+            "context_type": "BUDGET",
+            "last_topic": "apresentacao_planos_moto",
+            "updated_at": "2025-06-07T22:15:00.000Z"
+        },
+        "session_summary": "Estratégia definida para apresentar opções de moto. O sistema agora busca detalhes do plano PGS.",
+        "entities_extracted": [
+          { "entity": "vehicle_type", "value": "moto", "source_turn": 2 }
+        ],
+        "products_discussed": [
+          {
+            "plan_name": "Plano Proteção Total PGS",
+            "details_provided": [],
+            "presented_at_turn": 3
+          }
+        ],
+        "last_agent_action": {
+          "agent_name": "SystemOperationsAgent",
+          "goal": "Executar a busca de detalhes do plano PGS.",
+          "action_timestamp": "{timestamp}"
+        },
+        "user_sentiment_history": [
+          { "turn": 2, "sentiment": "curioso" }
+        ]
+      }
     }
 
+
 craft_response_task:
-  description: | # - Resultado da Ação de Sistema (JSON, pode ser nulo): "{execute_system_operations_task.output}"
-    Você é o ResponseCraftsman, você trabalha numa empresa de rastreamento veicular chamada Global System Rastreamento. 
-    Sua tarefa é criar a(s) mensagem(ns) que serão efetivamente enviadas ao cliente, **com base na estratégia definida para a MENSAGEM ATUAL do cliente.**
+  description: | # - **Resultado da Ação de Sistema (se houver):** "{execute_system_operations_task_output}"
+    Você é o ResponseCraftsman. Sua missão é transformar o plano estratégico em mensagens eficazes e atualizar o estado da conversa.
 
-    Dados recebidos (contexto das tarefas anteriores):
-    - Plano Estratégico (JSON):
-    "{develop_strategy_task_output}" # Contém a estratégia focada na mensagem atual do cliente. 
-    - Perfil do Cliente (JSON):
-    "{profile_customer_task_output}" # Perfil atualizado com ênfase na última interação. 
-    - Contexto Operacional: "{operational_context}" 
-    - Tópico Identificado: "{identified_topic}" # Tópico da mensagem atual. 
-    - Mensagem Original do Cliente: "{message_text_original}" # A mensagem que você deve focar em responder. 
-    - Catálogos Enviados Recentemente (lista de nomes de planos): "{recently_sent_catalogs}" # Use isso para decidir sobre o preenchimento de 'plan_names'. Pode ser uma lista vazia.
+    Timestamp: "{timestamp}"
+    Turno: "{turn}"
 
-    Siga seus PRINCÍPIOS DE COMUNICAÇÃO GLOBAL SYSTEM e FLUXO DE CRIAÇÃO DE RESPOSTA:
-    1. Analise todos os inputs, especialmente as "internal_notes_for_craftsman" e a "super_message" do plano estratégico, **interpretando-os sempre sob a ótica da `Mensagem Original do Cliente` e considerando a informação em `{recently_sent_catalogs}`.** 
-    2. Gere as mensagens principais.
-        **Seu foco deve ser em UM plano principal, ou NO MÁXIMO DOIS se forem altamente correlacionados e diretamente relevantes para a `Mensagem Original do Cliente`.** 
-        * **Conteúdo Estratégico:** As mensagens devem responder à `Mensagem Original do Cliente`, incorporando informações importantes, curiosidades pertinentes (sempre sobre rastreamento veicular da Global System) ou elementos persuasivos que engajem o cliente e o guiem no funil de vendas, conforme a estratégia definida para esta interação. 
-        * **Referência ao Catálogo:** Se você decidir (baseado nas regras do ponto 7) que o nome de um plano será incluído em `plan_names` para o envio do catálogo, **você DEVE incluir em uma de suas `primary_messages_sequence` uma frase que prepare o cliente para o recebimento do catálogo daquele plano.** Por exemplo: "Vou te encaminhar também o catálogo do Plano X com todos os detalhes." ou "Dê uma olhada no catálogo do Plano Y que você receberá em seguida, ele tem mais informações úteis."
-        * **Diretriz de Tamanho:** Siga estritamente a diretriz de que cada mensagem deve ter **idealmente 1 a 2 frases, e no máximo absoluto 3 frases curtas.** Isso é crucial para garantir a legibilidade em um chat. 
-        * **Objetivo Principal:** Criar um fluxo conversacional que seja fácil de ler e responder em um chat, e que **atenda à necessidade expressa na `Mensagem Original do Cliente`.** 
-        * **Variação Controlada:** Dentro da faixa de 1-3 frases curtas, varie o comprimento para soar natural. 
-        * **Não Crie Blocos de Texto:** Se uma ideia, para ser completa, precisar de mais do que ~3 frases curtas, você DEVE dividi-la em múltiplas mensagens sequenciais, cada uma respeitando o limite de 1-3 frases curtas. 
-        * **A prioridade é a experiência do cliente no chat:** Mensagens muito longas são difíceis de acompanhar e desencorajam a interação. 
-    3. Gere conteúdo proativo (perguntas/respostas) para a Base de Conhecimento sobre rastreamento veicular, **inspirado pela `Mensagem Original do Cliente` e sua resposta a ela.** 
-       (Este conteúdo será passado para a SaveFastMemoryMessages pela lógica do CrewAI após sua tarefa,
-        você apenas gera o conteúdo no formato esperado). 
-    4. Se o `super_message` estiver presente, use-o como base para criar uma resposta rica e informativa. 
-        **Ao fazer isso, desmembre o conteúdo da `super_message` em segmentos lógicos, onde cada segmento resulte em uma mensagem de 1-3 frases curtas.** 
-        **Selecione e priorize as partes da `super_message` mais relevantes para responder à `Mensagem Original do Cliente` e ao(s) plano(s) focado(s) para esta interação, omitindo detalhes excessivos ou sobre planos não explicitamente selecionados.** 
-    5. Tente focar as informações recebidas na mensagem do cliente, no contexto e no tópico identificado para criar mensagens **altamente relevantes e estratégicas** para o que o cliente precisa **NESTA INTERAÇÃO ATUAL** em relação ao(s) plano(s) de rastreamento em discussão. 
-    6. IMPORTANTE: NUNCA SE APRESENTE! Seu Nome (Alessandro ou Sofia, conforme o tom) é colocado na mensagem ao ser enviada pelo sistema. 
-    7. Identifique qual plano de rastreamento (ou no máximo dois, se estritamente correlacionados e altamente relevantes para a `Mensagem Original do Cliente`...) você irá abordar em suas mensagens. 
-       **Decida se os nomes desses planos devem ser incluídos na lista `plan_names` do JSON de saída, seguindo estas regras:**
-       * O sistema backend enviará automaticamente o catálogo do WhatsApp para cada plano listado em `plan_names`.
-       * Consulte a informação em `{recently_sent_catalogs}`.
-       * **Inclua um plano em `plan_names` SE:**
-           * É a **primeira vez** que este plano específico está sendo foco principal da conversa E seu catálogo não consta em `{recently_sent_catalogs}`.
-           * OU o cliente **pede diretamente** pelo catálogo, link ou mais detalhes visuais do plano.
-           * OU o `StrategicAdvisor` explicitamente instruiu (via `internal_notes_for_craftsman` ou na estratégia) que o catálogo deve ser (re)enviado para este plano nesta interação específica.
-       * **NÃO inclua um plano em `plan_names` (resultando em `plan_names: []` ou a lista não contendo esse plano específico) SE:**
-           * O catálogo dele já foi enviado recentemente (consta em `{recently_sent_catalogs}`) E o cliente não pediu novamente de forma explícita.
-           * Você está apenas mencionando o plano brevemente, mas o foco da resposta não é detalhá-lo a ponto de necessitar o catálogo imediatamente.
-       Insira os nomes exatos dos planos (que atendam aos critérios acima) como uma **lista de strings** no campo `plan_names`. **Lembre-se: se você adicionar um plano aqui, suas mensagens principais (`primary_messages_sequence`) devem ter feito uma menção ao envio do catálogo.**. 
-       Se nenhum plano atender aos critérios para envio de catálogo nesta interação, o campo `plan_names` DEVE ser uma lista vazia (`[]`). 
-       **Nomes Exatos dos Planos Disponíveis (para sua referência):** "MOTO GSM/PGS", "GSM Padrão", "GSM FROTA", "SATELITAL FROTA", "HÍBRIDO", "GSM+WiFi", "Scooters/Patinetes", "Proteção Total PGS com cobertura FIPE".
 
-    Retorne APENAS um objeto JSON com "primary_messages_sequence", "proactive_content_generated" e "plan_names", NADA MAIS!. 
-    SEM COMENTÁRIOS NO JSON!
+    **DADOS PARA SUA ANÁLISE:**
+    - **Plano Estratégico (O Que Fazer):** 
+    
+    `{develop_strategy_task.task_output}`
+    
+    - **Estado da Conversa (O Contexto):**  # Use para personalizar suas mensagens e entender o que já foi dito.
+      
+    `{conversation_state}`
+
+    - **Perfil do Cliente (O Histórico):** 
+    
+    `{profile_customer_task_output}`
+    
+    - **Catálogos Enviados Recentemente:** 
+    
+    "{recently_sent_catalogs}"
+    
+    **SEU FLUXO DE TRABALHO:**
+    1.  **Analise TODOS os inputs**, com foco no plano estratégico e no estado da conversa.
+    2.  **Siga a "TRÍADE DA BOA MENSAGEM"** (Conteúdo, Concisão, Atitude) definida em seu `backstory` para criar a `primary_messages_sequence`.
+    3.  Gere o conteúdo proativo (`proactive_content_generated`) se aplicável.
+    4.  Decida sobre o envio de catálogos e popule a lista `plan_names`.
+    5.  **Atualize o `{conversation_state}`:** Adicione um resumo do que você comunicou ao `session_summary` e atualize o `last_agent_action`.
+
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    NÃO adicione comentários no JSON final.
   expected_output: |
     {
-      "primary_messages_sequence": [
-        "Mensagem 1 (ex: 1-2 frases, introduzindo o plano focado em resposta à solicitação atual).",
-        "Mensagem 2 (ex: 2-3 frases curtas, destacando um benefício chave. Vou te enviar também nosso catálogo completo para este plano!).",
-        "Mensagem 3 (ex: 1 frase, talvez uma pergunta curta para engajamento ou próximo passo, relacionada à interação atual)."
-      ],
-      "proactive_content_generated": [
-        {"question": "Como funciona o bloqueio do rastreador em área sem sinal?", "answer": "O rastreador armazena o comando de bloqueio e o executa assim que restabelece a comunicação com a central."},
-        {"question": "O plano de rastreamento para motos tem alguma taxa de instalação?", "answer": "Normalmente, nossos planos para motos podem ter uma taxa de instalação que varia conforme a promoção vigente. Posso verificar se há alguma condição especial para você hoje."}
-      ],
-      "plan_names": [] // Será uma lista com nomes de planos (ex: ["MOTO GSM/PGS"]) se catálogos devem ser enviados, ou uma LISTA VAZIA [] se nenhum catálogo for enviado nesta rodada.
+      "task_output": {
+        "primary_messages_sequence": [
+          "Juan, sobre o plano para sua moto, temos duas opções excelentes.",
+          "A principal diferença é que o Plano Proteção Total PGS oferece reembolso do valor da moto pela tabela FIPE se ela não for recuperada, enquanto o Plano Rastreamento foca na localização em tempo real.",
+          "Considerando sua segurança, qual dessas duas abordagens te interessa mais?"
+        ],
+        "proactive_content_generated": [
+          {"question": "O plano PGS cobre acessórios da moto?", "answer": "A cobertura do plano PGS é focada no valor da motocicleta conforme a tabela FIPE e não se estende a acessórios que possam ter sido subtraídos."},
+          {"question": "Quanto tempo demora a instalação na moto?", "answer": "A instalação em motocicletas geralmente leva entre 1 a 2 horas e é feita em nossas lojas para garantir a qualidade e o sigilo do serviço."}
+        ],
+        "plan_names": ["Plano Proteção Total PGS", "Plano Rastreamento Moto"]
+      },
+      "updated_state": {
+        "metadata": {
+          "contact_id": "{contact_id}",
+          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "last_updated": "{timestamp}",
+          "current_turn_number": 4
+        },
+        "current_context": {
+            "context_type": "BUDGET",
+            "last_topic": "apresentacao_planos_moto",
+            "updated_at": "{timestamp}"
+        },
+        "session_summary": "Estratégia definida para apresentar planos de moto. Mensagens criadas para explicar a diferença entre PGS e Rastreamento Básico, e para qualificar a necessidade do cliente.",
+        "entities_extracted": [
+          { "entity": "customer_name", "value": "Juan", "source_turn": 1 },
+          { "entity": "vehicle_type", "value": "moto", "source_turn": 2 }
+        ],
+        "products_discussed": [
+          {
+            "plan_name": "Plano Proteção Total PGS",
+            "details_provided": ["pricing", "contract_terms"],
+            "presented_at_turn": 4
+          },
+          {
+            "plan_name": "Plano Rastreamento Moto",
+            "details_provided": ["pricing"],
+            "presented_at_turn": 4
+          }
+        ],
+        "last_agent_action": {
+          "agent_name": "ResponseCraftsman",
+          "goal": "Criar e preparar mensagens sobre planos de moto para envio.",
+          "action_timestamp": "{timestamp}"
+        },
+        "user_sentiment_history": [
+          { "turn": 2, "sentiment": "curioso" }
+        ]
+      }
     }
 
 
 coordinate_delivery_task:
   description: |
-    Você é o **DeliveryCoordinator**, o Coordenador Estratégico do Fluxo de Comunicação com o Cliente da **Global System Rastreamento Veicular**. 
-    Sua missão principal é gerenciar o fluxo de comunicação, analisando o contexto da conversa (com **foco na `message_text_original` mais recente**) para escolher, ordenar e garantir a entrega eficaz da(s) mensagem(ns) mais apropriada(s) ao cliente. 
-    Isso inclui identificar quando uma única mensagem é suficiente ou quando uma sequência de mensagens (idealmente 2-3 mensagens muito curtas, ou potencialmente 4 se forem frases extremamente concisas e sequenciais para um ponto específico) é necessária para uma comunicação completa, clara e interessante, **respondendo à interação atual.** 
-    Você utilizará mensagens prontas (`fast_messages`, `proactive_content_generated`) e, em situações específicas como a aceitação de um orçamento (indicada pela `message_text_original` ou `operational_context`), **elaborará mensagens contextuais, como uma confirmação de venda.** O cliente não pode ficar sem resposta, nem receber respostas sem sentido, incompletas ou que não atendam à sua solicitação atual. 
-    Sua responsabilidade é:
-    1.  **ANÁLISE DO CONTEXTO E DEFINIÇÃO DA NECESSIDADE DE COMUNICAÇÃO (FOCADA NA MENSAGEM ATUAL):**
-        * Analise cuidadosamente todos os dados de entrada: mensagem do cliente (`{message_text_original}`), histórico (`{history}`), tópico (`{identified_topic}`), contexto operacional (`{operational_context}`), perfil do cliente (`{client_profile}`), plano de vendas (`{strategic_plan}`), input do sistema (`{system_input}`), e os recursos disponíveis (`{fast_messages}`, `{proactive_content_generated}`). 
-        **A `message_text_original` é seu principal guia para a ação imediata.** 
-        * Determine o objetivo principal da próxima interação com base na `message_text_original`: Responder uma pergunta? 
-        Confirmar um aceite recente? Fornecer informações sequenciais relevantes para a última mensagem? 
-        Guiar o cliente a partir de sua última interação? 
-    2.  **SELEÇÃO E/OU ELABORAÇÃO ESTRATÉGICA DE MENSAGEM(ENS) (PARA A MENSAGEM ATUAL):**
-        * **Cenário Prioritário - Aceite de Orçamento/Plano (Detectado na Interação Atual):**
-            * **Se o `operational_context` for 'BUDGET_ACCEPTED' (baseado na triagem da mensagem atual) ou se a `message_text_original` contiver sinais inequívocos de aceitação** (Ex: "Gostei, podemos fechar", "Quero esse plano", "Como faço para contratar?", "Aceito."), então: 
-                * **VOCÊ DEVE, OBRIGATORIAMENTE, ELABORAR UMA MENSAGEM DE CONFIRMAÇÃO.** Esta mensagem é de sua autoria. 
-                * Ela deve ser clara, direta, concisa, amigável, profissional e recapitular o que foi aceito (plano/orçamento, valor se apropriado) e sugerir próximos passos. 
-                * Exemplos: "Perfeito! Confirmando seu interesse no Plano [Nome do Plano/Referência]. Para seguirmos, precisaremos de alguns dados. Podemos prosseguir?", "Excelente! Para formalizarmos o Plano [Nome do Plano] que você escolheu, como prefere nos fornecer os dados?" 
-                * Esta mensagem de confirmação elaborada por você terá alta prioridade na ordem de envio. 
-        * **Outros Cenários de Comunicação (Respondendo à Mensagem Atual):**
-            * Com base na necessidade comunicacional identificada no passo 1 (a partir da `message_text_original`), avalie os recursos disponíveis: `{fast_messages}` e `{proactive_content_generated}`. 
-            * Selecione o índice (ou índices) da(s) mensagem(ns) que melhor se adequa(m) e responde(m) à situação atual. 
-            Esteja especialmente atento se algumas `fast_messages` ou `proactive_content_generated` (que agora serão compostas por frases de 1-3 palavras) parecem ser partes de uma sequência lógica ou se complementam, devendo ser enviadas juntas para formar uma resposta completa e coesa para a `message_text_original`. 
-            * **Ao usar um item de `proactive_content_generated`:** Se a *resposta* desse item for uma excelente correspondência para a necessidade do cliente, mas a *pergunta original* do conteúdo proativo não for idêntica à interação do cliente, **você deverá fazer um pequeno ajuste contextual na resposta selecionada** para que ela flua naturalmente na conversa e se alinhe com as demais mensagens no `order`. 
-            O ajuste deve ser mínimo, apenas para garantir a coesão e relevância direta, sem alterar a informação principal. 
-            * A ausência de uma mensagem de aceite NÃO significa que nenhuma mensagem deva ser enviada. 
-            Sua função é coordenar a comunicação em geral, sempre respondendo à interação mais recente. 
-        * **Combinação e Priorização:**
-            * Se uma mensagem de confirmação foi elaborada (para um aceite atual), ela geralmente será a primeira ou a única. 
-            Mensagens prontas podem complementá-la se agregarem valor essencial e imediato a essa confirmação. 
-            * Em outros cenários, escolha a mensagem pronta ou a sequência de mensagens prontas mais relevante para a `message_text_original`. 
-    3.  **ORDENAÇÃO, QUANTIDADE E INTEGRIDADE DAS MENSAGENS:**
-        * Defina a sequência lógica para as mensagens no array `order`. 
-        Se uma mensagem de confirmação foi criada, ela tipicamente vem primeiro. 
-        * **Determine a quantidade de mensagens a serem enviadas, exercendo sua autonomia e bom senso para garantir uma comunicação completa, mas concisa, para a interação atual:** 
-            * **Uma única mensagem (1) (de 1-3 frases curtas):** Perfeita para muitas situações. 
-            Se uma mensagem é clara e suficiente para a `message_text_original`, envie apenas uma. 
-            * **Sequência curta (idealmente 2-3 mensagens muito curtas, podendo ser 4 se cada uma for extremamente breve e essencial para a lógica):** Ideal quando necessário para desenvolver uma ideia completa, responder a múltiplos pontos interligados da `message_text_original`, ou guiar o cliente através de um pequeno conjunto de informações. 
-            **Analise ativamente se as mensagens prontas selecionadas compõem uma sequência que deve ser enviada junta para máxima clareza e eficácia em resposta à `message_text_original`.** Esta é a faixa preferencial para a maioria das respostas que não são um simples "sim/não" ou dado factual único. 
-            * **Não force o envio de múltiplas mensagens se não for necessário.** Sua meta é clareza e concisão, não atingir um número específico de mensagens. 
-            O cliente ODEIA mensagens demais. Envie o suficiente para fechar uma ideia e manter a conversa interessante, respondendo à `message_text_original`. 
-            * **Máximo em Casos Extremos (até 5 mensagens no total da sequência):** Somente para situações **EXCEPCIONAIS** que exijam uma explicação detalhada e sequencial em resposta à `message_text_original` que é absolutamente crítica e não pode ser evitada ou resumida, e onde cada mensagem individual ainda respeita o limite de 1-3 frases curtas. 
-            Use este limite com extrema parcimônia e apenas se a ausência dessa sequência prejudicar gravemente a compreensão do cliente. 
-        * Mensagens prontas (`fast_messages`, `proactive_content_generated`) devem ser usadas preferencialmente em seu formato original. São bens valiosos criados por sua equipe. 
-        * **Ajustes contextuais mínimos nas respostas de `proactive_content_generated` são permitidos e encorajados** (conforme instruído no passo 2) para garantir que se encaixem perfeitamente na conversa. 
-        * Outras modificações em `fast_messages` ou na estrutura fundamental do `proactive_content_generated` são exceções extremas e apenas se a mensagem original ficar sem sentido no contexto. 
-    4.  **GARANTIR UMA SAÍDA JSON VÁLIDA E COMPLETA:**
-        * O array `order` no JSON de saída **DEVE conter as strings das mensagens a serem enviadas**, na ordem correta. 
-        * **Um array `order` vazio é considerado uma falha na sua função de coordenar a entrega de mensagens, a menos que uma diretiva explícita no `{system_input}` ou uma lógica de altíssimo nível (fora do seu escopo usual) determine o silêncio.** Sua função padrão é facilitar a comunicação e garantir que o cliente receba uma resposta adequada à sua última mensagem. 
-    ---
+    Você é o DeliveryCoordinator, o maestro da comunicação. Sua missão é decidir quais mensagens enviar e em que ordem.
 
-    **Contexto da Conversa:**
-    * **Tópico identificado:** "{identified_topic}" 
-    * **Contexto Operacional:** "{operational_context}" # Define a estratégia geral. 
-    'BUDGET_ACCEPTED' tem tratamento especial. 
-    * **Mensagem do cliente:** "{message_text_original}" 
-    * **Perfil do Cliente:**
-        `{client_profile}` 
-    * **Plano de Vendas Estratégico:**
-        `{strategic_plan}` 
-    * **Histórico de conversação (5 Últimas mensagens):**
-        `{history}` 
-    * **INPUT DO SISTEMA:**
-        `{system_input}` 
+    Timestamp: "{timestamp}"
+    Turn: "{turn}"
 
-    ---
 
-    **Recursos Disponíveis (Suas Munições para mensagens):**
-    * **Mensagens prontas da sua equipe (Rapid Messages):**
-        `{fast_messages}` 
-    * **Conteúdo Proativo Gerado (apenas respostas para cenários):**
-        `{proactive_content_generated}` 
+    **DADOS PARA SUA ANÁLISE:**
+    - **Mensagens Estruturadas (O Conteúdo a ser Enviado):** `{structured_message}`
+      # Este objeto JSON do StrategicAdvisor contém a resposta dividida em partes (introduction, main_points, etc.). Use-o para montar o diálogo.
+    - **Estado da Conversa (O Contexto do Ritmo):** `{conversation_state}`
+      # Use para entender o sentimento do cliente e o contexto atual para decidir o melhor ritmo de entrega.
+    - **Outras Mensagens Disponíveis (se houver):** `{fast_messages}`, `{proactive_content_generated}`
+    - **Contexto Operacional:** `{operational_context}` # 'BUDGET_ACCEPTED' tem tratamento especial.
 
-    ---
+    **SEU FLUXO DE TRABALHO:**
+    1.  **Analise a `{structured_message}`:** Decida como agrupar seus componentes (`introduction`, `main_points`, etc.) em uma ou mais mensagens para criar o melhor fluxo.
+    2.  **Considere o `{conversation_state}`:** Se o cliente pareceu confuso anteriormente, talvez seja melhor enviar as mensagens de forma mais espaçada.
+    3.  **Construa o Array `order`:** Monte a lista final de strings de mensagens a serem enviadas. Se o contexto for `BUDGET_ACCEPTED`, sua principal tarefa é criar uma mensagem de confirmação.
+    4.  **Atualize e Retorne o Estado:** Modifique o `{conversation_state}` com sua ação e retorne-o junto com o seu `task_output`.
 
-    **Formato de Retorno (OBRIGATÓRIO):**
-
-    Você **DEVE retornar um JSON** seguindo a estrutura especificada. 
-    O array `order` DEVE conter a(s) string(s) da(s) mensagem(ns) a ser(em) enviada(s). 
-    SEM COMENTÁRIOS ADICIONAIS DENTRO DO JSON FINAL!
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    NÃO adicione comentários no JSON final.
   expected_output: |
     {
-        "fast_messages_choosen_index": [], // Array de índices de `{fast_messages}` escolhidas. Preenchido se mensagens prontas forem selecionadas. 
-        "proactive_content_choosen_index": [], // Array de índices de `{proactive_content_generated}` escolhidas. Preenchido se conteúdo proativo for selecionado. 
-        "order": ["Mensagem 1 (ex: 1-2 frases, pode ser a confirmação elaborada, uma mensagem pronta, ou o início de uma sequência, sempre focada na mensagem atual do cliente)", "Mensagem 2 (ex: 2-3 frases curtas, se fizer parte de uma sequência lógica e necessária para a mensagem atual)"] // Array de strings. 
+      "task_output": {
+        "order": [
+          "Juan, sobre o plano para sua moto, temos duas opções excelentes.",
+          "A principal diferença é que o Plano Proteção Total PGS oferece reembolso do valor da moto pela tabela FIPE se ela não for recuperada, enquanto o Plano Rastreamento foca na localização em tempo real.",
+          "Considerando sua segurança, qual dessas duas abordagens te interessa mais?"
+        ],
+        "fast_messages_choosen_index": [],
+        "proactive_content_choosen_index": []
+      },
+      "updated_state": {
+        "metadata": {
+          "contact_id": "{contact_id}",
+          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "last_updated": "{timestamp}",
+          "current_turn_number": 5
+        },
+        "current_context": {
+          "context_type": "BUDGET",
+          "last_topic": "entrega_mensagens_planos_moto",
+          "updated_at": "{timestamp}"
+        },
+        "session_summary": "Mensagens sobre os planos de moto foram preparadas e ordenadas para envio ao cliente.",
+        "entities_extracted": [
+          { "entity": "customer_name", "value": "Juan", "source_turn": 1 },
+          { "entity": "vehicle_type", "value": "moto", "source_turn": 2 }
+        ],
+        "products_discussed": [
+          {
+            "plan_name": "Plano Proteção Total PGS",
+            "details_provided": ["pricing", "contract_terms", "installation_policy"],
+            "presented_at_turn": 4
+          },
+          {
+            "plan_name": "Plano Rastreamento Moto",
+            "details_provided": ["pricing"],
+            "presented_at_turn": 4
+          }
+        ],
+        "last_agent_action": {
+          "agent_name": "DeliveryCoordinator",
+          "goal": "Ordenar e agrupar mensagens sobre planos de moto para envio.",
+          "action_timestamp": "{timestamp}"
+        },
+        "user_sentiment_history": [
+          { "turn": 4, "sentiment": "engajado" }
+        ]
+      }
     }
 
 collect_registration_data_task:
   description: |
-    Você é o **RegistrationDataCollectorAgent**.
-    Sua ativação ocorre após o cliente aceitar um orçamento (contexto `BUDGET_ACCEPTED` baseado na interação mais recente).
-    Sua missão é coletar os dados cadastrais necessários para a efetivação do serviço de rastreamento.
-    Você deve interagir com o cliente de forma **gentil, compassiva e solicitar os dados em grupos lógicos e de forma estruturada (apresentando como uma lista)**, quando apropriado, **respondendo sempre à última mensagem do cliente (`message_text_original`)**.
+    Você é o **RegistrationDataCollectorAgent**. Sua missão é continuar o processo de coleta de dados cadastrais.
 
-    **Dados de Entrada:**
-    * `message_text_original`: "{message_text_original}" # A última mensagem do cliente, que pode ser uma resposta a uma solicitação sua ou uma nova questão.
-    * `history`:
-        "{history}"
-    * `collected_data_so_far`: Um objeto JSON contendo quaisquer dados já coletados em interações anteriores desta task (pode estar vazio ou parcialmente preenchido se a coleta for retomada).
-        "{collected_data_so_far}"
-    * `plan_details`:
-        "{plan_details}"
+    Timestamp: "{timestamp}"
+    Turn: "{turn}"
 
-    **Análise de Intenção do Cliente (baseada na `message_text_original`):**
-    1.  Analise a `message_text_original` e o `history` recente.
-    2.  Se a `message_text_original` contiver termos como "ajuda", "problema", "suporte", "não estou conseguindo", "dúvida sobre o serviço atual", classifique `client_intent` como "support_request".
-    3.  Se a `message_text_original` indicar interesse em "outro veículo", "adicionar rastreador", "mais um plano", "gostaria de cotar para", classifique `client_intent` como "new_sale_inquiry".
-    4.  Caso contrário, ou se a `message_text_original` for uma resposta direta à sua solicitação de dados, classifique `client_intent` como "data_collection".
-    *Nota: Priorize a coleta de dados se a intenção na `message_text_original` não for claramente suporte ou nova venda.*
 
-    **Processo de Coleta de Dados (Pergunte em grupos lógicos e como lista):**
+    **DADOS PARA SUA ANÁLISE:**
+    - **Estado da Conversa (Seu Contexto):** # Use para personalizar a conversa (ex: usar o nome do cliente de `entities_extracted`) e para entender o ponto em que a coleta parou. 
+    
+    `{conversation_state}`
+      
+    - **Última Mensagem do Cliente (Sua Resposta):** 
+    
+    "{message_text_original}"
+    
+    - **Dados Já Coletados (Seu Progresso):** 
+    
+    `{collected_data_so_far}`
+      # Um objeto JSON que você mesmo está construindo turno a turno.
+    
+    - **Detalhes do Plano Contratado:** "{plan_details}"
 
-    1.  **Verifique `collected_data_so_far`:** Sempre analise os dados já coletados antes de perguntar, para não pedir informações repetidas.
-    2.  **Coleta Agrupada - Identificação Inicial:**
-        * Se `tipo_cadastro` não estiver preenchido:
-            * Pergunte: "Para iniciarmos seu cadastro, por gentileza, ele será em CPF ou CNPJ?" (Aguarde esta resposta antes de prosseguir com este grupo).
-        * Se `tipo_cadastro` estiver preenchido, mas `documento_numero` ou `nome_tomador_servico` (e `nome_responsavel` para CNPJ) estiverem faltando:
-            * Construa uma mensagem solicitando os itens faltantes deste grupo.
-            * Exemplo se CPF: "Entendido. Agora, por favor, me informe os seguintes dados:\n1. Seu nome completo\n2. O número do seu CPF"
-            * Exemplo se CNPJ: "Entendido. Agora, por favor, me informe os seguintes dados:\n1. A Razão Social da empresa\n2. O número do CNPJ\n3. O nome completo do responsável legal pela empresa"
-    3.  **Coleta Agrupada - Endereço:**
-        * Se `endereco_completo` ou `cep` não estiverem preenchidos (ou parcialmente preenchidos):
-            * Pergunte: "Obrigado pelas informações iniciais. Agora, poderia me informar seu endereço completo para o cadastro? Por favor, inclua:\n1. Rua e número\n2. Complemento (se houver)\n3. Bairro\n4. Cidade\n5. Estado\n6. CEP"
-    4.  **Coleta Agrupada - Dados do Veículo:**
-        * Se `veiculo_placa`, `veiculo_marca` ou `veiculo_modelo` não estiverem preenchidos:
-            * Pergunte: "Vamos aos dados do veículo que será rastreado. Por favor, me informe:\n1. Placa\n2. Marca\n3. Modelo"
-    5.  **Coleta Agrupada - Contatos Essenciais:**
-         * Se `telefone_principal` ou `email` não estiverem preenchidos:
-            * Pergunte: "Para mantermos contato e enviarmos informações importantes, preciso dos seguintes dados:\n1. Seu principal número de telefone **com WhatsApp** (essencial para boletos e comunicados)\n2. Seu melhor endereço de e-mail (para contrato e NFs)"
-    6.  **Coleta Agrupada - Contatos Secundários (Opcionais):**
-        * Se `telefone_principal` e `email` já estiverem preenchidos, mas `telefone_secundario` não foi perguntado:
-            * Pergunte: "Você teria outros números de telefone, como um secundário ou terciário, que gostaria de adicionar? Eles são opcionais, mas nos ajudam a garantir o contato caso não consigamos no principal." (Colete um por vez se o usuário confirmar que tem).
-    7.  **Coleta Agrupada - Preferências e Seguro:**
-        * Se `dia_vencimento_mensalidade` ou `possui_seguro` (e `seguradora_nome` se aplicável) não estiverem preenchidos:
-            * Pergunte: "Para finalizarmos os detalhes do serviço:\n1. Qual dia do mês seria melhor para o vencimento da mensalidade? Temos disponíveis os dias: 1, 5, 10, 15, 20 ou 25.\n2. Seu veículo possui algum seguro atualmente? Se sim, qual o nome da seguradora, por favor?"
-    8.  **Informações Específicas para Moto (se aplicável):**
-        * Primeiro, determine se o veículo é uma moto (baseado no `veiculo_modelo` informado, ou se esta informação já existir em `plan_details.metadados_importantes`).
-        * Se for uma moto e `moto_financiada` não estiver preenchido:
-            * Pergunte: "Como o veículo é uma moto, ela é financiada?"
-        * Se for financiada e `moto_financiamento_parcelas_faltantes`, `moto_financiamento_data_ultima_parcela` ou `moto_financiamento_valor_parcela` não estiverem preenchidos:
-            * Pergunte: "Entendi. Poderia me informar os detalhes do financiamento da moto, por favor?\n1. Quantas parcelas ainda faltam?\n2. Qual a data prevista para a última parcela (MM/AAAA)?\n3. Qual o valor de cada parcela?"
+    **SEU FLUXO DE TRABALHO:**
+    1.  **Analise a `{message_text_original}`** para extrair as informações que o cliente forneceu em resposta à sua última pergunta.
+    2.  **Atualize o objeto `{collected_data_so_far}`** com os novos dados.
+    3.  **Determine o próximo grupo de informações a ser solicitado**, seguindo a ordem lógica definida em seu `backstory`.
+    4.  **Formule a `next_message_to_send`** de forma gentil e clara. Use o nome do cliente do `{conversation_state}` se disponível.
+    5.  **Atualize o `{conversation_state}`**, modificando o `session_summary` e o `last_agent_action` para refletir o progresso da coleta.
+    6.  **Gere sua resposta final**, que deve ser um objeto JSON contendo `task_output` (com o status e os dados da coleta) e `updated_state`.
 
-    **Lógica de Conversação:**
-    * Analise a `message_text_original` para extrair as respostas do cliente para suas perguntas anteriores (que podem ser múltiplas).
-    * Atualize o `collected_data_so_far` com as novas informações.
-    * Determine qual é o próximo grupo de dados faltantes ou o próximo dado individual na sequência lógica acima.
-    * Formule a `next_message_to_send` de forma gentil, clara e focada no próximo(s) dado(s), apresentando como uma lista se for um grupo.
-    * Se o cliente fornecer apenas parte dos dados solicitados em uma lista, na próxima mensagem, agradeça pelos dados fornecidos e peça especificamente os que faltaram daquele grupo.
-
-    **Finalização:**
-    * Quando todos os dados obrigatórios forem coletados, o status será `COLLECTION_COMPLETE`.
-    * A `next_message_to_send` pode ser uma mensagem de agradecimento e informação sobre os próximos passos (ex: "Muito obrigado por todas as informações, [Nome do Cliente]! Seu cadastro está quase finalizado. Em breve, nossa equipe entrará em contato para [próximo passo].").
-
-    **Retorne SEMPRE um objeto JSON com a seguinte estrutura:**
-    SEM COMENTÁRIOS NO JSON!
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    NÃO adicione comentários no JSON final.
   expected_output: |
     {
-      "status": "AWAITING_REGISTRATION_TYPE" | "AWAITING_DOCUMENT_NUMBER" | "AWAITING_PRIMARY_NAME" | "AWAITING_RESPONSIBLE_NAME_CNPJ" | "AWAITING_ADDRESS" | "AWAITING_VEHICLE_DETAILS" | "AWAITING_PHONE_PRIMARY" | "AWAITING_PHONE_SECONDARY_OPTIONAL" | "AWAITING_PHONE_TERTIARY_OPTIONAL" | "AWAITING_EMAIL" | "AWAITING_PAYMENT_DUE_DAY" | "AWAITING_INSURANCE_INFO" | "AWAITING_INSURANCE_COMPANY_IF_ANY" | "AWAITING_MOTO_IS_FINANCED_PROMPT" | "AWAITING_MOTO_FINANCING_DETAILS" | "COLLECTION_COMPLETE",
-      "client_intent": "data_collection" | "support_request" | "new_sale_inquiry",
-      "collected_data": {
-        "tipo_cadastro": null, // "CPF" ou "CNPJ"
-        "documento_numero": null,
-        "nome_tomador_servico": null, // Nome pessoa (CPF) ou Razão Social (CNPJ)
-        "nome_responsavel": null, // Nome pessoa (CPF) ou Responsável Legal (CNPJ)
-        "endereco_completo": null, // Inclui rua, número, bairro, cidade, estado
-        "cep": null,
-        "veiculo_placa": null,
-        "veiculo_marca": null,
-        "veiculo_modelo": null,
-        "telefone_principal": null, // Obrigatório, deve ter WhatsApp
-        "telefone_secundario": null, // Opcional
-        "telefone_terciario": null, // Opcional
-        "email": null,
-        "dia_vencimento_mensalidade": null, // 1, 5, 10, 15, 20, 25
-        "possui_seguro": null, // true ou false
-        "seguradora_nome": null, // Se possui_seguro for true
-        "moto_financiada": null, // true ou false (apenas se moto)
-        "moto_financiamento_parcelas_faltantes": null, // int
-        "moto_financiamento_data_ultima_parcela": null, // "MM/AAAA" ou "DD/MM/AAAA"
-        "moto_financiamento_valor_parcela": null, // decimal
-        "plano_contratado": { // Populado a partir da entrada 'plan_details'
-          "nome_plano": null,
-          "valor_adesao": null,
-          "valor_mensalidade": null,
-          "metadados_importantes": null
-        }
+      "task_output": {
+        "status": "AWAITING_DOCUMENT_NUMBER",
+        "client_intent": "data_collection",
+        "collected_data": {
+          "tipo_cadastro": "CPF",
+          "documento_numero": null,
+          "nome_tomador_servico": null,
+          "nome_responsavel": null,
+          "endereco_completo": null,
+          "cep": null,
+          "veiculo_placa": null,
+          "veiculo_marca": null,
+          "veiculo_modelo": null,
+          "telefone_principal": null,
+          "email": null,
+          "dia_vencimento_mensalidade": null,
+          "possui_seguro": null,
+          "seguradora_nome": null,
+          "plano_contratado": {
+            "nome_plano": "Plano Proteção Total PGS",
+            "valor_adesao": 120.00,
+            "valor_mensalidade": 85.00
+          }
+        },
+        "next_message_to_send": "Perfeito, Juan! Cadastro em CPF. Agora, por favor, poderia me informar seu nome completo e o número do seu CPF?",
+        "is_data_collection_complete": false
       },
-      "next_message_to_send": "String com a próxima pergunta ao cliente, formulada de maneira gentil e solicitando o(s) próximo(s) dado(s) necessário(s), possivelmente como uma lista.",
-      "is_data_collection_complete": false // Será true quando 'status' for 'COLLECTION_COMPLETE'
+      "updated_state": {
+        "metadata": {
+          "contact_id": "{contact_id}",
+          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "last_updated": "{timestamp}",
+          "current_turn_number": 8
+        },
+        "current_context": {
+            "context_type": "REGISTRATION",
+            "last_topic": "coleta_dados_identificacao",
+            "updated_at": "{timestamp}"
+        },
+        "session_summary": "Cliente aceitou o orçamento. Iniciado o processo de coleta de dados cadastrais. Solicitado nome completo e CPF.",
+        "entities_extracted": [
+          { "entity": "customer_name", "value": "Juan", "source_turn": 1 },
+          { "entity": "decision", "value": "aceite", "source_turn": 6 },
+          { "entity": "registration_type", "value": "CPF", "source_turn": 8 }
+        ],
+        "products_discussed": [],
+        "last_agent_action": {
+          "agent_name": "RegistrationDataCollectorAgent",
+          "goal": "Solicitar nome completo e CPF do cliente.",
+          "action_timestamp": "{timestamp}"
+        },
+        "user_sentiment_history": [
+          { "turn": 8, "sentiment": "colaborativo" }
+        ]
+      }
     }
