@@ -70,6 +70,7 @@ triage_initial_message_task:
             "presented_at_turn": 3
           }
         ],
+        "disclosure_checklist": [...],
         "last_agent_action": {
           "agent_name": "TriageAgent",
           "goal": "Classificar aceite do cliente e atualizar estado.",
@@ -156,6 +157,7 @@ profile_customer_task:
             "presented_at_turn": 3
           }
         ],
+        "disclosure_checklist": [...],
         "last_agent_action": {
           "agent_name": "CustomerProfiler",
           "goal": "Consolidar estado da sessão no perfil de longo prazo.",
@@ -244,6 +246,7 @@ profile_customer_task_purchased:
             "presented_at_turn": 3
           }
         ],
+        "disclosure_checklist": [...],
         "last_agent_action": {
           "agent_name": "CustomerProfiler",
           "goal": "Consolidar aceite da venda no perfil de longo prazo do cliente.",
@@ -282,9 +285,11 @@ develop_strategy_task:
 
     **SEU FLUXO DE TRABALHO ESTRATÉGICO:**
     1.  **Análise Completa:** Analise TODOS os inputs para ter uma visão 360° da situação.
-    2.  **Consulta à Base de Conhecimento:** Use a `KnowledgeServiceTool` para obter os fatos e dados precisos necessários para a sua estratégia. Lembre-se da desambiguação e das queries em lote.
-    3.  **Formulação do Plano:** Defina o `conversation_goal`, `key_talking_points`, `questions_to_ask_client` e a `super_message` (ou a nova `structured_message`).
-    4.  **Atualização do Estado:** Modifique o objeto `{conversation_state}` com o resultado da sua análise. Atualize o `session_summary`, adicione os `products_discussed` e registre sua ação no `last_agent_action`.
+    2.  **Qualificação (Se Vendas):** Verifique o `{{conversation_state}}`. Se as informações para qualificar o cliente (ex: tipo de veículo, área de operação) não estiverem presentes, sua primeira ação deve ser perguntar.
+    3.  **Consulta à Base de Conhecimento:** Use a `KnowledgeServiceTool` para obter os fatos e dados precisos (preços, termos, limitações) para sua estratégia.
+    4.  **Formulação do Plano e Mensagem Estruturada:** Defina o `conversation_goal` e os `key_talking_points`. Em seguida, popule o objeto `structured_message` de forma completa e detalhada, fornecendo ao ResponseCraftsman toda a "matéria-prima" necessária.
+    5.  **POPULAR O CHECKLIST DE ESCLARECIMENTO:** Se sua estratégia envolve apresentar um plano, você DEVE popular a chave `disclosure_checklist` no `{{conversation_state}}` com todos os termos contratuais e operacionais importantes, definindo o status inicial deles como 'pending'.
+    6.  **Atualização do Estado:** Modifique o objeto `{{conversation_state}}` com o resultado da sua análise. Atualize o `session_summary`, adicione os `products_discussed` e registre sua ação no `last_agent_action`.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
@@ -293,59 +298,72 @@ develop_strategy_task:
   expected_output: |
     {
       "task_output": {
-        "strategy_type": "SALES_QUALIFICATION_CURRENT_NEED",
-        "conversation_goal": "Apresentar as opções de rastreamento para a moto do cliente, entender sua necessidade (segurança vs. rastreamento básico) e avançar para o agendamento.",
+        "strategy_type": "SALES_RECOMMENDATION",
+        "conversation_goal": "Apresentar as opções Híbrido e GSM para a frota de caminhões do cliente, destacando prós e contras de cada um para uma decisão informada.",
         "key_talking_points": [
-          "Benefícios do Plano Proteção Total PGS (cobertura FIPE).",
-          "Diferença para o Plano Rastreamento Moto (foco em localização).",
-          "Detalhes de adesão e mensalidade para ambos.",
-          "Processo de instalação sigiloso na loja."
+          "Diferença de cobertura e custo entre Híbrido e GSM.",
+          "Importância da área de operação na escolha do plano.",
+          "Transparência sobre limitações técnicas de cada tecnologia."
         ],
-        "questions_to_ask_client": [
-          "Sua principal busca é por proteção completa com garantia de reembolso em caso de não recuperação, ou o rastreamento para gestão e localização já atende sua necessidade?",
-          "Para eu te passar o valor exato do plano com proteção, qual o valor aproximado da sua moto na tabela FIPE?"
-        ],
+        "questions_to_ask_client": [],
         "system_action_request": null,
-        "internal_notes_for_craftsman": "Tom consultivo, focado em ajudar o cliente a escolher. Seja claro sobre a diferença entre os dois planos de moto. Use a resposta sobre a prioridade do cliente para focar a conversa em um dos planos.",
+        "internal_notes_for_craftsman": "Cliente parece sensível a preço, mas opera em áreas remotas. O tom deve ser de um consultor imparcial, ajudando-o a pesar o custo-benefício de cada opção.",
         "empathy_statement_suggestion": null,
-        "super_message": "Juan, para sua moto, temos duas ótimas opções. O Plano Rastreamento Moto foca na localização em tempo real. Já o Plano Proteção Total PGS, além de rastrear, garante o reembolso do valor da moto pela tabela FIPE caso ela não seja recuperada. Para entender qual se encaixa melhor, me conta: sua prioridade é a proteção financeira completa ou o rastreamento essencial?"
+        "structured_message": {
+          "greeting_and_context": "Para a sua frota de caminhões, considerando que rodam tanto em cidades quanto em áreas rurais, temos duas soluções excelentes, cada uma com um foco diferente.",
+          "core_recommendation": [
+            {
+              "plan_name": "Plano Satelital Híbrido",
+              "key_selling_point": "É a nossa solução mais completa, com garantia de cobertura em tempo real em 100% do território nacional.",
+              "how_it_works": "Ele usa a rede de celular (GSM) como principal e, ao entrar em uma área de sombra, muda automaticamente para a comunicação via satélite, garantindo que você nunca perca o contato.",
+              "pricing_summary": "Adesão de R$400 e mensalidade a partir de R$180.",
+              "key_contractual_term": "O contrato não possui multa de fidelidade, apenas uma taxa pelo serviço de desinstalação se o cancelamento ocorrer antes de 24 meses.",
+              "potential_limitation": "O custo mensal é mais elevado, sendo um investimento maior na segurança e na gestão contínua."
+            },
+            {
+              "plan_name": "Rastreador GSM 4G",
+              "key_selling_point": "Esta é a nossa alternativa com o melhor custo-benefício, ideal se a maior parte da sua operação ocorre em locais com sinal de celular.",
+              "how_it_works": "Ele utiliza a rede 4G e, caso o veículo entre em uma área sem sinal, ele armazena todo o trajeto na memória interna e descarrega as informações automaticamente assim que se reconecta.",
+              "pricing_summary": "Adesão de R$200 e mensalidade a partir de R$65.",
+              "key_contractual_term": "A política de cancelamento é a mesma: sem multa, apenas a taxa de desinstalação caso seja antes do prazo de 24 meses.",
+              "potential_limitation": "Em áreas de sombra, o acompanhamento não é em tempo real; você verá a localização assim que o veículo retornar a uma área com cobertura."
+            }
+          ],
+
+          "call_to_action": {
+            "closing_question": "Analisando o dia a dia da sua operação, a garantia de cobertura total do plano Híbrido é a prioridade, ou um plano mais focado no custo-benefício como o GSM se encaixa melhor?",
+            "next_step_suggestion": null
+          }
+        }
       },
       "updated_state": {
         "metadata": {
           "contact_id": "{contact_id}",
-          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "session_start_time": "...",
           "last_updated": "{timestamp}",
-          "current_turn_number": 3
+          "current_turn_number": 4
         },
         "current_context": {
           "context_type": "BUDGET",
-          "last_topic": "apresentacao_planos_moto",
+          "last_topic": "apresentacao_planos_frota_caminhao",
           "updated_at": "{timestamp}"
         },
-        "session_summary": "Sessão iniciada com interesse em planos para moto. Estratégia definida para apresentar as duas opções (PGS e Rastreamento Básico) e qualificar a necessidade do cliente.",
-        "entities_extracted": [
-          { "entity": "vehicle_type", "value": "moto", "source_turn": 2 }
-        ],
+        "session_summary": "Cliente qualificado com frota de caminhões. Estratégia definida para apresentar as opções Híbrido e GSM, focando em seus prós e contras.",
+        "entities_extracted": [{"entity": "vehicle_type", "value": "caminhão", "source_turn": 2}],
         "products_discussed": [
-          {
+        {
             "plan_name": "Plano Proteção Total PGS",
             "details_provided": [],
             "presented_at_turn": 3
-          },
-          {
-            "plan_name": "Plano Rastreamento Moto",
-            "details_provided": [],
-            "presented_at_turn": 3
-                  }
+          }
         ],
+        "disclosure_checklist": [...],
         "last_agent_action": {
           "agent_name": "StrategicAdvisor",
-          "goal": "Definir estratégia para apresentar planos de moto.",
+          "goal": "Definir estratégia para apresentar planos de frota.",
           "action_timestamp": "{timestamp}"
         },
-        "user_sentiment_history": [
-          { "turn": 2, "sentiment": "curioso" }
-        ]
+        "user_sentiment_history": []
       }
     }
 
@@ -412,6 +430,7 @@ execute_system_operations_task:
             "presented_at_turn": 3
           }
         ],
+        "disclosure_checklist": [...],
         "last_agent_action": {
           "agent_name": "SystemOperationsAgent",
           "goal": "Executar a busca de detalhes do plano PGS.",
@@ -426,7 +445,7 @@ execute_system_operations_task:
 
 craft_response_task:
   description: | # - **Resultado da Ação de Sistema (se houver):** "{execute_system_operations_task_output}"
-    Você é o ResponseCraftsman. Sua missão é transformar o plano estratégico em mensagens eficazes e atualizar o estado da conversa.
+    Você é o ResponseCraftsman. Sua missão é DECONSTRUIR a `structured_message` do plano estratégico em uma sequência de mensagens de chat curtas e eficazes.
 
     Timestamp: "{timestamp}"
     Now Turn: "{turn}"
@@ -450,11 +469,24 @@ craft_response_task:
     "{recently_sent_catalogs}"
     
     **SEU FLUXO DE TRABALHO:**
-    1.  **Analise TODOS os inputs**, com foco no plano estratégico e no estado da conversa.
-    2.  **Siga a "TRÍADE DA BOA MENSAGEM"** (Conteúdo, Concisão, Atitude) definida em seu `backstory` para criar a `primary_messages_sequence`.
-    3.  Gere o conteúdo proativo (`proactive_content_generated`) se aplicável.
-    4.  Decida sobre o envio de catálogos e popule a lista `plan_names`.
-    5.  **Atualize o `{{conversation_state}}`:** Adicione um resumo do que você comunicou ao `session_summary` e atualize o `last_agent_action`.
+    1.  **Analise a `structured_message`** contida no plano estratégico.
+    2.  Use os componentes dela (`greeting_and_context`, `core_recommendation`, `call_to_action`, etc.) para construir a `primary_messages_sequence`.
+    3.  **Siga a "TRÍADE DA BOA MENSAGEM"** (Conteúdo, Concisão, Atitude) definida em seu `backstory` para criar a `primary_messages_sequence`.
+    4.  **Para cada informação, crie uma ou mais mensagens curtas (1 frase. No máximo 2.)** para a `primary_messages_sequence`. Siga a "TRÍADE DA BOA MENSAGEM".
+    5.  Gere o conteúdo proativo (`proactive_content_generated`) se aplicável.
+    6.  **Decida sobre o envio de catálogos e popule a lista `plan_names` seguindo as regras abaixo.**
+    7.  **Atualize o `{{conversation_state}}`:** Adicione um resumo do que você comunicou ao `session_summary` e atualize o `last_agent_action`.
+
+    **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
+    - Consulte a lista `{recently_sent_catalogs}`.
+    - **INCLUA um plano em `plan_names` SE:**
+        - É a **primeira vez** que este plano é foco na conversa E seu nome não consta em `{recently_sent_catalogs}`.
+        - OU o cliente **pede diretamente** pelo catálogo/link.
+        - OU o `StrategicAdvisor` instruiu explicitamente o reenvio.
+    - **NÃO INCLUA um plano em `plan_names` SE:**
+        - O catálogo já foi enviado recentemente E o cliente não pediu novamente.
+    - **LEMBRE-SE:** Se você adicionar um plano à lista `plan_names`, uma de suas mensagens em `primary_messages_sequence` DEVE mencionar sutilmente o envio.
+
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
@@ -503,6 +535,7 @@ craft_response_task:
             "presented_at_turn": 4
           }
         ],
+        "disclosure_checklist": [...],
         "last_agent_action": {
           "agent_name": "ResponseCraftsman",
           "goal": "Criar e preparar mensagens sobre planos de moto para envio.",
@@ -540,9 +573,9 @@ coordinate_delivery_task:
     - **Contexto Operacional:** `{operational_context}` # 'BUDGET_ACCEPTED' tem tratamento especial.
 
     **SEU FLUXO DE TRABALHO:**
-    1.  **Analise as `{{primary_messages_sequence}}` e `{{proactive_content_generated}}`:** Decida como agrupar seus componentes (`introduction`, `main_points`, etc.) em uma ou mais mensagens para criar o melhor fluxo.
+    1.  **Analise as `{{primary_messages_sequence}}` e `{{proactive_content_generated}}`:** Decida como agrupar, ordenar e quais escolher. em uma ou mais mensagens para criar o melhor fluxo.
     2.  **Considere o `{{conversation_state}}`:** Se o cliente pareceu confuso anteriormente, talvez seja melhor enviar as mensagens de forma mais espaçada.
-    3.  **Construa o Array `order`:** Monte a lista final de strings de mensagens a serem enviadas. Se o contexto for `BUDGET_ACCEPTED`, sua principal tarefa é criar uma mensagem de confirmação.
+    3.  **Construa o Array `order`:** Monte a lista final de strings de mensagens a serem enviadas.
     4.  **Atualize e Retorne o Estado:** Modifique o `{{conversation_state}}` com sua ação e retorne-o junto com o seu `task_output`.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
@@ -579,15 +612,15 @@ coordinate_delivery_task:
         ],
         "products_discussed": [
           {
-            "plan_name": "Plano Proteção Total PGS",
-            "details_provided": ["pricing", "contract_terms", "installation_policy"],
-            "presented_at_turn": 4
-          },
-          {
             "plan_name": "Plano Rastreamento Moto",
             "details_provided": ["pricing"],
             "presented_at_turn": 4
           }
+        ],
+        "disclosure_checklist": [
+          { "item_id": "IS_NOT_INSURANCE", "status": "communicated", "content": "..." },
+          { "item_id": "CANCELLATION_POLICY", "status": "communicated", "content": "..." },
+          { "item_id": "SIGNAL_LIMITATION", "status": "pending", "content": "..." }
         ],
         "last_agent_action": {
           "agent_name": "DeliveryCoordinator",
@@ -599,6 +632,8 @@ coordinate_delivery_task:
         ]
       }
     }
+
+
 
 collect_registration_data_task:
   description: |
@@ -624,12 +659,17 @@ collect_registration_data_task:
     - **Detalhes do Plano Contratado:** "{plan_details}"
 
     **SEU FLUXO DE TRABALHO:**
-    1.  **Analise a `{message_text_original}`** para extrair as informações que o cliente forneceu em resposta à sua última pergunta.
+    **SEU PROCESSO DE COLETA DE DADOS (AGRUPADO):**
+    1.  **Analise a `{message_text_original}`** para extrair as respostas do cliente.
     2.  **Atualize o objeto `{collected_data_so_far}`** com os novos dados.
-    3.  **Determine o próximo grupo de informações a ser solicitado**, seguindo a ordem lógica definida em seu `backstory`.
-    4.  **Formule a `next_message_to_send`** de forma gentil e clara. Use o nome do cliente do `{{conversation_state}}` se disponível.
-    5.  **Atualize o `{{conversation_state}}`**, modificando o `session_summary` e o `last_agent_action` para refletir o progresso da coleta.
-    6.  **Gere sua resposta final**, que deve ser um objeto JSON contendo `task_output` (com o status e os dados da coleta) e `updated_state`.
+    3.  **Verifique os dados que ainda faltam e formule a próxima pergunta em blocos maiores para agilizar.**
+        - **BLOCO 1 (Identificação):** Peça `tipo_cadastro`, `nome_tomador_servico` e `documento_numero` juntos, após saber se é CPF ou CNPJ.
+        - **BLOCO 2 (Localização e Contato):** Peça `endereco_completo`, `cep`, `telefone_principal` com WhatsApp e `email` juntos.
+        - **BLOCO 3 (Veículo e Preferências):** Peça os dados do veículo (`placa`, `marca`, `modelo`) e o `dia_vencimento_mensalidade` juntos.
+    4.  **Valide as Informações:** Ao receber o dia de vencimento, certifique-se de que seja um dos dias permitidos: **1, 5, 10, 15, 20 ou 25**. Se o cliente sugerir outro dia, informe gentilmente as opções disponíveis.
+    5.  **Finalização:** Quando todos os dados obrigatórios forem coletados, sua tarefa principal é definir o `"status": "COLLECTION_COMPLETE"` na sua saída.
+    6.  **Atualize e Retorne:** Prepare o `task_output` com o status e os dados da coleta, e retorne o `{conversation_state}` atualizado.
+
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
@@ -687,6 +727,7 @@ collect_registration_data_task:
           "goal": "Solicitar nome completo e CPF do cliente.",
           "action_timestamp": "{timestamp}"
         },
+        "disclosure_checklist": [...],
         "user_sentiment_history": [
           { "turn": 8, "sentiment": "colaborativo" }
         ]

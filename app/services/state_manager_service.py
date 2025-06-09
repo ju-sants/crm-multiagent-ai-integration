@@ -43,6 +43,7 @@ class StateManagerService:
           "session_summary": "Início da conversa.",
           "entities_extracted": [],
           "products_discussed": [],
+          "disclousure_checklist": [],
           "last_agent_action": None,
           "user_sentiment_history": []
         }

@@ -109,8 +109,12 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
         history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' if message.get("text") else '' for message in reversed(history.get('messages', [])[:10])])
     
     state = state_manager.get_state(contact_id)
+    state["user_sentiment_history"] = state.get("user_sentiment_history", [])[-5:]
 
     state["metadata"]["current_turn_number"] += 1
+
+    if 'disclousure_checklist' not in state:
+        state["disclousure_checklist"] = []
 
     jump_to_registration_task = False
     registration_task = False
@@ -168,6 +172,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
             if updated_state and isinstance(updated_state, dict):
                 state_manager.save_state(contact_id, updated_state)
                 state = updated_state
+                state["user_sentiment_history"] = state.get("user_sentiment_history", [])[-5:]
 
         else:
             logger.warning(f"MVP Crew: Nenhuma resposta gerada para contact_id {contact_id}")
@@ -280,7 +285,9 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
             "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
             "collected_data_so_far": str(user_data_so_far),
             "plan_details": str(plan_details),
-            "turn": state["metadata"]["current_turn_number"]
+            "turn": state["metadata"]["current_turn_number"],
+            "timestamp": datetime.datetime.now().isoformat(),
+            "conversation_state": str(state),
         }
 
         registration_crew.kickoff(inputs_for_registration)
@@ -290,6 +297,8 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
         
         if updated_state and isinstance(updated_state, dict):
             state = updated_state
+            state["user_sentiment_history"] = state.get("user_sentiment_history", [])[-5:]
+
             state_manager.save_state(contact_id, state)
 
         if registration_task_json and all([registration_task_json.get("is_data_collection_complete"), registration_task_json.get("status") == 'COLLECTION_COMPLETE']):
@@ -357,6 +366,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
             profile_customer_task_json, updated_state = parse_json_from_string(profile_customer_task.output.raw)
             if updated_state and isinstance(updated_state, dict):
                 state = updated_state
+                state["user_sentiment_history"] = state.get("user_sentiment_history", [])[-5:]
                 state_manager.save_state(contact_id, state)
 
             inputs_strategic = {
@@ -379,6 +389,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
 
             if updated_state and isinstance(updated_state, dict):
                 state = updated_state
+                state["user_sentiment_history"] = state.get("user_sentiment_history", [])[-5:]
                 state_manager.save_state(contact_id, state)
 
             payload = {
@@ -454,6 +465,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
 
             if updated_state and isinstance(updated_state, dict):
                 state = updated_state
+                state["user_sentiment_history"] = state.get("user_sentiment_history", [])[-5:]
                 state_manager.save_state(contact_id, state)
                 
             redo = False
@@ -658,6 +670,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
 
             if updated_state and isinstance(updated_state, dict):
                 state = updated_state
+                state["user_sentiment_history"] = state.get("user_sentiment_history", [])[-5:]
                 state_manager.save_state(contact_id, state)
 
             if response_delivery_json:

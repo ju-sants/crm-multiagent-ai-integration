@@ -72,7 +72,7 @@ class ImageDescriptionAPI:
         
         elif not image_path and image_url:
             extension = image_url.split('?')[0].split('.')[-1]
-            image_path = f'Global-Agent/app/services/tmp_files/tmp_image.{extension}'
+            image_path = f'app/services/tmp_files/tmp_image.{extension}'
             with open(image_path, 'wb') as f:
                 f.write(requests.get(image_url).content)
         
