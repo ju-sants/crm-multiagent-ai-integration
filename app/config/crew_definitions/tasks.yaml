@@ -12,7 +12,7 @@ triage_initial_message_task:
     - **Histórico Bruto (Contexto Adicional):** "{history}"
     - ID Contato: "{contact_id}"
     - Timestamp: "{timestamp}"
-    - Turn: "{turn}"
+    - Now Turn: "{turn}"
     - Cache L0/L1: 
     
     "{l0l1_cache}"
@@ -22,19 +22,21 @@ triage_initial_message_task:
     "{l2_cache}"
 
     **SEU FLUXO DE DECISÃO:**
-    1.  **PRIMEIRO, ANALISE O `{conversation_state}`:** Entenda o que já aconteceu. O cliente já está em um funil de `BUDGET`? Ele já forneceu o tipo de veículo em `entities_extracted`?
+    1.  **PRIMEIRO, ANALISE O `{{conversation_state}}`:** Entenda o que já aconteceu. O cliente já está em um funil de `BUDGET`? Ele já forneceu o tipo de veículo em `entities_extracted`?
     2.  **DEPOIS, ANALISE A `{message_text}`:** A mensagem atual confirma, continua ou muda o estado da conversa?
     3.  **DECIDA O PRÓXIMO PASSO (`action`):**
         - Use "RESPOND_DIRECTLY" com extrema cautela, apenas para perguntas factuais que não conflitem com o estado da conversa.
-        - Na maioria dos casos, especialmente se o `{conversation_state}` já estiver populado, a ação correta será "INITIATE_FULL_PROCESSING" para dar continuidade ao fluxo com os especialistas.
+        - Na maioria dos casos, especialmente se o `{{conversation_state}}` já estiver populado, a ação correta será "INITIATE_FULL_PROCESSING" para dar continuidade ao fluxo com os especialistas.
     4.  **CLASSIFIQUE O CONTEXTO (`operational_context`):**
-        - Baseie sua decisão primariamente no `{conversation_state}` e use a mensagem atual para refinar a classificação.
+        - Baseie sua decisão primariamente no `{{conversation_state}}` e use a mensagem atual para refinar a classificação.
         - Se a última ação no estado foi uma proposta de orçamento e o cliente diz "sim", classifique como `BUDGET_ACCEPTED`.
         - Se o estado mostra uma discussão sobre planos e o cliente pede mais um detalhe, mantenha o contexto `BUDGET`.
-    5.  **ATUALIZE O ESTADO:** Modifique o objeto `{conversation_state}` com suas novas conclusões. O novo `current_context` deve ser o `operational_context` que você definiu. Extraia novas entidades se houver.
+    5.  **ATUALIZE O ESTADO:** Modifique o objeto `{{conversation_state}}` com suas novas conclusões. O novo `current_context` deve ser o `operational_context` que você definiu. Extraia novas entidades se houver.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
+    o `excpected_output` é um exemplo de saída esperada.
+
   expected_output: |
     {
       "task_output": {
@@ -87,7 +89,7 @@ profile_customer_task:
     Você é o CustomerProfiler. O fluxo de interação com o cliente acaba de ser concluído. Sua missão é atualizar a memória de longo prazo do cliente.
 
     Timestamp: "{timestamp}"
-    Turn: "{turn}"
+    Now Turn: "{turn}"
     
 
     **DADOS PARA SUA ANÁLISE:**
@@ -107,12 +109,14 @@ profile_customer_task:
     "{history}"
 
     **SEU FLUXO DE TRABALHO:**
-    1.  **Sintetize o `{conversation_state}`:** Extraia as entidades, os produtos discutidos, o resumo da sessão e o sentimento final.
+    1.  **Sintetize o `{{conversation_state}}`:** Extraia as entidades, os produtos discutidos, o resumo da sessão e o sentimento final.
     2.  **Atualize o Perfil de Longo Prazo:** Use as informações da sessão para enriquecer o perfil antigo. Se não houver perfil antigo, crie um novo.
     3.  **Gere o Novo Perfil Estruturado:** O seu output deve ser o perfil completo e atualizado do cliente, refletindo o conhecimento mais recente que temos sobre ele. Certifique-se de que o `profile_summary` destaque a conclusão da última sessão.
 
     Retorne APENAS um objeto JSON com o perfil atualizado, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     SEM COMENTÁRIOS NO JSON!
+    o `excpected_output` é um exemplo de saída esperada.
+
   expected_output: |
     {
       "task_output": {
@@ -170,7 +174,7 @@ profile_customer_task_purchased:
     Sua missão é usar os dados da sessão para criar ou atualizar o perfil de longo prazo do cliente, marcando a venda como concluída.
 
     Timestamp: "{timestamp}"
-    Turn: "{turn}"
+    Now Turn: "{turn}"
 
 
     **DADOS PARA SUA ANÁLISE:**
@@ -183,16 +187,18 @@ profile_customer_task_purchased:
     - Histórico Bruto (Para contexto adicional): "{history}"
 
     **SEU FLUXO DE TRABALHO:**
-    1.  **Sintetize o `{conversation_state}`:** Identifique o plano que foi aceito e os detalhes finais da conversa a partir do `session_summary` e `products_discussed`.
+    1.  **Sintetize o `{{conversation_state}}`:** Identifique o plano que foi aceito e os detalhes finais da conversa a partir do `session_summary` e `products_discussed`.
     2.  **Atualize o Perfil de Longo Prazo:** Use as informações da sessão para enriquecer o perfil antigo (ou criar um novo).
         - **Obrigatório:** Adicione o plano comprado à lista `past_purchases`.
         - **Obrigatório:** Marque o `sales_stage` como 'Venda Concluída'.
         - **Obrigatório:** Defina o `current_sentiment` como 'Positivo (compra realizada)'.
     3.  **Gere o Novo Perfil Estruturado:** Seu `task_output` deve ser o perfil completo e atualizado do cliente.
-    4.  **Retorne o Estado:** No `updated_state`, passe o `{conversation_state}` que você recebeu, apenas atualizando o campo `last_agent_action` para refletir sua própria ação de consolidação.
+    4.  **Retorne o Estado:** No `updated_state`, passe o `{{conversation_state}}` que você recebeu, apenas atualizando o campo `last_agent_action` para refletir sua própria ação de consolidação.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
+    o `excpected_output` é um exemplo de saída esperada.
+
   expected_output: |
     {
       "task_output": {
@@ -251,30 +257,39 @@ profile_customer_task_purchased:
     }
 
 
-  develop_strategy_task:
-    description: |
-      Você é o StrategicAdvisor. Dados recebidos (contexto das tarefas anteriores):
+develop_strategy_task:
+  description: |
+    Você é o StrategicAdvisor. Sua missão é formular a melhor estratégia de interação e ATUALIZAR o estado da conversa com os insights da sua análise.
 
-      Timestamp: "{timestamp}"
-      Turn: "{turn}"
+    Timestamp: "{timestamp}"
+    Now Turn: "{turn}"
 
-      - Perfil do Cliente (JSON): 
-      "{profile_customer_task_output}"
 
-      - Mensagem Original do Cliente: "{message_text_original}"
-      - Contexto Operacional: "{operational_context}"
-      - Tópico Identificado: "{identified_topic}"
-      
-      Siga sua FILOSOFIA DE CONSULTORIA ESTRATÉGICA e FLUXO DE DEFINIÇÃO DE ESTRATÉGIA:
-      1.  Analise todos os inputs, **dando prioridade máxima à `Mensagem Original do Cliente` para entender a necessidade imediata.**
-      2.  **Consulte a `KnowledgeServiceTool` para obter TODAS as informações de negócio necessárias.** Analise a necessidade do cliente e formule uma query JSON precisa, usando o "Cardápio de Tópicos" definido em seu `backstory`.
-      3.  **Se a referência do cliente a um produto for ambígua, aplique a estratégia de desambiguação:** primeiro, use o tópico 'list_all_products' para obter a lista de planos; depois, raciocine para identificar o nome exato do plano e, então, faça uma segunda consulta para obter os detalhes.
-      4.  **Use as informações PRECISAS retornadas pela ferramenta** para formular o plano estratégico (objetivo, pontos-chave, perguntas). O plano deve ser 100% alinhado com os dados obtidos.
-      5.  A `super_message` gerada deve ser rica em informações, mas **estritamente focada em responder à `Mensagem Original do Cliente`**, utilizando o histórico como contexto e os dados da `KnowledgeServiceTool` como conteúdo. Lembre-se de estruturá-la pensando na futura fragmentação pelo ResponseCraftsman.
-      6.  **Atualização do Estado:** Modifique o objeto `{conversation_state}` com o resultado da sua análise. Atualize o `session_summary`, adicione os `products_discussed` e registre sua ação no `last_agent_action`.
-      
-      Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    **DADOS PARA SUA ANÁLISE ESTRATÉGICA:**
+    - **Estado da Conversa (Contexto de Curto Prazo):**   # Use para entender o fluxo da sessão atual, entidades já extraídas e produtos discutidos. 
+    
+    `{conversation_state}`
+    
+    - **Perfil do Cliente (Contexto de Longo Prazo):** 
+    
+    `{profile_customer_task_output}`
+    
+      # Use para entender o histórico completo e as preferências do cliente com a empresa.
+    
+    - **Mensagem Original do Cliente (O Gatilho Imediato):** "{message_text_original}"
+    - **Contexto Operacional:** "{operational_context}"
+    - **Tópico Identificado:** "{identified_topic}"
+
+    **SEU FLUXO DE TRABALHO ESTRATÉGICO:**
+    1.  **Análise Completa:** Analise TODOS os inputs para ter uma visão 360° da situação.
+    2.  **Consulta à Base de Conhecimento:** Use a `KnowledgeServiceTool` para obter os fatos e dados precisos necessários para a sua estratégia. Lembre-se da desambiguação e das queries em lote.
+    3.  **Formulação do Plano:** Defina o `conversation_goal`, `key_talking_points`, `questions_to_ask_client` e a `super_message` (ou a nova `structured_message`).
+    4.  **Atualização do Estado:** Modifique o objeto `{conversation_state}` com o resultado da sua análise. Atualize o `session_summary`, adicione os `products_discussed` e registre sua ação no `last_agent_action`.
+
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
+    o `excpected_output` é um exemplo de saída esperada.
+
   expected_output: |
     {
       "task_output": {
@@ -321,7 +336,7 @@ profile_customer_task_purchased:
             "plan_name": "Plano Rastreamento Moto",
             "details_provided": [],
             "presented_at_turn": 3
-          }
+                  }
         ],
         "last_agent_action": {
           "agent_name": "StrategicAdvisor",
@@ -335,19 +350,21 @@ profile_customer_task_purchased:
     }
 
 
-# tasks.yaml (versão atualizada e alinhada com a nova arquitetura)
 
 execute_system_operations_task:
   description: |
     Você é o SystemOperationsAgent, um executor de tarefas de sistema.
 
     Timestamp: "{timestamp}"
-    Turno: "{turn}"
+    Now Turn: "{turn}"
 
     **DADOS PARA SUA ANÁLISE:**
-    - **Solicitação de Ação de Sistema (Seu Gatilho):** "{develop_strategy_task.task_output.system_action_request}"
+    - **Solicitação de Ação de Sistema (Seu Gatilho):** "{develop_strategy_task.task_output_system_action_request}"
       # Este é o comando que você deve executar.
-    - **Estado da Conversa (Contexto para Repassar):** `{conversation_state}`
+    - **Estado da Conversa (Contexto para Repassar):** 
+    
+    `{conversation_state}`
+    
       # Você não precisa analisar este estado, mas DEVE retorná-lo intacto na sua saída para manter a continuidade do fluxo.
 
     **SEU FLUXO DE TRABALHO:**
@@ -355,10 +372,12 @@ execute_system_operations_task:
     2.  Caso contrário, mapeie o `action_type` para a ferramenta interna correta.
     3.  Execute a ferramenta com os `parameters` fornecidos.
     4.  Estruture o resultado da sua execução (sucesso ou falha) no campo `task_output` da sua resposta.
-    5.  Inclua o objeto `{conversation_state}` que você recebeu, sem modificações, no campo `updated_state` da sua resposta.
+    5.  Inclua o objeto `{{conversation_state}}` que você recebeu, sem modificações, no campo `updated_state` da sua resposta.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
+    o `excpected_output` é um exemplo de saída esperada.
+
   expected_output: |
     {
       "task_output": {
@@ -410,13 +429,13 @@ craft_response_task:
     Você é o ResponseCraftsman. Sua missão é transformar o plano estratégico em mensagens eficazes e atualizar o estado da conversa.
 
     Timestamp: "{timestamp}"
-    Turno: "{turn}"
+    Now Turn: "{turn}"
 
 
     **DADOS PARA SUA ANÁLISE:**
     - **Plano Estratégico (O Que Fazer):** 
     
-    `{develop_strategy_task.task_output}`
+    `{develop_strategy_task_output}`
     
     - **Estado da Conversa (O Contexto):**  # Use para personalizar suas mensagens e entender o que já foi dito.
       
@@ -435,10 +454,12 @@ craft_response_task:
     2.  **Siga a "TRÍADE DA BOA MENSAGEM"** (Conteúdo, Concisão, Atitude) definida em seu `backstory` para criar a `primary_messages_sequence`.
     3.  Gere o conteúdo proativo (`proactive_content_generated`) se aplicável.
     4.  Decida sobre o envio de catálogos e popule a lista `plan_names`.
-    5.  **Atualize o `{conversation_state}`:** Adicione um resumo do que você comunicou ao `session_summary` e atualize o `last_agent_action`.
+    5.  **Atualize o `{{conversation_state}}`:** Adicione um resumo do que você comunicou ao `session_summary` e atualize o `last_agent_action`.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
+    o `excpected_output` é um exemplo de saída esperada.
+
   expected_output: |
     {
       "task_output": {
@@ -499,25 +520,35 @@ coordinate_delivery_task:
     Você é o DeliveryCoordinator, o maestro da comunicação. Sua missão é decidir quais mensagens enviar e em que ordem.
 
     Timestamp: "{timestamp}"
-    Turn: "{turn}"
+    Now Turn: "{turn}"
 
 
     **DADOS PARA SUA ANÁLISE:**
-    - **Mensagens Estruturadas (O Conteúdo a ser Enviado):** `{structured_message}`
+    - **Mensagens Estruturadas (O Conteúdo a ser Enviado):** 
+    
+     * Mensagens Primárias criadas pelo ResponseCraftsman:
+    `{primary_messages_sequence}`
+
+     * Mensagens Proativas criadas pelo ResponseCraftsman:
+     {proactive_content_generated}`
+    
       # Este objeto JSON do StrategicAdvisor contém a resposta dividida em partes (introduction, main_points, etc.). Use-o para montar o diálogo.
-    - **Estado da Conversa (O Contexto do Ritmo):** `{conversation_state}`
-      # Use para entender o sentimento do cliente e o contexto atual para decidir o melhor ritmo de entrega.
-    - **Outras Mensagens Disponíveis (se houver):** `{fast_messages}`, `{proactive_content_generated}`
+    - **Estado da Conversa (O Contexto do Ritmo):** # Use para entender o sentimento do cliente e o contexto atual para decidir o melhor ritmo de entrega. 
+    
+    `{conversation_state}`
+      
     - **Contexto Operacional:** `{operational_context}` # 'BUDGET_ACCEPTED' tem tratamento especial.
 
     **SEU FLUXO DE TRABALHO:**
-    1.  **Analise a `{structured_message}`:** Decida como agrupar seus componentes (`introduction`, `main_points`, etc.) em uma ou mais mensagens para criar o melhor fluxo.
-    2.  **Considere o `{conversation_state}`:** Se o cliente pareceu confuso anteriormente, talvez seja melhor enviar as mensagens de forma mais espaçada.
+    1.  **Analise as `{{primary_messages_sequence}}` e `{{proactive_content_generated}}`:** Decida como agrupar seus componentes (`introduction`, `main_points`, etc.) em uma ou mais mensagens para criar o melhor fluxo.
+    2.  **Considere o `{{conversation_state}}`:** Se o cliente pareceu confuso anteriormente, talvez seja melhor enviar as mensagens de forma mais espaçada.
     3.  **Construa o Array `order`:** Monte a lista final de strings de mensagens a serem enviadas. Se o contexto for `BUDGET_ACCEPTED`, sua principal tarefa é criar uma mensagem de confirmação.
-    4.  **Atualize e Retorne o Estado:** Modifique o `{conversation_state}` com sua ação e retorne-o junto com o seu `task_output`.
+    4.  **Atualize e Retorne o Estado:** Modifique o `{{conversation_state}}` com sua ação e retorne-o junto com o seu `task_output`.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
+    o `excpected_output` é um exemplo de saída esperada.
+
   expected_output: |
     {
       "task_output": {
@@ -526,7 +557,7 @@ coordinate_delivery_task:
           "A principal diferença é que o Plano Proteção Total PGS oferece reembolso do valor da moto pela tabela FIPE se ela não for recuperada, enquanto o Plano Rastreamento foca na localização em tempo real.",
           "Considerando sua segurança, qual dessas duas abordagens te interessa mais?"
         ],
-        "fast_messages_choosen_index": [],
+        "primary_messages_sequence_choosen_index": [],
         "proactive_content_choosen_index": []
       },
       "updated_state": {
@@ -574,9 +605,8 @@ collect_registration_data_task:
     Você é o **RegistrationDataCollectorAgent**. Sua missão é continuar o processo de coleta de dados cadastrais.
 
     Timestamp: "{timestamp}"
-    Turn: "{turn}"
-
-
+    Now Turn: "{turn}"
+    
     **DADOS PARA SUA ANÁLISE:**
     - **Estado da Conversa (Seu Contexto):** # Use para personalizar a conversa (ex: usar o nome do cliente de `entities_extracted`) e para entender o ponto em que a coleta parou. 
     
@@ -597,12 +627,13 @@ collect_registration_data_task:
     1.  **Analise a `{message_text_original}`** para extrair as informações que o cliente forneceu em resposta à sua última pergunta.
     2.  **Atualize o objeto `{collected_data_so_far}`** com os novos dados.
     3.  **Determine o próximo grupo de informações a ser solicitado**, seguindo a ordem lógica definida em seu `backstory`.
-    4.  **Formule a `next_message_to_send`** de forma gentil e clara. Use o nome do cliente do `{conversation_state}` se disponível.
-    5.  **Atualize o `{conversation_state}`**, modificando o `session_summary` e o `last_agent_action` para refletir o progresso da coleta.
+    4.  **Formule a `next_message_to_send`** de forma gentil e clara. Use o nome do cliente do `{{conversation_state}}` se disponível.
+    5.  **Atualize o `{{conversation_state}}`**, modificando o `session_summary` e o `last_agent_action` para refletir o progresso da coleta.
     6.  **Gere sua resposta final**, que deve ser um objeto JSON contendo `task_output` (com o status e os dados da coleta) e `updated_state`.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
+    o `excpected_output` é um exemplo de saída esperada.
   expected_output: |
     {
       "task_output": {
