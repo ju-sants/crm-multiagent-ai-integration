@@ -40,6 +40,10 @@ class StateManagerService:
           "last_topic": "",
           "updated_at": ""
           },
+          "communication_preference": {
+                "prefers_audio": False,
+                "reason": "default"
+          },
           "session_summary": "Início da conversa.",
           "entities_extracted": [],
           "products_discussed": [],

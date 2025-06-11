@@ -1,7 +1,116 @@
+context_analysis_task:
+  description: |
+    Você é o ContextAnalysisAgent. Sua missão é realizar a análise completa da interação, atualizar o perfil de longo prazo do cliente e decidir o próximo passo.
+    
+    **DADOS PARA SUA ANÁLISE 360°:**
+    - **Estado da Conversa (Curto Prazo):** 
+    
+    `{conversation_state}`
+
+    - **Perfil do Cliente (Longo Prazo, pode ser nulo):** 
+    
+    `{customer_profile}`
+
+    - **Mensagem Atual do Cliente (Gatilho):** `{message_text}`
+    - **Outros Dados:** 
+    Histórico 
+    
+    (`{history}`), 
+    Caches 
+    
+    (`{l0l1_cache}`, `{l2_cache}`), 
+    
+    Timestamp (`{timestamp}`)
+    Now Turn (`{turn}`)
+    Contact ID (`{contact_id}`)
+
+    **SEU FLUXO DE TRABALHO UNIFICADO E DETALHADO:**
+
+    # --- Parte 1: SÍNTESE DO PERFIL ---
+    1.  Primeiro, use os insights do `{{conversation_state}}` (resumo da sessão, entidades extraídas, produtos discutidos) para atualizar o `{{customer_profile}}`. Se o perfil antigo não existir, crie um novo.
+    2.  O `profile_summary` deve ser reescrito para refletir o conhecimento mais recente. O `sales_stage` e o `current_sentiment` devem ser atualizados com base na conclusão da última sessão. As novas `entities_extracted` do estado devem ser adicionadas às `preferences` do perfil.
+    3.  Analise a conversa para identificar possíveis dificuldades de leitura e atualize o campo `communication_preference` no `{{conversation_state}}` se necessário.
+
+    # --- Parte 2: DECISÃO DE ROTEAMENTO ---
+    4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `{message_text}`.
+    5.  Avalie as respostas de cache (`{{l0l1_cache}}`, `{{l2_cache}}`) contra as **CONDIÇÕES ESTRITAS** definidas em seu `backstory` para decidir a `action`. Lembre-se que um processamento completo (3-6 min) é caro. Use "RESPOND_DIRECTLY" somente com 100% de certeza.
+    6.  Se a ação for "INITIATE_FULL_PROCESSING", defina o `operational_context` e o `identified_topic`.
+    7.  **CLASSIFICAÇÃO:** Se a ação for "INITIATE_FULL_PROCESSING", defina o `operational_context` e o `identified_topic` seguindo as **REGRAS DE CLASSIFICAÇÃO DE CONTEXTO** detalhadas em seu `backstory`.
+
+    # --- Parte 3: PREPARAÇÃO DA SAÍDA ---
+    8.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `current_context`, adicione novas entidades da última mensagem, e incremente os metadados.
+    9.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
+
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a ESTRUTURA (populada com outros dados) do exemplo.
+  expected_output: |
+    {
+      "task_output": {
+        "action": "INITIATE_FULL_PROCESSING",
+        "identified_topic": "continuidade_discussao_preco_moto",
+        "operational_context": "BUDGET",
+        "profile": {
+          "contact_id": "{contact_id}",
+          "customer_identity": {
+            "name": "Juan Bispo dos Santos",
+            "roles": ["Gestor"]
+          },
+          "executive_summary": "Cliente valioso com histórico de compras. Demonstra conhecimento técnico e interesse em soluções para áreas rurais (fazendas). Possui baixa tolerância a explicações textuais, preferindo áudio. Atualmente reengajou a conversa para avaliar em detalhes o plano GSM+WiFi.",
+          "relationship_timeline": [
+            { "timestamp": "2025-06-09T11:00:00Z", "event_type": "SALES_INQUIRY", "summary": "Iniciou conversa sobre planos para frota." },
+            { "timestamp": "{timestamp}", "event_type": "SALES_INQUIRY", "summary": "Retomou a conversa com foco específico no plano para fazenda com Wi-Fi." }
+          ],
+          "strategic_insights": {
+            "communication_preferences": {
+              "format": "Áudio",
+              "reason": "Relatou explicitamente dificuldade com texto."
+            },
+            "key_motivations": [ "Solução para cobertura de sinal em área rural", "Detalhes técnicos de funcionamento", "Termos contratuais claros" ],
+            "potential_frustrations": [ "Respostas genéricas", "Explicações longas em texto" ],
+            "sales_recommendations": [ "Focar a conversa no plano 'Rastreador GSM (2G+3G+4G) + WI-FI'", "Ser proativo ao explicar limitações técnicas", "Enviar respostas longas ou complexas via áudio." ]
+          },
+          "assets": {
+            "vehicles": ["caminhões", "carros", "moto"],
+            "active_plans": ["Rastreador GSM 4G"]
+        }
+      },
+      "updated_state": {
+        "current_context": { "context_type": "BUDGET", "last_topic": "continuidade_discussao_preco_moto" },
+        "session_summary": "Sessão retomada. Cliente perguntou novamente sobre preços para moto.",
+        "communication_preference": { "prefers_audio": false, "reason": "default" },
+        "entities_extracted": [
+          { 
+            "entity": "customer_name", 
+            "value": "juan", 
+            "turn": 6 # Insira o turno atual
+          },
+          { 
+            "entity": "vehicle_type", 
+            "value": "moto", 
+            "turn": 6 # Insira o turno atual
+          }, 
+          { 
+            "entity": "use_case", 
+            "value": "fazenda", 
+            "turn": 6 # Insira o turno atual
+          }
+        ],
+        "last_agent_action": { "agent_name": "ContextAnalysisAgent", "goal": "Analisar contexto e rotear para especialista de orçamento."},
+        "user_sentiment": [
+            { 
+            "turn": 1, # Insira o turno atual
+            "sentiment": "curioso" 
+            }
+        ],
+      }
+    }
+
 triage_initial_message_task:
   description: |
     Você é o TriageAgent. Sua prioridade é analisar o ESTADO ATUAL DA CONVERSA em conjunto com a MENSAGEM MAIS RECENTE para classificar a intenção do cliente.
 
+    Timestamp: "{timestamp}"
+    Now Turn: "{turn}"
+    
     **DADOS PARA SUA ANÁLISE:**
       
     - **Estado da Conversa (O Contexto Principal):**   # Use este objeto JSON como sua principal fonte de verdade sobre o que já foi discutido, o que o cliente já informou e em que estágio a conversa está.
@@ -11,8 +120,7 @@ triage_initial_message_task:
     - **Mensagem Atual do Cliente (O Gatilho):** "{message_text}"
     - **Histórico Bruto (Contexto Adicional):** "{history}"
     - ID Contato: "{contact_id}"
-    - Timestamp: "{timestamp}"
-    - Now Turn: "{turn}"
+
     - Cache L0/L1: 
     
     "{l0l1_cache}"
@@ -21,22 +129,17 @@ triage_initial_message_task:
     
     "{l2_cache}"
 
-    **SEU FLUXO DE DECISÃO:**
-    1.  **PRIMEIRO, ANALISE O `{{conversation_state}}`:** Entenda o que já aconteceu. O cliente já está em um funil de `BUDGET`? Ele já forneceu o tipo de veículo em `entities_extracted`?
-    2.  **DEPOIS, ANALISE A `{message_text}`:** A mensagem atual confirma, continua ou muda o estado da conversa?
-    3.  **DECIDA O PRÓXIMO PASSO (`action`):**
-        - Use "RESPOND_DIRECTLY" com extrema cautela, apenas para perguntas factuais que não conflitem com o estado da conversa.
-        - Na maioria dos casos, especialmente se o `{{conversation_state}}` já estiver populado, a ação correta será "INITIATE_FULL_PROCESSING" para dar continuidade ao fluxo com os especialistas.
-    4.  **CLASSIFIQUE O CONTEXTO (`operational_context`):**
-        - Baseie sua decisão primariamente no `{{conversation_state}}` e use a mensagem atual para refinar a classificação.
-        - Se a última ação no estado foi uma proposta de orçamento e o cliente diz "sim", classifique como `BUDGET_ACCEPTED`.
-        - Se o estado mostra uma discussão sobre planos e o cliente pede mais um detalhe, mantenha o contexto `BUDGET`.
-    5.  **ATUALIZE O ESTADO:** Modifique o objeto `{{conversation_state}}` com suas novas conclusões. O novo `current_context` deve ser o `operational_context` que você definiu. Extraia novas entidades se houver.
+    **SEU FLUXO DE DECISÃO RIGOROSO:**
+    1.  **Analise o `{{conversation_state}}` e a `{{message_text}}` em conjunto.**
+    2.  **Avalie as respostas de cache (`{{l0l1_cache}}`, `{{l2_cache}}`) contra as CONDIÇÕES ESTRITAS definidas em seu `backstory`.** Lembre-se que um processamento completo leva de 3 a 6 minutos e deve ser evitado se uma resposta de altíssima confiança estiver disponível.
+    3.  **DECIDA A AÇÃO:** "RESPOND_DIRECTLY" apenas se TODAS as condições forem satisfeitas sem nenhuma dúvida. Caso contrário, a ação DEVE ser "INITIATE_FULL_PROCESSING".
+    4.  **CLASSIFIQUE O CONTEXTO:** Se a ação for de processamento, defina o `operational_context` e o `identified_topic`.
+    5.  **ATUALIZE O ESTADO:** Modifique o objeto `{{conversation_state}}` com suas conclusões.
+
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
     o `excpected_output` é um exemplo de saída esperada.
-
   expected_output: |
     {
       "task_output": {
@@ -58,10 +161,14 @@ triage_initial_message_task:
             "updated_at": "{timestamp}"
         },
         "session_summary": "Conversa iniciou com interesse em planos para moto. Cliente recebeu informações sobre o plano PGS, tirou dúvidas sobre o contrato e, na última mensagem, confirmou que deseja prosseguir com a contratação.",
+        "communication_preference": {
+              "prefers_audio": Bool,
+              "reason": ""
+        },
         "entities_extracted": [
-          { "entity": "vehicle_type", "value": "moto", "source_turn": 1 },
-          { "entity": "interest", "value": "cobertura_FIPE", "source_turn": 3 },
-          { "entity": "decision", "value": "aceite", "source_turn": 5 }
+          { "entity": "vehicle_type", "value": "moto", "turn": 1 },
+          { "entity": "interest", "value": "cobertura_FIPE", "turn": 3 },
+          { "entity": "decision", "value": "aceite", "turn": 5 }
         ],
         "products_discussed": [
           {
@@ -146,9 +253,13 @@ profile_customer_task:
             "updated_at": "2025-06-07T22:10:00.000Z"
         },
         "session_summary": "Conversa evoluiu para o aceite do orçamento do plano PGS.",
+        "communication_preference": {
+              "prefers_audio": Bool,
+              "reason": ""
+        },
         "entities_extracted": [
-          { "entity": "vehicle_type", "value": "moto", "source_turn": 1 },
-          { "entity": "decision", "value": "aceite", "source_turn": 6 }
+          { "entity": "vehicle_type", "value": "moto", "turn": 1 },
+          { "entity": "decision", "value": "aceite", "turn": 6 }
         ],
         "products_discussed": [
           {
@@ -235,9 +346,13 @@ profile_customer_task_purchased:
             "updated_at": "{timestamp}"
         },
         "session_summary": "Cliente aceitou o orçamento para o plano PGS. Próximo passo é a coleta de dados cadastrais.",
+        "communication_preference": {
+              "prefers_audio": Bool,
+              "reason": ""
+        },
         "entities_extracted": [
-          { "entity": "vehicle_type", "value": "moto", "source_turn": 1 },
-          { "entity": "decision", "value": "aceite", "source_turn": 6 }
+          { "entity": "vehicle_type", "value": "moto", "turn": 1 },
+          { "entity": "decision", "value": "aceite", "turn": 6 }
         ],
         "products_discussed": [
           {
@@ -337,24 +452,12 @@ develop_strategy_task:
         }
       },
       "updated_state": {
-        "metadata": {
-          "contact_id": "{contact_id}",
-          "session_start_time": "...",
-          "last_updated": "{timestamp}",
-          "current_turn_number": 4
-        },
-        "current_context": {
-          "context_type": "BUDGET",
-          "last_topic": "apresentacao_planos_frota_caminhao",
-          "updated_at": "{timestamp}"
-        },
         "session_summary": "Cliente qualificado com frota de caminhões. Estratégia definida para apresentar as opções Híbrido e GSM, focando em seus prós e contras.",
-        "entities_extracted": [{"entity": "vehicle_type", "value": "caminhão", "source_turn": 2}],
         "products_discussed": [
         {
             "plan_name": "Plano Proteção Total PGS",
             "details_provided": [],
-            "presented_at_turn": 3
+            "turn": 3 # Insira o turno atual
           }
         ],
         "disclosure_checklist": [...],
@@ -420,8 +523,12 @@ execute_system_operations_task:
             "updated_at": "2025-06-07T22:15:00.000Z"
         },
         "session_summary": "Estratégia definida para apresentar opções de moto. O sistema agora busca detalhes do plano PGS.",
+        "communication_preference": {
+              "prefers_audio": Bool,
+              "reason": ""
+          },
         "entities_extracted": [
-          { "entity": "vehicle_type", "value": "moto", "source_turn": 2 }
+          { "entity": "vehicle_type", "value": "moto", "turn": 2 }
         ],
         "products_discussed": [
           {
@@ -469,13 +576,11 @@ craft_response_task:
     "{recently_sent_catalogs}"
     
     **SEU FLUXO DE TRABALHO:**
-    1.  **Analise a `structured_message`** contida no plano estratégico.
-    2.  Use os componentes dela (`greeting_and_context`, `core_recommendation`, `call_to_action`, etc.) para construir a `primary_messages_sequence`.
-    3.  **Siga a "TRÍADE DA BOA MENSAGEM"** (Conteúdo, Concisão, Atitude) definida em seu `backstory` para criar a `primary_messages_sequence`.
-    4.  **Para cada informação, crie uma ou mais mensagens curtas (1 frase. No máximo 2.)** para a `primary_messages_sequence`. Siga a "TRÍADE DA BOA MENSAGEM".
-    5.  Gere o conteúdo proativo (`proactive_content_generated`) se aplicável.
-    6.  **Decida sobre o envio de catálogos e popule a lista `plan_names` seguindo as regras abaixo.**
-    7.  **Atualize o `{{conversation_state}}`:** Adicione um resumo do que você comunicou ao `session_summary` e atualize o `last_agent_action`.
+    1.  **Analise CUIDADOSAMENTE plano estratégico. Use os componentes dele para construir a `primary_messages_sequence` e a `proactive_content_generated`.**
+    2.  **Siga a "TRÍADE DA BOA MENSAGEM"** (Conteúdo, Concisão, Atitude) definida em seu `backstory` para criar a `primary_messages_sequence`, com mensagens curtas de uma frase **CURTA** apenas..
+    3.  **Para cada informação, crie uma ou mais mensagens curtas (1 frase.)** para a `primary_messages_sequence`. Siga a "TRÍADE DA BOA MENSAGEM".
+    4.  **Decida sobre o envio de catálogos e popule a lista `plan_names` seguindo as regras abaixo.**
+    5.  **Atualize o `{{conversation_state}}`:** Adicione um resumo do que você comunicou ao `session_summary` e atualize o `last_agent_action`.
 
     **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
     - Consulte a lista `{recently_sent_catalogs}`.
@@ -497,8 +602,7 @@ craft_response_task:
       "task_output": {
         "primary_messages_sequence": [
           "Juan, sobre o plano para sua moto, temos duas opções excelentes.",
-          "A principal diferença é que o Plano Proteção Total PGS oferece reembolso do valor da moto pela tabela FIPE se ela não for recuperada, enquanto o Plano Rastreamento foca na localização em tempo real.",
-          "Considerando sua segurança, qual dessas duas abordagens te interessa mais?"
+          ... # Outras mensagens de uma frase.
         ],
         "proactive_content_generated": [
           {"question": "O plano PGS cobre acessórios da moto?", "answer": "A cobertura do plano PGS é focada no valor da motocicleta conforme a tabela FIPE e não se estende a acessórios que possam ter sido subtraídos."},
@@ -519,9 +623,13 @@ craft_response_task:
             "updated_at": "{timestamp}"
         },
         "session_summary": "Estratégia definida para apresentar planos de moto. Mensagens criadas para explicar a diferença entre PGS e Rastreamento Básico, e para qualificar a necessidade do cliente.",
+        "communication_preference": {
+              "prefers_audio": Bool,
+              "reason": ""
+          },
         "entities_extracted": [
-          { "entity": "customer_name", "value": "Juan", "source_turn": 1 },
-          { "entity": "vehicle_type", "value": "moto", "source_turn": 2 }
+          { "entity": "customer_name", "value": "Juan", "turn": 1 },
+          { "entity": "vehicle_type", "value": "moto", "turn": 2 }
         ],
         "products_discussed": [
           {
@@ -606,9 +714,13 @@ coordinate_delivery_task:
           "updated_at": "{timestamp}"
         },
         "session_summary": "Mensagens sobre os planos de moto foram preparadas e ordenadas para envio ao cliente.",
+        "communication_preference": {
+              "prefers_audio": Bool,
+              "reason": ""
+          },
         "entities_extracted": [
-          { "entity": "customer_name", "value": "Juan", "source_turn": 1 },
-          { "entity": "vehicle_type", "value": "moto", "source_turn": 2 }
+          { "entity": "customer_name", "value": "Juan", "turn": 1 },
+          { "entity": "vehicle_type", "value": "moto", "turn": 2 }
         ],
         "products_discussed": [
           {
@@ -716,10 +828,14 @@ collect_registration_data_task:
             "updated_at": "{timestamp}"
         },
         "session_summary": "Cliente aceitou o orçamento. Iniciado o processo de coleta de dados cadastrais. Solicitado nome completo e CPF.",
+        "communication_preference": {
+              "prefers_audio": Bool,
+              "reason": ""
+          },
         "entities_extracted": [
-          { "entity": "customer_name", "value": "Juan", "source_turn": 1 },
-          { "entity": "decision", "value": "aceite", "source_turn": 6 },
-          { "entity": "registration_type", "value": "CPF", "source_turn": 8 }
+          { "entity": "customer_name", "value": "Juan", "turn": 1 },
+          { "entity": "decision", "value": "aceite", "turn": 6 },
+          { "entity": "registration_type", "value": "CPF", "turn": 8 }
         ],
         "products_discussed": [],
         "last_agent_action": {

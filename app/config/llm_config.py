@@ -11,7 +11,8 @@ default_X_llm = LLM(
 reasoning_X_llm = LLM(
     model='xai/grok-3-mini-beta',
     api_key=settings.XAI_API_KEY,
-    stop=None
+    stop=None,
+    stream=True
     )
 
 fast_reasoning_X_llm = LLM(
@@ -28,7 +29,11 @@ pro_Google_llm = LLM(
 flash_Google_llm = LLM(
     model='gemini/gemini-2.5-flash-preview-05-20',
     api_key=settings.GEMINI_API_KEY,
-    thinking={"type": "enabled", "budget": 8192},
+)
+
+flash_Google_llm_reason = LLM(
+    model='gemini/gemini-2.5-flash-preview-05-20',
+    thinking={"type": "enabled", "budget": 2048},
 )
 
 default_openai_llm = LLM(
