@@ -11,12 +11,11 @@ import logging
 
 
 from app.core.logger import get_logger
-from app.crews.conversation_crew import run_mvp_crew
+from app.crews.conversation_crew import run_mvp_crew, run_mvp_crew_2
 from app.config.settings import settings
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
-from app.services.celery_Service import make_celery
 
 CALLBELL_API_KEY = os.environ.get("CALLBELL_API_KEY", "test_gshuPaZoeEG6ovbc8M79w0QyM")
 CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
@@ -170,6 +169,7 @@ def process_requisitions(payload):
             contact_lock = None
             if contact_uuid == "71464be80c504971ae263d710b39dd1f":
                 redis_client.delete(f'processing:{contact_uuid}')
+                redis_client.delete(f'state:{contact_uuid}')
                 
             try:
                 contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True, ex=300)
@@ -199,7 +199,7 @@ def process_requisitions(payload):
                         
                         history['messages'] = history_copy['messages']
                     
-                    run_mvp_crew(contact_uuid, phone_number, redis_client, history)
+                    run_mvp_crew_2(contact_uuid, phone_number, redis_client, history)
                     logger.info(f'[{contact_uuid}] - CHAMADA da função run_mvp_crew (comentada no código).')
 
                 except requests.exceptions.RequestException as e:

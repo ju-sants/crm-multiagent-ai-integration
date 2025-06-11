@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = "..."
     CALLBELL_API_KEY: str = "..."
     OPENAI_API_KEY: str = "..."
+    ELEVEN_LABS_API_KEY: str = '...'
     
     X_GLADIA_KEY: str = "..."
     APPID_IMAGE_DESCRIPTION: str = '...'
