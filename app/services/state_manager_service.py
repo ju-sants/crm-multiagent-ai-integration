@@ -31,8 +31,6 @@ class StateManagerService:
         return {
           "metadata": {
             "contact_id": contact_id,
-            "session_start_time": datetime.datetime.now().isoformat(),
-            "last_updated": datetime.datetime.now().isoformat(),
             "current_turn_number": 0
           },
           "current_context": {

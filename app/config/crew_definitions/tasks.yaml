@@ -27,7 +27,7 @@ context_analysis_task:
     **SEU FLUXO DE TRABALHO UNIFICADO E DETALHADO:**
 
     # --- Parte 1: SÍNTESE DO PERFIL ---
-    1.  Primeiro, use os insights do `{{conversation_state}}` (resumo da sessão, entidades extraídas, produtos discutidos) para atualizar o `{{customer_profile}}`. Se o perfil antigo não existir, crie um novo.
+    1.  Primeiro, use os insights do `{{conversation_state}}` (resumo da sessão, entidades extraídas, produtos discutidos) para atualizar o `{{profile}}`. Se o perfil antigo não existir, crie um novo.
     2.  O `profile_summary` deve ser reescrito para refletir o conhecimento mais recente. O `sales_stage` e o `current_sentiment` devem ser atualizados com base na conclusão da última sessão. As novas `entities_extracted` do estado devem ser adicionadas às `preferences` do perfil.
     3.  Analise a conversa para identificar possíveis dificuldades de leitura e atualize o campo `communication_preference` no `{{conversation_state}}` se necessário.
 
@@ -36,10 +36,11 @@ context_analysis_task:
     5.  Avalie as respostas de cache (`{{l0l1_cache}}`, `{{l2_cache}}`) contra as **CONDIÇÕES ESTRITAS** definidas em seu `backstory` para decidir a `action`. Lembre-se que um processamento completo (3-6 min) é caro. Use "RESPOND_DIRECTLY" somente com 100% de certeza.
     6.  Se a ação for "INITIATE_FULL_PROCESSING", defina o `operational_context` e o `identified_topic`.
     7.  **CLASSIFICAÇÃO:** Se a ação for "INITIATE_FULL_PROCESSING", defina o `operational_context` e o `identified_topic` seguindo as **REGRAS DE CLASSIFICAÇÃO DE CONTEXTO** detalhadas em seu `backstory`.
+    8.  **Plano estratégico:** Decida se o plano estratégico de interação atual (se existir) é válido com o contexto, sessão e mensagem atual do cliente. se sim, envie `"is_plan_acceptable": true` em `task_output`, se não `"is_plan_acceptable": false`.
 
     # --- Parte 3: PREPARAÇÃO DA SAÍDA ---
-    8.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `current_context`, adicione novas entidades da última mensagem, e incremente os metadados.
-    9.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
+    9.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `current_context`, adicione novas entidades da última mensagem, e incremente os metadados.
+    10.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a ESTRUTURA (populada com outros dados) do exemplo.
   expected_output: |
@@ -94,7 +95,6 @@ context_analysis_task:
             "turn": 6 # Insira o turno atual
           }
         ],
-        "last_agent_action": { "agent_name": "ContextAnalysisAgent", "goal": "Analisar contexto e rotear para especialista de orçamento."},
         "user_sentiment": [
             { 
             "turn": 1, # Insira o turno atual
@@ -404,7 +404,8 @@ develop_strategy_task:
     3.  **Consulta à Base de Conhecimento:** Use a `KnowledgeServiceTool` para obter os fatos e dados precisos (preços, termos, limitações) para sua estratégia.
     4.  **Formulação do Plano e Mensagem Estruturada:** Defina o `conversation_goal` e os `key_talking_points`. Em seguida, popule o objeto `structured_message` de forma completa e detalhada, fornecendo ao ResponseCraftsman toda a "matéria-prima" necessária.
     5.  **POPULAR O CHECKLIST DE ESCLARECIMENTO:** Se sua estratégia envolve apresentar um plano, você DEVE popular a chave `disclosure_checklist` no `{{conversation_state}}` com todos os termos contratuais e operacionais importantes, definindo o status inicial deles como 'pending'.
-    6.  **Atualização do Estado:** Modifique o objeto `{{conversation_state}}` com o resultado da sua análise. Atualize o `session_summary`, adicione os `products_discussed` e registre sua ação no `last_agent_action`.
+    6.  **Atualização do Estado:** Crie um objeto `updated_state` presente em sua saida esperada, com o resultado da sua análise apenas adicionando os tópicos judiciais e contratuais identificados em `disclosure_checklist`.
+    7.  **disclosure_checklist:** Você recebeu uma lista de dicionarios contendo tópicos contratuais e termos importantes. Você deve apenas ADICIONAR tópicos e nunca os retire. Use isso como um guia sobre quais tópicos e termos você deve abordar.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
@@ -452,22 +453,20 @@ develop_strategy_task:
         }
       },
       "updated_state": {
-        "session_summary": "Cliente qualificado com frota de caminhões. Estratégia definida para apresentar as opções Híbrido e GSM, focando em seus prós e contras.",
-        "products_discussed": [
-        {
-            "plan_name": "Plano Proteção Total PGS",
-            "details_provided": [],
-            "turn": 3 # Insira o turno atual
-          }
+        "disclosure_checklist": [
+          {
+          "item_id": "natureza_servico_pgs",
+          "topic": "Natureza do Serviço (Plano PGS)",
+          "content": "Este contrato NÃO é um seguro, mas em caso de NÃO recuperação da motocicleta, haverá REEMBOLSO do valor da motocicleta de acordo com a tabela FIPE, respeitando o valor máximo do plano contratado.",
+          "status": "pending"
+          },
+          {
+            "item_id": "responsabilidade_recuperacao",
+            "topic": "Responsabilidade de Recuperação",
+            "content": "A recuperação do veículo é atividade única e exclusiva das autoridades policiais.",
+            "status": "pending"
+          },
         ],
-        "disclosure_checklist": [...],
-        "last_agent_action": {
-          "agent_name": "StrategicAdvisor",
-          "goal": "Definir estratégia para apresentar planos de frota.",
-          "action_timestamp": "{timestamp}"
-        },
-        "user_sentiment_history": []
-      }
     }
 
 
@@ -500,54 +499,54 @@ execute_system_operations_task:
     o `excpected_output` é um exemplo de saída esperada.
 
   expected_output: |
-    {
-      "task_output": {
-        "action_type_executed": "GET_TRACKING_PLAN_DETAILS",
-        "status": "success",
-        "data": {
-          "plan_name": "Plano Proteção Total PGS",
-          "details": "Adesão de R$120,00. Mensalidade baseada na FIPE. Inclui reembolso em caso de não recuperação."
-        },
-        "error_message": null
-      },
-      "updated_state": {
-        "metadata": {
-          "contact_id": "71464be80c504971ae263d710b39dd1f",
-          "session_start_time": "2025-06-07T21:50:00.000Z",
-          "last_updated": "2025-06-07T22:15:00.000Z",
-          "current_turn_number": 4
-        },
-        "current_context": {
-            "context_type": "BUDGET",
-            "last_topic": "apresentacao_planos_moto",
-            "updated_at": "2025-06-07T22:15:00.000Z"
-        },
-        "session_summary": "Estratégia definida para apresentar opções de moto. O sistema agora busca detalhes do plano PGS.",
-        "communication_preference": {
-              "prefers_audio": Bool,
-              "reason": ""
-          },
-        "entities_extracted": [
-          { "entity": "vehicle_type", "value": "moto", "turn": 2 }
-        ],
-        "products_discussed": [
-          {
-            "plan_name": "Plano Proteção Total PGS",
-            "details_provided": [],
-            "presented_at_turn": 3
-          }
-        ],
-        "disclosure_checklist": [...],
-        "last_agent_action": {
-          "agent_name": "SystemOperationsAgent",
-          "goal": "Executar a busca de detalhes do plano PGS.",
-          "action_timestamp": "{timestamp}"
-        },
-        "user_sentiment_history": [
-          { "turn": 2, "sentiment": "curioso" }
-        ]
-      }
-    }
+    # {
+    #   "task_output": {
+    #     "action_type_executed": "GET_TRACKING_PLAN_DETAILS",
+    #     "status": "success",
+    #     "data": {
+    #       "plan_name": "Plano Proteção Total PGS",
+    #       "details": "Adesão de R$120,00. Mensalidade baseada na FIPE. Inclui reembolso em caso de não recuperação."
+    #     },
+    #     "error_message": null
+    #   },
+    #   "updated_state": {
+    #     "metadata": {
+    #       "contact_id": "71464be80c504971ae263d710b39dd1f",
+    #       "session_start_time": "2025-06-07T21:50:00.000Z",
+    #       "last_updated": "2025-06-07T22:15:00.000Z",
+    #       "current_turn_number": 4
+    #     },
+    #     "current_context": {
+    #         "context_type": "BUDGET",
+    #         "last_topic": "apresentacao_planos_moto",
+    #         "updated_at": "2025-06-07T22:15:00.000Z"
+    #     },
+    #     "session_summary": "Estratégia definida para apresentar opções de moto. O sistema agora busca detalhes do plano PGS.",
+    #     "communication_preference": {
+    #           "prefers_audio": Bool,
+    #           "reason": ""
+    #       },
+    #     "entities_extracted": [
+    #       { "entity": "vehicle_type", "value": "moto", "turn": 2 }
+    #     ],
+    #     "products_discussed": [
+    #       {
+    #         "plan_name": "Plano Proteção Total PGS",
+    #         "details_provided": [],
+    #         "presented_at_turn": 3
+    #       }
+    #     ],
+    #     "disclosure_checklist": [...],
+    #     "last_agent_action": {
+    #       "agent_name": "SystemOperationsAgent",
+    #       "goal": "Executar a busca de detalhes do plano PGS.",
+    #       "action_timestamp": "{timestamp}"
+    #     },
+    #     "user_sentiment_history": [
+    #       { "turn": 2, "sentiment": "curioso" }
+    #     ]
+    #   }
+    # }
 
 
 craft_response_task:
@@ -580,7 +579,6 @@ craft_response_task:
     2.  **Siga a "TRÍADE DA BOA MENSAGEM"** (Conteúdo, Concisão, Atitude) definida em seu `backstory` para criar a `primary_messages_sequence`, com mensagens curtas de uma frase **CURTA** apenas..
     3.  **Para cada informação, crie uma ou mais mensagens curtas (1 frase.)** para a `primary_messages_sequence`. Siga a "TRÍADE DA BOA MENSAGEM".
     4.  **Decida sobre o envio de catálogos e popule a lista `plan_names` seguindo as regras abaixo.**
-    5.  **Atualize o `{{conversation_state}}`:** Adicione um resumo do que você comunicou ao `session_summary` e atualize o `last_agent_action`.
 
     **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
     - Consulte a lista `{recently_sent_catalogs}`.
@@ -599,60 +597,15 @@ craft_response_task:
 
   expected_output: |
     {
-      "task_output": {
-        "primary_messages_sequence": [
-          "Juan, sobre o plano para sua moto, temos duas opções excelentes.",
-          ... # Outras mensagens de uma frase.
-        ],
-        "proactive_content_generated": [
-          {"question": "O plano PGS cobre acessórios da moto?", "answer": "A cobertura do plano PGS é focada no valor da motocicleta conforme a tabela FIPE e não se estende a acessórios que possam ter sido subtraídos."},
-          {"question": "Quanto tempo demora a instalação na moto?", "answer": "A instalação em motocicletas geralmente leva entre 1 a 2 horas e é feita em nossas lojas para garantir a qualidade e o sigilo do serviço."}
-        ],
-        "plan_names": ["Plano Proteção Total PGS", "Plano Rastreamento Moto"]
-      },
-      "updated_state": {
-        "metadata": {
-          "contact_id": "{contact_id}",
-          "session_start_time": "2025-06-07T21:50:00.000Z",
-          "last_updated": "{timestamp}",
-          "current_turn_number": 4
-        },
-        "current_context": {
-            "context_type": "BUDGET",
-            "last_topic": "apresentacao_planos_moto",
-            "updated_at": "{timestamp}"
-        },
-        "session_summary": "Estratégia definida para apresentar planos de moto. Mensagens criadas para explicar a diferença entre PGS e Rastreamento Básico, e para qualificar a necessidade do cliente.",
-        "communication_preference": {
-              "prefers_audio": Bool,
-              "reason": ""
-          },
-        "entities_extracted": [
-          { "entity": "customer_name", "value": "Juan", "turn": 1 },
-          { "entity": "vehicle_type", "value": "moto", "turn": 2 }
-        ],
-        "products_discussed": [
-          {
-            "plan_name": "Plano Proteção Total PGS",
-            "details_provided": ["pricing", "contract_terms"],
-            "presented_at_turn": 4
-          },
-          {
-            "plan_name": "Plano Rastreamento Moto",
-            "details_provided": ["pricing"],
-            "presented_at_turn": 4
-          }
-        ],
-        "disclosure_checklist": [...],
-        "last_agent_action": {
-          "agent_name": "ResponseCraftsman",
-          "goal": "Criar e preparar mensagens sobre planos de moto para envio.",
-          "action_timestamp": "{timestamp}"
-        },
-        "user_sentiment_history": [
-          { "turn": 2, "sentiment": "curioso" }
-        ]
-      }
+      "primary_messages_sequence": [
+        "Juan, sobre o plano para sua moto, temos duas opções excelentes.",
+        ... # Outras mensagens de uma frase.
+      ],
+      "proactive_content_generated": [
+        {"question": "O plano PGS cobre acessórios da moto?", "answer": "A cobertura do plano PGS é focada no valor da motocicleta conforme a tabela FIPE e não se estende a acessórios que possam ter sido subtraídos."},
+        {"question": "Quanto tempo demora a instalação na moto?", "answer": "A instalação em motocicletas geralmente leva entre 1 a 2 horas e é feita em nossas lojas para garantir a qualidade e o sigilo do serviço."}
+      ],
+      "plan_names": ["Plano Proteção Total PGS", "Plano Rastreamento Moto"]
     }
 
 
@@ -684,7 +637,7 @@ coordinate_delivery_task:
     1.  **Analise as `{{primary_messages_sequence}}` e `{{proactive_content_generated}}`:** Decida como agrupar, ordenar e quais escolher. em uma ou mais mensagens para criar o melhor fluxo.
     2.  **Considere o `{{conversation_state}}`:** Se o cliente pareceu confuso anteriormente, talvez seja melhor enviar as mensagens de forma mais espaçada.
     3.  **Construa o Array `order`:** Monte a lista final de strings de mensagens a serem enviadas.
-    4.  **Atualize e Retorne o Estado:** Modifique o `{{conversation_state}}` com sua ação e retorne-o junto com o seu `task_output`.
+    4.  **Atualize e Retorne o Estado:** Modifique o `updated_state` em sua saida esperada com sua ação e retorne-o junto com o seu `task_output`, adicione os produtos que você enviou ao cliente, termos contratuais que você comunicou e atualize o `session_summary`, TUDO com base no que você enviou em `order`.
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
@@ -702,26 +655,7 @@ coordinate_delivery_task:
         "proactive_content_choosen_index": []
       },
       "updated_state": {
-        "metadata": {
-          "contact_id": "{contact_id}",
-          "session_start_time": "2025-06-07T21:50:00.000Z",
-          "last_updated": "{timestamp}",
-          "current_turn_number": 5
-        },
-        "current_context": {
-          "context_type": "BUDGET",
-          "last_topic": "entrega_mensagens_planos_moto",
-          "updated_at": "{timestamp}"
-        },
         "session_summary": "Mensagens sobre os planos de moto foram preparadas e ordenadas para envio ao cliente.",
-        "communication_preference": {
-              "prefers_audio": Bool,
-              "reason": ""
-          },
-        "entities_extracted": [
-          { "entity": "customer_name", "value": "Juan", "turn": 1 },
-          { "entity": "vehicle_type", "value": "moto", "turn": 2 }
-        ],
         "products_discussed": [
           {
             "plan_name": "Plano Rastreamento Moto",
@@ -730,18 +664,19 @@ coordinate_delivery_task:
           }
         ],
         "disclosure_checklist": [
-          { "item_id": "IS_NOT_INSURANCE", "status": "communicated", "content": "..." },
-          { "item_id": "CANCELLATION_POLICY", "status": "communicated", "content": "..." },
-          { "item_id": "SIGNAL_LIMITATION", "status": "pending", "content": "..." }
+          {
+          "item_id": "natureza_servico_pgs",
+          "topic": "Natureza do Serviço (Plano PGS)",
+          "content": "Este contrato NÃO é um seguro, mas em caso de NÃO recuperação da motocicleta, haverá REEMBOLSO do valor da motocicleta de acordo com a tabela FIPE, respeitando o valor máximo do plano contratado.",
+          "status": "pending"
+          },
+          {
+            "item_id": "responsabilidade_recuperacao",
+            "topic": "Responsabilidade de Recuperação",
+            "content": "A recuperação do veículo é atividade única e exclusiva das autoridades policiais.",
+            "status": "communicated"
+          },
         ],
-        "last_agent_action": {
-          "agent_name": "DeliveryCoordinator",
-          "goal": "Ordenar e agrupar mensagens sobre planos de moto para envio.",
-          "action_timestamp": "{timestamp}"
-        },
-        "user_sentiment_history": [
-          { "turn": 4, "sentiment": "engajado" }
-        ]
       }
     }
 
