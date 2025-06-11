@@ -17,7 +17,7 @@ agents_config = yaml.safe_load(open(config_path, 'r').read())
 def get_context_analysis_agent() -> Agent:
     return Agent(
         config=agents_config['ContextAnalysisAgent'],
-        llm=flash_Google_llm,
+        llm=fast_reasoning_X_llm,
         verbose=True,
         allow_delegation=False,
     )
@@ -41,7 +41,7 @@ def get_customer_profile_agent() -> Agent:
 def get_strategic_advisor_agent() -> Agent:
     return Agent(
         config=agents_config['StrategicAdvisor'],
-        llm=flash_Google_llm_reason,
+        llm=pro_Google_llm,
         verbose=True,
         allow_delegation=False,
     )
@@ -65,7 +65,7 @@ def get_response_craftsman_agent() -> Agent:
 def get_delivery_coordinator_agent() -> Agent:
     return Agent(
         config=agents_config['DeliveryCoordinator'],
-        llm=flash_Google_llm,
+        llm=fast_reasoning_X_llm,
         verbose=True,
         allow_delegation=False,
     )

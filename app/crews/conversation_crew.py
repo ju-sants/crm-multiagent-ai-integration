@@ -1,8 +1,13 @@
 from crewai import Crew, Process, Task
 import datetime
 import json
+import litellm
+from qdrant_client import models
+import uuid
+from typing import Any, Dict
+import redis
 
-from app.core.logger import get_logger
+
 
 from app.agents.agent_declaration import (
     get_context_analysis_agent,
@@ -14,6 +19,7 @@ from app.agents.agent_declaration import (
     get_system_operations_agent,
     get_registration_agent
 )
+
 from app.tasks.tasks_declaration import (
     create_context_analysis_task,
     create_triage_task,
@@ -26,28 +32,18 @@ from app.tasks.tasks_declaration import (
     create_collect_registration_data_task
 )
 
-
 from app.tools.qdrant_tools import SaveFastMemoryMessages, FastMemoryMessages, GetUserProfile
 from app.tools.cache_tools import L1CacheQueryTool
-from app.tools.callbell_tools import CallbellSendTool
 
 from app.services.qdrant_service import get_client
 from app.services.telegram_service import send_single_telegram_message
 from app.services.state_manager_service import StateManagerService
 from app.services.eleven_labs_service import main as eleven_labs_service_main
+from app.services.callbell_service import send_callbell_message
 
-import os
+from app.core.logger import get_logger
 
-import litellm
-
-from qdrant_client import models
-
-import uuid
-
-from typing import Any, Dict
-
-import redis
-
+# =======================================================================
 logger = get_logger(__name__)
 
 original_completition = litellm.completion
@@ -78,7 +74,7 @@ litellm.completion = patched_completition
 state_manager = StateManagerService()
 
 
-def parse_json_from_string(json_string):
+def parse_json_from_string(json_string, update=True):
     try:
         if '```json' in json_string:
                     json_string = json_string.split('```json')[-1].split('```')[0]
@@ -88,11 +84,14 @@ def parse_json_from_string(json_string):
     
         json_response = json.loads(json_string)
 
-        if 'task_output' and 'updated_state' in json_response:
+        if 'task_output' and 'updated_state' in json_response and update:
             task_output = json_response['task_output']
             updated_state = json_response['updated_state']
 
             return task_output, updated_state
+        
+        elif not update:
+            return json_response
         
         return json_response, None
     except json.JSONDecodeError as e:
@@ -118,6 +117,7 @@ def distill_conversation_state(agent_name: str, full_state: Dict[str, Any]) -> D
     # --- Destilação Específica por Agente ---
 
     if agent_name == "ContextAnalysisAgent":
+        distilled_state['strategic_plan'] = full_state.get("strategic_plan")
         distilled_state["session_summary"] = full_state.get("session_summary", "")
         distilled_state["recent_entities"] = full_state.get("entities_extracted", [])[-5:]
         distilled_state["checklist_status_summary"] = {
@@ -128,17 +128,17 @@ def distill_conversation_state(agent_name: str, full_state: Dict[str, Any]) -> D
     elif agent_name == "StrategicAdvisor":
         distilled_state["session_summary"] = full_state.get("session_summary")
         key_entities = ["customer_name", "vehicle_type", "use_case"]
-        distilled_state["key_entities"] = [e for e in full_state.get("entities_extracted", []) if e.get("entity") in key_entities]
+        distilled_state["key_entities"] = [e for e in full_state.get("entities_extracted", []) if e and e.get("entity") in key_entities]
         distilled_state["products_being_discussed"] = [p.get("plan_name") for p in full_state.get("products_discussed", [])]
-        distilled_state['disclosure_topics_pending'] = [item.get("topic") for item in full_state.get("disclosure_checklist", []) if item.get("status") == "pending"]
+        distilled_state['disclosure_checklist'] = full_state.get("disclosure_checklist", [])
         
 
     elif agent_name in ["ResponseCraftsman", "CommunicationAgent"]:
-        last_entities = full_state.get("entities_extracted", [])[-3:]
+        last_entities = full_state.get("entities_extracted", [])
         distilled_state["customer_name"] = next((e["value"] for e in last_entities if e["entity"] == "customer_name"), None)
         last_sentiment_entry = full_state.get("user_sentiment_history", [{}])[-1] if full_state.get("user_sentiment_history", []) else {}
         distilled_state["sentiment_of_last_turn"] = last_sentiment_entry.get("sentiment")
-        distilled_state['disclosure_topics_pending'] = [item.get("topic") for item in full_state.get("disclosure_checklist", []) if item.get("status") == "pending"]
+        distilled_state['disclosure_topics_pending'] = [f'{item.get("topic")} - {item.get("content")}' for item in full_state.get("disclosure_checklist", []) if item.get("status") == "pending"]
 
     elif agent_name == "DeliveryCoordinator":
         distilled_state["user_sentiment_history_summary"] = [s.get("sentiment") for s in full_state.get("user_sentiment_history", [])]
@@ -147,7 +147,7 @@ def distill_conversation_state(agent_name: str, full_state: Dict[str, Any]) -> D
             "items_communicated": sum(1 for item in full_state.get("disclosure_checklist", []) if item.get("status") == "communicated"),
             "is_complete": all(item.get("status") == "communicated" for item in full_state.get("disclosure_checklist", []) if full_state.get("disclosure_checklist"))
         }
-        distilled_state['disclosure_topics'] = [{item.get("topic"): "pending"} for item in full_state.get("disclosure_checklist", []) if item.get("status") == "pending"]
+        distilled_state['disclosure_topics'] = [{f'{item.get("topic")} - {item.get("content")}': "pending"} for item in full_state.get("disclosure_checklist", []) if item.get("status") == "pending"]
 
 
     return distilled_state
@@ -372,7 +372,7 @@ def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, 
             redis_client.delete(f"{contact_id}:getting_data_from_user")
         
         elif registration_task_json and "next_message_to_send" in registration_task_json and registration_task_json["next_message_to_send"]:
-            CallbellSendTool().run(phone_number=phone_number, messages=[registration_task_json["next_message_to_send"]])
+            send_callbell_message(phone_number=phone_number, messages=[registration_task_json["next_message_to_send"]])
             
             redis_client.set(f"{contact_id}:getting_data_from_user", "1")
     else:
@@ -754,7 +754,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                         if state.get('communication_preference').get("prefers_audio"):
                             logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
                             audio_url = eleven_labs_service_main(response_delivery_json['order'])
-                            CallbellSendTool()._run(phone_number=phone_number, type="audio", audio_url=audio_url)
+                            send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
                         
                         else:
                         
@@ -769,10 +769,10 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                                 for message in response_delivery_json['order']:
                                     if len(message) > 250:
                                         audio_url = eleven_labs_service_main([message])
-                                        CallbellSendTool()._run(phone_number=phone_number, type="audio", audio_url=audio_url)
+                                        send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
 
                                     else:
-                                        CallbellSendTool()._run(phone_number=phone_number, messages=[message])
+                                        send_callbell_message(phone_number=phone_number, messages=[message])
                             
                             else:
                                 logger.info(f"[{contact_id}] - Não encontrada mensagem com mais de 250 caracteres.")
@@ -782,10 +782,10 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                                     logger.info(f"[{contact_id}] - Todas as mensagens somam mais de 300 caracteres. Enviando mensagem de áudio.")
 
                                     audio_url = eleven_labs_service_main(messages_all_str)
-                                    CallbellSendTool()._run(phone_number=phone_number, type="audio", audio_url=audio_url)
+                                    send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
                                 else:
                                     logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
-                                    CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['order'])
+                                    send_callbell_message(phone_number=phone_number, messages=response_delivery_json['order'])
 
                     except Exception as e:
                         logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
@@ -837,7 +837,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                 elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
                     logger.info(f'[{contact_id}] - "Final Answer" e "choosen_messages" encontrados em response_delivery_json. Enviando mensagens Callbell.')
                     try:
-                        CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                        send_callbell_message(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
                         logger.info(f'[{contact_id}] - Mensagens do "Final Answer" enviadas via CallbellSendTool.')
                     except Exception as e:
                         logger.error(f'[{contact_id}] - ERRO ao enviar mensagens do "Final Answer" via CallbellSendTool: {e}', exc_info=True)
@@ -892,7 +892,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                         logger.error(f'[{contact_id}] - ERRO ao fazer upsert no Qdrant para FastMemoryMessages (Final Answer): {e}', exc_info=True)
 
                 if 'messages_plans_to_send' in locals() and 'plans_names_to_send' in locals() and messages_plans_to_send and plans_names_to_send:
-                    CallbellSendTool()._run(phone_number=phone_number, messages=messages_plans_to_send)
+                    send_callbell_message(phone_number=phone_number, messages=messages_plans_to_send)
 
                     for plan in plans_names_to_send:
                         redis_client.set(f"contact:{contact_id}:sendend_catalog_{plan}", "1")
@@ -939,18 +939,8 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
         history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' if message.get("text") else '' for message in reversed(history.get('messages', [])[:10])])
     
     state = state_manager.get_state(contact_id)
-    state["user_sentiment_history"] = state.get("user_sentiment_history", [])[-5:]
 
     state["metadata"]["current_turn_number"] += 1
-
-    if 'disclousure_checklist' not in state:
-        state["disclousure_checklist"] = []
-    
-    if 'communication_preference' not in state:
-        state["communication_preference"] = {
-                "prefers_audio": False,
-                "reason": "default"
-          },
 
     jump_to_registration_task = False
     registration_task = False
@@ -981,7 +971,7 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
         "message_text": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
         "timestamp": datetime.datetime.now().isoformat(), 
         "l0l1_cache": str(L1CacheQueryTool()._run(contact_id)),
-        "l2_cache": str(FastMemoryMessages()._run(contact_id)),
+        "l2_cache": str(redis_client.get(f'{contact_id}:fast_memory_messages')),
         "history": history_messages,
         "conversation_state": str(distill_conversation_state('ContextAnalysisAgent', state)),
         "turn": state["metadata"]["current_turn_number"],
@@ -1010,11 +1000,16 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
                 if 'profile' in json_response:
                     redis_client.set(f"{contact_id}:customer_profile", json.dumps(json_response['profile']))
 
+            else:
+                logger.warning(f"MVP Crew: Nenhuma resposta JSON válida gerada para contact_id {contact_id}")
+                run_mvp_crew_2(contact_id, phone_number, redis_client, history)
+                return
+            
             if updated_state and isinstance(updated_state, dict):
                 
                 for k in updated_state:                    
                     if k in ['user_sentiment', 'entities_extracted'] and k in state:
-                        state[k].append(updated_state[k])
+                        state[k].extend(updated_state[k])
                     
                     else:
                         state[k] = updated_state[k]
@@ -1091,7 +1086,7 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
             redis_client.delete(f"{contact_id}:getting_data_from_user")
         
         elif registration_task_json and "next_message_to_send" in registration_task_json and registration_task_json["next_message_to_send"]:
-            CallbellSendTool().run(phone_number=phone_number, messages=[registration_task_json["next_message_to_send"]])
+            send_callbell_message(phone_number=phone_number, messages=[registration_task_json["next_message_to_send"]])
             
             redis_client.set(f"{contact_id}:getting_data_from_user", "1")
     else:
@@ -1099,54 +1094,56 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
 
         if json_response and 'action' in json_response and json_response['action'] == "INITIATE_FULL_PROCESSING":
             logger.info(f"MVP Crew: Iniciando processamento completo para contact_id {contact_id}")
-            strategic_advisor_instance = get_strategic_advisor_agent()
-            response_craftman_instance = get_response_craftsman_agent()
-            
-            strategic_advise_task = create_develop_strategy_task(strategic_advisor_instance)
-            response_craft_task = create_craft_response_task(response_craftman_instance)
-            
-            logger.info(f"MVP Crew: Iniciando processamento completo para contact_id {contact_id}")
 
-            # Criando estratégia
-            crew_strategic = Crew(
-                agents=[
-                    strategic_advisor_instance
-                ],
-                tasks=[
-                    strategic_advise_task
-                ],
-                process=Process.sequential,
-                verbose=True
-            )
-            
-            if updated_state and isinstance(updated_state, dict):
-                state = updated_state
-                state_manager.save_state(contact_id, state)
+            if not json_response.get('is_plan_acceptable'):
+                strategic_advisor_instance = get_strategic_advisor_agent()
+                
+                strategic_advise_task = create_develop_strategy_task(strategic_advisor_instance)
+                
+                logger.info(f"MVP Crew: Iniciando processamento completo para contact_id {contact_id}")
 
-            inputs_strategic = {
-                "profile_customer_task_output": str(redis_client.get(f"{contact_id}:customer_profile")),
-                "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
-                "operational_context": json_response.get('operational_context', ''),
-                "identified_topic": json_response.get('identified_topic', ''),
-                "conversation_state": str(state),
-                "timestamp": datetime.datetime.now().isoformat(),
-                "turn": state["metadata"]["current_turn_number"]
-            }
-            
-            crew_strategic.kickoff(inputs_strategic)
-            
-            # Saving Profile and Strategic Plan
-            qdrant_client = get_client()
-            
-            strategic_advise_task_str = strategic_advise_task.output.raw
-            strategic_advise_task_json, updated_state = parse_json_from_string(strategic_advise_task_str)
+                # Criando estratégia
+                crew_strategic = Crew(
+                    agents=[
+                        strategic_advisor_instance
+                    ],
+                    tasks=[
+                        strategic_advise_task
+                    ],
+                    process=Process.sequential,
+                    verbose=True
+                )
 
-            if updated_state and isinstance(updated_state, dict):
-                state = updated_state
-                state_manager.save_state(contact_id, state)
+                inputs_strategic = {
+                    "profile_customer_task_output": str(redis_client.get(f"{contact_id}:customer_profile")),
+                    "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
+                    "operational_context": json_response.get('operational_context', ''),
+                    "identified_topic": json_response.get('identified_topic', ''),
+                    "conversation_state": str(distill_conversation_state('StrategicAdvisor', state)),
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "turn": state["metadata"]["current_turn_number"]
+                }
+                
+                crew_strategic.kickoff(inputs_strategic)
+                
+                strategic_advise_task_str = strategic_advise_task.output.raw
+                strategic_advise_task_json, updated_state = parse_json_from_string(strategic_advise_task_str)
+
+                redis_client.set(f"{contact_id}:strategic_plan", strategic_advise_task_str)
+
+                if updated_state and isinstance(updated_state, dict):
+                    for k in updated_state:
+                        state[k] = updated_state[k]
+
+                    state['strategic_plan'] = strategic_advise_task_json
+
+                    state_manager.save_state(contact_id, state)
             # ===============================================
                 
             # Craftando mensagens
+            response_craftman_instance = get_response_craftsman_agent()
+            response_craft_task = create_craft_response_task(response_craftman_instance)
+
             crew_craft_messages = Crew(
                 agents=[
                     response_craftman_instance  
@@ -1164,7 +1161,7 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
             
 
             inputs_craft = {
-                "develop_strategy_task_output": str(strategic_advise_task_json),
+                "develop_strategy_task_output": str(redis_client.get(f"{contact_id}:strategic_plan")),
                 "profile_customer_task_output": str(redis_client.get(f"{contact_id}:customer_profile")),
                 "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
                 "operational_context": json_response.get('operational_context', ''),
@@ -1181,12 +1178,8 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
             response_craft_json = None
             response_craft_str = response_craft_task.output.raw
 
-            response_craft_json, updated_state = parse_json_from_string(response_craft_str)
+            response_craft_json = parse_json_from_string(response_craft_str, update=False)
 
-            if updated_state and isinstance(updated_state, dict):
-                state = updated_state
-                state_manager.save_state(contact_id, state)
-                
             redo = False
             if response_craft_json:
                 if 'Final Answer' in response_craft_json:
@@ -1214,15 +1207,16 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
                 
             
             if redo:
-                run_mvp_crew(contact_id, phone_number, redis_client, history)
+                run_mvp_crew_2(contact_id, phone_number, redis_client, history)
             
             else:
-                response_craft_json['contact_id'] = contact_id
-                
-                SaveFastMemoryMessages()._run(
-                    response_craft_json,
-                    contact_id
-                )
+                response_json_save = response_craft_json.copy()
+                response_json_save['contact_id'] = contact_id
+
+                if 'plan_names' in response_json_save:
+                    del response_json_save['plan_names']
+
+                redis_client.set(f'{contact_id}:fast_memory_messages', json.dumps(response_json_save))
         
         delivery_coordinator_instance = get_delivery_coordinator_agent()
         delivery_coordinator_task = create_coordinate_delivery_task(delivery_coordinator_instance)
@@ -1238,33 +1232,6 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
             verbose=True
         )
         
-        qdrant_client = get_client()
-        
-        scroll_memory = qdrant_client.scroll(
-            collection_name="FastMemoryMessages",
-            limit=1000000000,
-            with_vectors=False,
-            with_payload=True
-            )
-        
-        scroll_profile = qdrant_client.scroll(
-            collection_name='UserProfiles',
-            limit=1000000000,
-            with_vectors=False,
-            with_payload=True
-        )
-        
-        profile = None
-        for point_profile in scroll_profile[0]:
-            if point_profile.payload.get('contact_id') == contact_id:
-                profile = point_profile.payload.copy()
-                break
-            
-        memory = None
-        for point_memory in scroll_memory[0]:
-            if point_memory.payload.get('contact_id') == contact_id:
-                memory = point_memory.payload.copy()
-                break
         
         plans = redis_client.hget(f'contact:{contact_id}', 'plan')
         if plans:
@@ -1358,101 +1325,110 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
 """
                 redis_client.hset(f"contact:{contact_id}", 'system_input', system_input)    
             
+        # =============================================================================================================================
+        last_messages_processed = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+        
+        try:
+            fast_memory_messages = json.loads(redis_client.get(f'{contact_id}:fast_memory_messages'))
+        except:
+            fast_memory_messages = {}
 
-        if memory and profile:
-            history_messages = ''
-            if history:
-                history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status") == "received" else "customer"} - {message.get("text")}' for message in reversed(history.get('messages', [])[:5])])
-            
-            last_messages_processed = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
-            
-            inputs_delivery_crew = {
-                "identified_topic": json_response.get('identified_topic', ''),
-                "operational_context": json_response.get('operational_context', ''),
-                "message_text_original": '\n'.join(last_messages_processed),
-                "primary_messages_sequence": json.dumps(memory.get('primary_messages_sequence', ''), indent=4),
-                "proactive_content_generated": json.dumps(memory.get('proactive_content_generated', ''), indent=4),
-                "client_profile": str(profile.get('profile_customer', '')),
-                "history": history_messages,
-                "timestamp": datetime.datetime.now().isoformat(),
-                "conversation_state": str(distill_conversation_state('DeliveryCoordinator', state)),
-                "turn": state["metadata"]["current_turn_number"]
-            }
-            
-            delivery_crew.kickoff(inputs_delivery_crew)
-            
-            response_delivery_str = delivery_coordinator_task.output.raw
-            response_delivery_json, updated_state = parse_json_from_string(response_delivery_str)
+        primary_messages_sequence = fast_memory_messages.get('primary_messages_sequence', [])
+        proactive_content_generated = fast_memory_messages.get('proactive_content_generated', [])
 
-            if updated_state and isinstance(updated_state, dict):
-                state = updated_state
-                state_manager.save_state(contact_id, state)
+        inputs_delivery_crew = {
+            "identified_topic": json_response.get('identified_topic', ''),
+            "operational_context": json_response.get('operational_context', ''),
+            "message_text_original": '\n'.join(last_messages_processed),
+            "primary_messages_sequence": str(primary_messages_sequence),
+            "proactive_content_generated": str(proactive_content_generated),
+            "client_profile": redis_client.get(f'{contact_id}:customer_profile'),
+            "history": history_messages,
+            "timestamp": datetime.datetime.now().isoformat(),
+            "conversation_state": str(distill_conversation_state('DeliveryCoordinator', state)),
+            "turn": state["metadata"]["current_turn_number"]
+        }
+        
+        delivery_crew.kickoff(inputs_delivery_crew)
+        
+        response_delivery_str = delivery_coordinator_task.output.raw
+        response_delivery_json, updated_state = parse_json_from_string(response_delivery_str)
 
-            if response_delivery_json:
-                logger.info(f'[{contact_id}] - response_delivery_json existe.')
-
-                if not 'primary_messages_sequence_choosen_index' in response_delivery_json:
-                    logger.info(f'[{contact_id}] - "primary_messages_sequence_choosen_index" NÃO está em response_delivery_json. Chamando run_mvp_crew.')
-                    run_mvp_crew(contact_id, phone_number, redis_client, history)
+        if updated_state and isinstance(updated_state, dict):
+            for k in updated_state:
+                if k in ['products_discussed'] and k in state:
+                    state[k].append(updated_state[k])
+                
                 else:
-                    logger.info(f'[{contact_id}] - "primary_messages_sequence_choosen_index" está em response_delivery_json. Prosseguindo com a lógica de order/Final Answer.')
+                    state[k] = updated_state[k]
 
-                payload = memory.copy()
-                if 'order' in response_delivery_json:
-                    logger.info(f'[{contact_id}] - "order" encontrado em response_delivery_json. Enviando mensagens Callbell.')
+            state_manager.save_state(contact_id, state)
 
-                    try:
-                        if state.get('communication_preference').get("prefers_audio"):
-                            logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
-                            audio_url = eleven_labs_service_main(response_delivery_json['order'])
-                            CallbellSendTool()._run(phone_number=phone_number, type="audio", audio_url=audio_url)
+        if response_delivery_json:
+            logger.info(f'[{contact_id}] - response_delivery_json existe.')
+
+            if not 'primary_messages_sequence_choosen_index' in response_delivery_json:
+                logger.info(f'[{contact_id}] - "primary_messages_sequence_choosen_index" NÃO está em response_delivery_json. Chamando run_mvp_crew_2.')
+                run_mvp_crew_2(contact_id, phone_number, redis_client, history)
+            else:
+                logger.info(f'[{contact_id}] - "primary_messages_sequence_choosen_index" está em response_delivery_json. Prosseguindo com a lógica de order/Final Answer.')
+
+
+            if 'order' in response_delivery_json:
+                logger.info(f'[{contact_id}] - "order" encontrado em response_delivery_json. Enviando mensagens Callbell.')
+
+                try:
+                    if state.get('communication_preference').get("prefers_audio"):
+                        logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
+                        audio_url = eleven_labs_service_main(response_delivery_json['order'])
+                        send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                    
+                    else:
+                    
+                        has_long_message = False
+                        for message in response_delivery_json['order']:
+                            if len(message) > 250:
+                                has_long_message = True
                         
-                        else:
-                        
-                            has_long_message = False
+                        if has_long_message and not all([len(message) > 250 for message in response_delivery_json['order']]):
+                            logger.info(f"[{contact_id}] - Encontrada mensagem com mais de 250 caracteres. Enviando mensagem de áudio.")
+                                        
                             for message in response_delivery_json['order']:
                                 if len(message) > 250:
-                                    has_long_message = True
-                            
-                            if has_long_message and not all([len(message) > 250 for message in response_delivery_json['order']]):
-                                logger.info(f"[{contact_id}] - Encontrada mensagem com mais de 250 caracteres. Enviando mensagem de áudio.")
-                                            
-                                for message in response_delivery_json['order']:
-                                    if len(message) > 250:
-                                        audio_url = eleven_labs_service_main([message])
-                                        CallbellSendTool()._run(phone_number=phone_number, type="audio", audio_url=audio_url)
+                                    audio_url = eleven_labs_service_main([message])
+                                    send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
 
-                                    else:
-                                        CallbellSendTool()._run(phone_number=phone_number, messages=[message])
-                            
-                            else:
-                                logger.info(f"[{contact_id}] - Não encontrada mensagem com mais de 250 caracteres.")
-                                
-                                messages_all_str = '\n'.join(response_delivery_json['order'])
-                                if len(messages_all_str) > 300:
-                                    logger.info(f"[{contact_id}] - Todas as mensagens somam mais de 300 caracteres. Enviando mensagem de áudio.")
-
-                                    audio_url = eleven_labs_service_main(messages_all_str)
-                                    CallbellSendTool()._run(phone_number=phone_number, type="audio", audio_url=audio_url)
                                 else:
-                                    logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
-                                    CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['order'])
+                                    send_callbell_message(phone_number=phone_number, messages=[message])
+                        
+                        else:
+                            logger.info(f"[{contact_id}] - Não encontrada mensagem com mais de 250 caracteres.")
+                            
+                            messages_all_str = '\n'.join(response_delivery_json['order'])
+                            if len(messages_all_str) > 300:
+                                logger.info(f"[{contact_id}] - Todas as mensagens somam mais de 300 caracteres. Enviando mensagem de áudio.")
 
-                    except Exception as e:
-                        logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
+                                audio_url = eleven_labs_service_main(messages_all_str)
+                                send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                            else:
+                                logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
+                                send_callbell_message(phone_number=phone_number, messages=response_delivery_json['order'])
 
+                except Exception as e:
+                    logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
 
-                    new_payload = memory.copy()
+                if fast_memory_messages:
+                    new_payload = fast_memory_messages.copy()
                     logger.info(f'[{contact_id}] - Payload de point_memory copiado para new_payload.')
 
                     if response_delivery_json['primary_messages_sequence_choosen_index']:
                         logger.info(f'[{contact_id}] - "primary_messages_sequence_choosen_index" existe e não está vazio. Removendo mensagens primárias.')
-                        logger.info(f'[{contact_id}] - {memory["primary_messages_sequence"]}')
+                        logger.info(f'[{contact_id}] - {fast_memory_messages["primary_messages_sequence"]}')
                         for index in response_delivery_json['primary_messages_sequence_choosen_index']:
                             
                             try:
-                                logger.info(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence. [{memory["primary_messages_sequence"][index]}]')
-                                new_payload['primary_messages_sequence'].remove(memory['primary_messages_sequence'][index])
+                                logger.info(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence. [{fast_memory_messages["primary_messages_sequence"][index]}]')
+                                new_payload['primary_messages_sequence'].remove(fast_memory_messages['primary_messages_sequence'][index])
                             except (ValueError, IndexError) as e:
                                 logger.error(f"[{contact_id}] - Índice {index} não encontrado em primary_messages_sequence.")
 
@@ -1464,114 +1440,98 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                             
                             try:
                                 logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
-                                new_payload['proactive_content_generated'].remove(memory['proactive_content_generated'][index])
+                                new_payload['proactive_content_generated'].remove(fast_memory_messages['proactive_content_generated'][index])
                             except (ValueError, IndexError) as e:
                                 logger.error(f"[{contact_id}] - Erro ao remover índice {index} de proactive_content_generated: {e}", exc_info=True)
 
                         logger.info(f'[{contact_id}] - Remoção de conteúdo proativo concluída.')
 
                     try:
-                        logger.info(f'[{contact_id}] - Fazendo upsert no Qdrant para FastMemoryMessages com ID: {point_memory.id}.')
-                        qdrant_client.upsert(
-                            'FastMemoryMessages',
-                            [
-                                models.PointStruct(
-                                    id=str(point_memory.id),
-                                    vector={},
-                                    payload=new_payload
-                                )
-                            ]
-                        )
+                        logger.info(f'[{contact_id}] - upload no redis das novas mensagens.')
+                        redis_client.set()
                         logger.info(f'[{contact_id}] - Upsert no Qdrant para FastMemoryMessages CONCLUÍDO.')
                     except Exception as e:
                         logger.error(f'[{contact_id}] - ERRO ao fazer upsert no Qdrant para FastMemoryMessages: {e}', exc_info=True)
 
-                elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
-                    logger.info(f'[{contact_id}] - "Final Answer" e "choosen_messages" encontrados em response_delivery_json. Enviando mensagens Callbell.')
-                    try:
-                        CallbellSendTool()._run(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
-                        logger.info(f'[{contact_id}] - Mensagens do "Final Answer" enviadas via CallbellSendTool.')
-                    except Exception as e:
-                        logger.error(f'[{contact_id}] - ERRO ao enviar mensagens do "Final Answer" via CallbellSendTool: {e}', exc_info=True)
-
-                    new_response_json = {}
-                    new_payload = point_memory.payload.copy()
-                    logger.info(f'[{contact_id}] - Payload de point_memory copiado para new_payload.')
-
-                    logger.info(f'[{contact_id}] - Copiando itens de response_craft_json["Final Answer"] para new_response_json.')
-                    for k, v in response_craft_json['Final Answer'].items():
-                        new_response_json[k] = v
-                    logger.info(f'[{contact_id}] - Cópia para new_response_json concluída. Conteúdo: {list(new_response_json.keys())}.')
-
-                    if new_response_json.get('primary_messages_sequence_choosen_index'):
-                        logger.info(f'[{contact_id}] - "primary_messages_sequence_choosen_index" existe em new_response_json. Removendo mensagens primárias.')
-                        for index in new_response_json['primary_messages_sequence_choosen_index']:
-                            
-                            try:
-                                logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
-                                new_payload['primary_messages_sequence'].remove(payload['primary_messages_sequence'][index])
-                            except (ValueError, IndexError) as e:
-                                logger.error(f"[{contact_id}] - Índice {index} não encontrado em primary_messages_sequence.")
-
-                        logger.info(f'[{contact_id}] - Remoção de mensagens primárias do payload concluída.')
-
-                    if 'proactive_content_choosen_index' in new_response_json and new_response_json['proactive_content_choosen_index']:
-                        logger.info(f'[{contact_id}] - "proactive_content_choosen_index" existe em new_response_json. Removendo conteúdo proativo.')
-                        for index in new_response_json['proactive_content_choosen_index']:
-                            
-                            try:
-                                logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
-                                new_payload['proactive_content_generated'].remove(payload['proactive_content_generated'][index])
-                            except (ValueError, IndexError) as e:
-                                logger.error(f"[{contact_id}] - Índice {index} não encontrado em proactive_content_generated.")
-
-                        logger.info(f'[{contact_id}] - Remoção de conteúdo proativo de new_response_json concluída.')
-
-                    try:
-                        logger.info(f'[{contact_id}] - Fazendo upsert no Qdrant para FastMemoryMessages com ID: {point_memory.id}.')
-                        qdrant_client.upsert(
-                            'FastMemoryMessages',
-                            [
-                                models.PointStruct(
-                                    id=str(point_memory.id),
-                                    vector={},
-                                    payload=new_payload
-                                )
-                            ]
-                        )
-                        logger.info(f'[{contact_id}] - Upsert no Qdrant para FastMemoryMessages CONCLUÍDO.')
-                    except Exception as e:
-                        logger.error(f'[{contact_id}] - ERRO ao fazer upsert no Qdrant para FastMemoryMessages (Final Answer): {e}', exc_info=True)
-
-                if 'messages_plans_to_send' in locals() and 'plans_names_to_send' in locals() and messages_plans_to_send and plans_names_to_send:
-                    CallbellSendTool()._run(phone_number=phone_number, messages=messages_plans_to_send)
-
-                    for plan in plans_names_to_send:
-                        redis_client.set(f"contact:{contact_id}:sendend_catalog_{plan}", "1")
-
-                logger.info(f'[{contact_id}] - Iniciando processamento de mensagens restantes no Redis.')
+            elif 'Final Answer' in response_delivery_json and 'choosen_messages' in response_delivery_json['Final Answer']:
+                logger.info(f'[{contact_id}] - "Final Answer" e "choosen_messages" encontrados em response_delivery_json. Enviando mensagens Callbell.')
                 try:
-                    all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
-                    logger.info(f'[{contact_id}] - Todas as mensagens na fila Redis antes da filtragem: {len(all_messages)} itens.')
-                    messages_left = [x for x in all_messages if x not in last_messages_processed]
-                    logger.info(f'[{contact_id}] - Mensagens restantes após filtragem (não processadas): {len(messages_left)} itens.')
-
-                    pipe = redis_client.pipeline()
-                    logger.info(f'[{contact_id}] - Pipeline Redis criado.')
-
-                    pipe.delete(f'contacts_messages:waiting:{contact_id}')
-                    logger.info(f'[{contact_id}] - Comando DELETE adicionado ao pipeline para contacts_messages:waiting:{contact_id}.')
-
-                    if messages_left:
-                        pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
-                        logger.info(f'[{contact_id}] - Comando RPUSH adicionado ao pipeline para {len(messages_left)} mensagens restantes.')
-
-                    pipe.execute()
-                    logger.info(f'[{contact_id}] - Pipeline Redis EXECUTADO.')
+                    send_callbell_message(phone_number=phone_number, messages=response_delivery_json['Final Answer']['choosen_messages'])
+                    logger.info(f'[{contact_id}] - Mensagens do "Final Answer" enviadas via CallbellSendTool.')
                 except Exception as e:
-                    logger.error(f'[{contact_id}] - ERRO durante o processamento das mensagens restantes no Redis: {e}', exc_info=True)
+                    logger.error(f'[{contact_id}] - ERRO ao enviar mensagens do "Final Answer" via CallbellSendTool: {e}', exc_info=True)
 
-            else:
-                logger.info(f'[{contact_id}] - response_delivery_json é vazio ou nulo. Chamando run_mvp_crew (condição principal).')
-                run_mvp_crew(contact_id, phone_number, redis_client, history)
+                new_response_json = {}
+                new_payload = fast_memory_messages.copy()
+                logger.info(f'[{contact_id}] - Payload de point_memory copiado para new_payload.')
+
+                logger.info(f'[{contact_id}] - Copiando itens de response_craft_json["Final Answer"] para new_response_json.')
+                for k, v in response_craft_json['Final Answer'].items():
+                    new_response_json[k] = v
+                logger.info(f'[{contact_id}] - Cópia para new_response_json concluída. Conteúdo: {list(new_response_json.keys())}.')
+
+                if new_response_json.get('primary_messages_sequence_choosen_index'):
+                    logger.info(f'[{contact_id}] - "primary_messages_sequence_choosen_index" existe em new_response_json. Removendo mensagens primárias.')
+                    for index in new_response_json['primary_messages_sequence_choosen_index']:
+                        
+                        try:
+                            logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
+                            new_payload['primary_messages_sequence'].remove(fast_memory_messages['primary_messages_sequence'][index])
+                        except (ValueError, IndexError) as e:
+                            logger.error(f"[{contact_id}] - Índice {index} não encontrado em primary_messages_sequence.")
+
+                    logger.info(f'[{contact_id}] - Remoção de mensagens primárias do payload concluída.')
+
+                if 'proactive_content_choosen_index' in new_response_json and new_response_json['proactive_content_choosen_index']:
+                    logger.info(f'[{contact_id}] - "proactive_content_choosen_index" existe em new_response_json. Removendo conteúdo proativo.')
+                    for index in new_response_json['proactive_content_choosen_index']:
+                        
+                        try:
+                            logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
+                            new_payload['proactive_content_generated'].remove(fast_memory_messages['proactive_content_generated'][index])
+                        except (ValueError, IndexError) as e:
+                            logger.error(f"[{contact_id}] - Índice {index} não encontrado em proactive_content_generated.")
+
+                    logger.info(f'[{contact_id}] - Remoção de conteúdo proativo de new_response_json concluída.')
+
+                try:
+                    logger.info(f'[{contact_id}] - upload no redis das novas mensagens.')
+                    
+                    redis_client.set(f'{contact_id}:fast_memory_messages', json.dumps(new_payload))
+
+                    logger.info(f'[{contact_id}] - Upsert no Qdrant para FastMemoryMessages CONCLUÍDO.')
+                except Exception as e:
+                    logger.error(f'[{contact_id}] - ERRO ao fazer upsert no Qdrant para FastMemoryMessages (Final Answer): {e}', exc_info=True)
+
+            if 'messages_plans_to_send' in locals() and 'plans_names_to_send' in locals() and messages_plans_to_send and plans_names_to_send:
+                send_callbell_message(phone_number=phone_number, messages=messages_plans_to_send)
+
+                for plan in plans_names_to_send:
+                    redis_client.set(f"contact:{contact_id}:sendend_catalog_{plan}", "1")
+
+            logger.info(f'[{contact_id}] - Iniciando processamento de mensagens restantes no Redis.')
+            try:
+                all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+                logger.info(f'[{contact_id}] - Todas as mensagens na fila Redis antes da filtragem: {len(all_messages)} itens.')
+                messages_left = [x for x in all_messages if x not in last_messages_processed]
+                logger.info(f'[{contact_id}] - Mensagens restantes após filtragem (não processadas): {len(messages_left)} itens.')
+
+                pipe = redis_client.pipeline()
+                logger.info(f'[{contact_id}] - Pipeline Redis criado.')
+
+                pipe.delete(f'contacts_messages:waiting:{contact_id}')
+                logger.info(f'[{contact_id}] - Comando DELETE adicionado ao pipeline para contacts_messages:waiting:{contact_id}.')
+
+                if messages_left:
+                    pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+                    logger.info(f'[{contact_id}] - Comando RPUSH adicionado ao pipeline para {len(messages_left)} mensagens restantes.')
+
+                pipe.execute()
+                logger.info(f'[{contact_id}] - Pipeline Redis EXECUTADO.')
+            except Exception as e:
+                logger.error(f'[{contact_id}] - ERRO durante o processamento das mensagens restantes no Redis: {e}', exc_info=True)
+
+        else:
+            logger.info(f'[{contact_id}] - response_delivery_json é vazio ou nulo. Chamando run_mvp_crew_2 (condição principal).')
+            run_mvp_crew_2(contact_id, phone_number, redis_client, history)
             

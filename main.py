@@ -170,6 +170,7 @@ def process_requisitions(payload):
             if contact_uuid == "71464be80c504971ae263d710b39dd1f":
                 redis_client.delete(f'processing:{contact_uuid}')
                 redis_client.delete(f'state:{contact_uuid}')
+                redis_client.delete(f"{contact_uuid}:customer_profile")
                 
             try:
                 contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True, ex=300)
@@ -190,15 +191,6 @@ def process_requisitions(payload):
                     history = history_response.json()
                     logger.info(f'[{contact_uuid}] - Histórico da Callbell obtido (status {history_response.status_code}). Total de mensagens no histórico: {len(history)}')
 
-                    if contact_uuid == '71464be80c504971ae263d710b39dd1f':
-                        history_copy = {'messages': []}
-                        
-                        for message in history.get('messages', []):
-                            if datetime.datetime.strptime(message.get('createdAt'), '%Y-%m-%dT%H:%M:%SZ') > datetime.datetime.strptime('30/05/2025 14:30:30', '%d/%m/%Y %H:%M:%S'):
-                                history_copy['messages'].append(message)
-                        
-                        history['messages'] = history_copy['messages']
-                    
                     run_mvp_crew_2(contact_uuid, phone_number, redis_client, history)
                     logger.info(f'[{contact_uuid}] - CHAMADA da função run_mvp_crew (comentada no código).')
 

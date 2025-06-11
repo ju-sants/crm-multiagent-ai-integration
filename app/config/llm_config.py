@@ -9,7 +9,7 @@ default_X_llm = LLM(
     )
 
 reasoning_X_llm = LLM(
-    model='xai/grok-3-mini-beta',
+    model='xai/grok-3-mini',
     api_key=settings.XAI_API_KEY,
     stop=None,
     stream=True
