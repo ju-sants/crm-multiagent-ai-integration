@@ -62,6 +62,7 @@ class KnowledgeService:
             'regional_availability': self._search_regional_availability,
             'get_sales_philosophy': self._search_sales_philosophy,
             'get_support_philosophy': self._search_support_philosophy,
+            'get_company_info': self._search_company_info,
             'maintenance_policy': self._search_maintenance_policy,
             'technical_limitations': self._search_technical_limitations,
             'blocker_installation_rules': self._search_blocker_installation_rules,

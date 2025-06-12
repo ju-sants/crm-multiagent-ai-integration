@@ -60,7 +60,7 @@ def send_callbell_message(phone_number: str, messages: str = None, type: str = N
                 
                 statuses.append(response.status_code)
             
-        if all(status == 200 for status in statuses):
+        if all(status in (200, 201) for status in statuses):
             return {"status": "success"}
         else:
             return {"status": "error"}

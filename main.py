@@ -24,7 +24,8 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
 app = Flask(__name__)
 redis_client = get_redis()
-# redis_client.delete(f'state:71464be80c504971ae263d710b39dd1f')
+redis_client.delete(f'processing:71464be80c504971ae263d710b39dd1f')
+print(redis_client.hgetall("71464be80c504971ae263d710b39dd1f:attachments"))
 
 client_description = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
 logger:  logging.Logger = get_logger(__name__)
@@ -109,10 +110,16 @@ def process_requisitions(payload):
         transcription = None
         if content_audio:
             try:
+                url = content_audio[0]
                 logger.info(f'[{contact_uuid}] - Iniciando transcrição de áudio para {len(content_audio)} anexos.')
-                transcription = transcript(content_audio)
+                transcription = transcript(url)
                 if transcription:
                     logger.info(f'[{contact_uuid}] - Transcrição de áudio CONCLUÍDA. Conteúdo: "{transcription[:50]}..."')
+                    logger.info(f'[{contact_uuid}] - Adicionando transcrição de áudio ao texto final.')
+                    text += f'\n{transcription}'
+
+                    static_url_part = url.split('uploads/')[1].split('?')[0]
+                    redis_client.hset(f'{contact_uuid}:attachments', static_url_part, transcription)
                 else:
                     logger.warning(f'[{contact_uuid}] - Transcrição de áudio RETORNOU VAZIO.')
             except Exception as e:
@@ -128,14 +135,14 @@ def process_requisitions(payload):
                 if description:
                     logger.info(f'[{contact_uuid}] - Descrição da imagem obtida. Adicionando ao texto.')
                     text += f'\n\n(SISTEMA): O CLIENTE MANDOU UMA IMAGEM QUE FOI DESCRITA POR UMA IA:\n\n{description}\nFIM DA DESCRIÇÃO DE IMAGEM.'
+
+                    static_url_part = attach.split('uploads/')[1].split('?')[0]
+                    redis_client.hset(f'{contact_uuid}:attachments', static_url_part, description)
                 else:
                     logger.warning(f'[{contact_uuid}] - Descrição da imagem VAZIA para {attach}.')
             except Exception as e:
                 logger.error(f'[{contact_uuid}] - ERRO ao descrever imagem {attach}: {e}', exc_info=True)
-
-        if transcription:
-            logger.info(f'[{contact_uuid}] - Adicionando transcrição de áudio ao texto final.')
-            text += f'\n{transcription}'
+            
 
         logger.info(f'[{contact_uuid}] - Texto FINAL a ser salvo no Redis: "{text[:100]}..."')
         try:
@@ -167,10 +174,10 @@ def process_requisitions(payload):
             logger.info(f'[{contact_uuid}] - NENHUMA nova mensagem chegou durante o período de espera. Tentando obter lock de processamento.')
 
             contact_lock = None
-            if contact_uuid == "71464be80c504971ae263d710b39dd1f":
-                redis_client.delete(f'processing:{contact_uuid}')
-                redis_client.delete(f'state:{contact_uuid}')
-                redis_client.delete(f"{contact_uuid}:customer_profile")
+            # if contact_uuid == "71464be80c504971ae263d710b39dd1f":
+            #     redis_client.delete(f'state:{contact_uuid}')
+            #     redis_client.delete(f"{contact_uuid}:customer_profile")
+            #     redis_client.delete(f"contact:{contact_uuid}")
                 
             try:
                 contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True, ex=300)

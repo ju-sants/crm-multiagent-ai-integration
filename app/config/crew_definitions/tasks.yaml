@@ -16,6 +16,9 @@ context_analysis_task:
     Histórico 
     
     (`{history}`), 
+
+    ---
+
     Caches 
     
     (`{l0l1_cache}`, `{l2_cache}`), 
@@ -398,15 +401,11 @@ develop_strategy_task:
     - **Contexto Operacional:** "{operational_context}"
     - **Tópico Identificado:** "{identified_topic}"
 
-    **SEU FLUXO DE TRABALHO ESTRATÉGICO:**
-    1.  **Análise Completa:** Analise TODOS os inputs para ter uma visão 360° da situação.
-    2.  **Qualificação (Se Vendas):** Verifique o `{{conversation_state}}`. Se as informações para qualificar o cliente (ex: tipo de veículo, área de operação) não estiverem presentes, sua primeira ação deve ser perguntar.
-    3.  **Consulta à Base de Conhecimento:** Use a `KnowledgeServiceTool` para obter os fatos e dados precisos (preços, termos, limitações) para sua estratégia.
-    4.  **Formulação do Plano e Mensagem Estruturada:** Defina o `conversation_goal` e os `key_talking_points`. Em seguida, popule o objeto `structured_message` de forma completa e detalhada, fornecendo ao ResponseCraftsman toda a "matéria-prima" necessária.
-    5.  **POPULAR O CHECKLIST DE ESCLARECIMENTO:** Se sua estratégia envolve apresentar um plano, você DEVE popular a chave `disclosure_checklist` no `{{conversation_state}}` com todos os termos contratuais e operacionais importantes, definindo o status inicial deles como 'pending'.
-    6.  **Atualização do Estado:** Crie um objeto `updated_state` presente em sua saida esperada, com o resultado da sua análise apenas adicionando os tópicos judiciais e contratuais identificados em `disclosure_checklist`.
-    7.  **disclosure_checklist:** Você recebeu uma lista de dicionarios contendo tópicos contratuais e termos importantes. Você deve apenas ADICIONAR tópicos e nunca os retire. Use isso como um guia sobre quais tópicos e termos você deve abordar.
-
+    **SEU FLUXO DE TRABALHO:**
+    Execute o **"FLUXO DE DEFINIÇÃO DE ESTRATÉGIA"** detalhado em seu `backstory`. Analise os inputs, qualifique o cliente (se necessário), colete dados com a `KnowledgeServiceTool`, defina a estratégia, gere a `structured_message` e, crucialmente, popule o `disclosure_checklist` antes de atualizar o estado da conversa.
+    Use a `KnowledgeServiceTool` para obter todas as informações que precise, utilize a query em lote e envie tudo que precisar de uma só vez, sempre envie na query requisições para `get_company_info` e `get_sales_philosophy` ou `get_support_philosophy`.
+    
+    
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
     o `excpected_output` é um exemplo de saída esperada.
@@ -414,41 +413,45 @@ develop_strategy_task:
   expected_output: |
     {
       "task_output": {
-        "strategy_type": "SALES_RECOMMENDATION",
-        "conversation_goal": "Apresentar as opções Híbrido e GSM para a frota de caminhões do cliente, destacando prós e contras de cada um para uma decisão informada.",
-        "key_talking_points": [
-          "Diferença de cobertura e custo entre Híbrido e GSM.",
-          "Importância da área de operação na escolha do plano.",
-          "Transparência sobre limitações técnicas de cada tecnologia."
-        ],
-        "questions_to_ask_client": [],
-        "system_action_request": null,
-        "internal_notes_for_craftsman": "Cliente parece sensível a preço, mas opera em áreas remotas. O tom deve ser de um consultor imparcial, ajudando-o a pesar o custo-benefício de cada opção.",
-        "empathy_statement_suggestion": null,
-        "structured_message": {
-          "greeting_and_context": "Para a sua frota de caminhões, considerando que rodam tanto em cidades quanto em áreas rurais, temos duas soluções excelentes, cada uma com um foco diferente.",
-          "core_recommendation": [
-            {
-              "plan_name": "Plano Satelital Híbrido",
-              "key_selling_point": "É a nossa solução mais completa, com garantia de cobertura em tempo real em 100% do território nacional.",
-              "how_it_works": "Ele usa a rede de celular (GSM) como principal e, ao entrar em uma área de sombra, muda automaticamente para a comunicação via satélite, garantindo que você nunca perca o contato.",
-              "pricing_summary": "Adesão de R$400 e mensalidade a partir de R$180.",
-              "key_contractual_term": "O contrato não possui multa de fidelidade, apenas uma taxa pelo serviço de desinstalação se o cancelamento ocorrer antes de 24 meses.",
-              "potential_limitation": "O custo mensal é mais elevado, sendo um investimento maior na segurança e na gestão contínua."
+        "conversation_blueprint": {
+          "customer_context_summary": {
+            "relevant_profile_insights": "Cliente com histórico de roubo. Principal motivador é o medo de perda e o desejo de não ficar 'a pé'. Não é sensível a preço, mas sim à percepção de segurança e garantia.",
+            "insights_from_current_session": "Na última mensagem, perguntou sobre a 'proteção' dos planos, indicando que o reembolso FIPE é seu principal ponto de interesse."
+          },
+          "product_presentation_strategy": {
+            "presentation_order": ["Plano Proteção Total PGS", "Plano Rastreamento Moto"],
+            "primary_offer": {
+              "plan_name": "Plano Proteção Total PGS",
+              "sales_angle": "Focar na tranquilidade absoluta: a garantia do reembolso FIPE e o benefício exclusivo da 'moto reserva'. Atacar diretamente o medo de ficar a pé."
             },
-            {
-              "plan_name": "Rastreador GSM 4G",
-              "key_selling_point": "Esta é a nossa alternativa com o melhor custo-benefício, ideal se a maior parte da sua operação ocorre em locais com sinal de celular.",
-              "how_it_works": "Ele utiliza a rede 4G e, caso o veículo entre em uma área sem sinal, ele armazena todo o trajeto na memória interna e descarrega as informações automaticamente assim que se reconecta.",
-              "pricing_summary": "Adesão de R$200 e mensalidade a partir de R$65.",
-              "key_contractual_term": "A política de cancelamento é a mesma: sem multa, apenas a taxa de desinstalação caso seja antes do prazo de 24 meses.",
-              "potential_limitation": "Em áreas de sombra, o acompanhamento não é em tempo real; você verá a localização assim que o veículo retornar a uma área com cobertura."
+            "secondary_offer": {
+              "plan_name": "Plano Rastreamento Moto",
+              "sales_angle": "Apresentar como a opção de monitoramento essencial e de excelente custo-benefício, mas reforçar que não possui a proteção financeira que ele demonstrou buscar."
             }
-          ],
-
-          "call_to_action": {
-            "closing_question": "Analisando o dia a dia da sua operação, a garantia de cobertura total do plano Híbrido é a prioridade, ou um plano mais focado no custo-benefício como o GSM se encaixa melhor?",
-            "next_step_suggestion": null
+          },
+          "disclosure_and_transparency_plan": {
+            "priority_checklist_items": ["IS_NOT_INSURANCE", "REIMBURSEMENT_CLAUSE_PGS", "CANCELLATION_POLICY"],
+            "communication_approach": "Introduzir proativamente que o PGS não é um seguro tradicional, mas um serviço superior com garantia de reembolso, para evitar confusão e gerar valor."
+          },
+          "communication_guidance": {
+            "tone_and_style": "Tom empático e seguro. Reconhecer a experiência passada do cliente com o roubo para criar rapport. Evitar jargões, focar na sensação de segurança.",
+            "key_talking_points": ["Diferença entre rastreamento e proteção financeira", "Benefício 'Moto Reserva'", "Funcionamento do bloqueio via central"],
+            "key_questions_to_ask": ["Considerando sua experiência, ter a garantia do valor da moto de volta é o mais importante para você?", "Para eu te passar o valor exato da mensalidade do plano com proteção, qual o modelo e ano da sua moto?"]
+          },
+          "information_payload": {
+            "plano_pgs_data": {
+              "pricing": { "adesao": 120.00, "faixas_mensalidade": [ { "fipe_range": "Até R$ 15.000,00", "valor": 77.00 }, { "...": "..." } ] },
+              "contract_terms": { "contract_id": "moto_pgs_com_cobertura", "reimbursement_clause": { "payment_deadline": "90 dias" }, "inadimplencia": { "consequences": ["Suspensão com 1 dia de atraso"] } },
+              "faq": [{"question": "Perco a garantia da moto?", "answer": "Não a garantia completa, mas pode impactar partes elétricas..."}]
+            },
+            "plano_rastreamento_data": {
+              "pricing": { "adesao": 120.00, "mensalidade": 60.00 },
+              "contract_terms": { "contract_id": "standard_rastreamento", "cancellation": { "policy": "Não há multa, apenas taxa de desinstalação." } }
+            },
+            "general_policies": {
+              "blocker_rules_moto": "A função de bloqueio NÃO está disponível no aplicativo para motos. O acionamento é feito exclusivamente pela central...",
+              "installation_policy_moto": "A instalação de rastreadores em motocicletas é feita EXCLUSIVAMENTE em uma de nossas lojas autorizadas..."
+            }
           }
         }
       },
@@ -558,7 +561,7 @@ craft_response_task:
 
 
     **DADOS PARA SUA ANÁLISE:**
-    - **Plano Estratégico (O Que Fazer):** 
+    - **Dossiê Estratégico  (O Que Fazer):** 
     
     `{develop_strategy_task_output}`
     
@@ -569,16 +572,23 @@ craft_response_task:
     - **Perfil do Cliente (O Histórico):** 
     
     `{profile_customer_task_output}`
+
+    - **Histórico de Conversa (O Que Já Foi Falado):**
+    
+    "{history}"
     
     - **Catálogos Enviados Recentemente:** 
     
     "{recently_sent_catalogs}"
     
     **SEU FLUXO DE TRABALHO:**
-    1.  **Analise CUIDADOSAMENTE plano estratégico. Use os componentes dele para construir a `primary_messages_sequence` e a `proactive_content_generated`.**
-    2.  **Siga a "TRÍADE DA BOA MENSAGEM"** (Conteúdo, Concisão, Atitude) definida em seu `backstory` para criar a `primary_messages_sequence`, com mensagens curtas de uma frase **CURTA** apenas..
-    3.  **Para cada informação, crie uma ou mais mensagens curtas (1 frase.)** para a `primary_messages_sequence`. Siga a "TRÍADE DA BOA MENSAGEM".
-    4.  **Decida sobre o envio de catálogos e popule a lista `plan_names` seguindo as regras abaixo.**
+    1.  **Analise profundamente o `{{strategic_briefing}}`.** Ele contém tudo que você precisa saber.
+    2.  **Execute sua principal tarefa de DECONSTRUÇÃO:** Transforme as informações do dossiê (benefícios, preços, limitações, termos) em uma lista de mensagens curtas de uma frase em `primary_messages_sequence`.
+    3. **Nunca mande mensagens ou assuntos repetidos.** Use o `{{conversation_state}}` e o `{{history}}` para evitar redundâncias e manter a fluidez da conversa.
+    3.  **Aplique a lógica de envio de catálogo** para popular a lista `plan_names`.
+    4.  **Siga a "TRÍADE DA BOA MENSAGEM"** (Conteúdo, Concisão, Atitude) definida em seu `backstory` para criar a `primary_messages_sequence`, com mensagens curtas de uma frase **CURTA** apenas..
+    5.  Gere conteúdo proativo em `proactive_content_generated`.
+    6.  **Decida sobre o envio de catálogos e popule a lista `plan_names` seguindo as regras abaixo.**
 
     **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
     - Consulte a lista `{recently_sent_catalogs}`.

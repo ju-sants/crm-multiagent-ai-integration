@@ -6,7 +6,7 @@ from qdrant_client import models
 import uuid
 from typing import Any, Dict
 import redis
-
+import copy
 
 
 from app.agents.agent_declaration import (
@@ -138,7 +138,6 @@ def distill_conversation_state(agent_name: str, full_state: Dict[str, Any]) -> D
         distilled_state["customer_name"] = next((e["value"] for e in last_entities if e["entity"] == "customer_name"), None)
         last_sentiment_entry = full_state.get("user_sentiment_history", [{}])[-1] if full_state.get("user_sentiment_history", []) else {}
         distilled_state["sentiment_of_last_turn"] = last_sentiment_entry.get("sentiment")
-        distilled_state['disclosure_topics_pending'] = [f'{item.get("topic")} - {item.get("content")}' for item in full_state.get("disclosure_checklist", []) if item.get("status") == "pending"]
 
     elif agent_name == "DeliveryCoordinator":
         distilled_state["user_sentiment_history_summary"] = [s.get("sentiment") for s in full_state.get("user_sentiment_history", [])]
@@ -755,6 +754,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                             logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
                             audio_url = eleven_labs_service_main(response_delivery_json['order'])
                             send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+
                         
                         else:
                         
@@ -770,6 +770,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                                     if len(message) > 250:
                                         audio_url = eleven_labs_service_main([message])
                                         send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                                        redis_client.hset(f"{contact_id}:attachments", audio_url, message)
 
                                     else:
                                         send_callbell_message(phone_number=phone_number, messages=[message])
@@ -783,6 +784,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
 
                                     audio_url = eleven_labs_service_main(messages_all_str)
                                     send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                                    redis_client.hset(f"{contact_id}:attachments", audio_url, messages_all_str)
                                 else:
                                     logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
                                     send_callbell_message(phone_number=phone_number, messages=response_delivery_json['order'])
@@ -936,8 +938,35 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
 
     history_messages = ''
     if history:
-        history_messages = '\n'.join([f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}' if message.get("text") else '' for message in reversed(history.get('messages', [])[:10])])
-    
+        for message in reversed(history.get('messages', [])[:10]):
+            if message.get("text"):
+                history_messages += f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}\n'
+            elif message.get("attachments"):
+                attachments = message.get("attachments", [])
+
+                list_of_dicts = False
+                if isinstance(attachments[0], dict):
+                    list_of_dicts = True
+                
+                elif isinstance(attachments[0], str):
+                    list_of_dicts = False
+
+                for attachment in attachments:
+                    raw_url = attachment.get("payload", {}).get('url', '') if list_of_dicts else attachment
+
+                    if "audio_eleven_agent_AI" in raw_url:
+                        url = raw_url
+
+                    else:
+                        url = raw_url.split('uploads/')[1].split('?')[0] if 'uploads/' in raw_url else ''
+
+                    if url:
+                        mapped_attachments = redis_client.hgetall(f"{contact_id}:attachments")
+                        if mapped_attachments:
+                            attachment_text = mapped_attachments.get(url, "")
+                            if attachment_text:
+                                history_messages += f'{"AI" if message.get("status", "") == "sent" and "audio_eleven_agent_AI" in url else "collaborator" if not message.get("status", "") == "received" else "customer"} - {attachment_text}\n'
+
     state = state_manager.get_state(contact_id)
 
     state["metadata"]["current_turn_number"] += 1
@@ -1021,29 +1050,7 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
     
 
     if registration_task or jump_to_registration_task:
-        qdrant_client = get_client()
-                
-        if not qdrant_client.collection_exists("CustomersDataForSignUp"):
-            qdrant_client.create_collection(
-                'CustomersDataForSignUp',
-                vectors_config=None,
-            )
-            
-        scroll = qdrant_client.scroll(
-            "CustomersDataForSignUp",
-            limit=1000000000,
-            with_vectors=False,
-            with_payload=True
-        )
-        
-        point_user_data = None
-        for point in scroll[0]:
-            if point.payload.get('contact_id') == contact_id:
-                point_user_data = point
-        
-        user_data_so_far = None
-        if point_user_data:
-            user_data_so_far = point_user_data.payload.copy()
+        user_data_so_far = redis_client.get(f"{contact_id}:user_data_so_far")
         
         plan_details = redis_client.get(f"{contact_id}:plan_details")
         
@@ -1080,6 +1087,8 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
             state = updated_state
 
             state_manager.save_state(contact_id, state)
+
+        redis_client.set(f"{contact_id}:user_data_so_far", json.dumps(registration_task_json))
 
         if registration_task_json and all([registration_task_json.get("is_data_collection_complete"), registration_task_json.get("status") == 'COLLECTION_COMPLETE']):
             send_single_telegram_message(registration_task_str, '-4854533163')
@@ -1169,7 +1178,8 @@ def run_mvp_crew_2(contact_id: str, phone_number: str, redis_client: redis.Redis
                 "recently_sent_catalogs": ', '.join(recently_sent_catalogs),
                 "conversation_state": str(distill_conversation_state('ResponseCraftsman', state)),
                 "timestamp": datetime.datetime.now().isoformat(),
-                "turn": state["metadata"]["current_turn_number"]
+                "turn": state["metadata"]["current_turn_number"],
+                "history": history_messages
             }
 
             
@@ -1357,7 +1367,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
         if updated_state and isinstance(updated_state, dict):
             for k in updated_state:
                 if k in ['products_discussed'] and k in state:
-                    state[k].append(updated_state[k])
+                    state[k].extend(updated_state[k])
                 
                 else:
                     state[k] = updated_state[k]
@@ -1382,6 +1392,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                         logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
                         audio_url = eleven_labs_service_main(response_delivery_json['order'])
                         send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                        redis_client.hset(f"{contact_id}:attachments", audio_url, ' '.join(response_delivery_json['order']))
                     
                     else:
                     
@@ -1397,6 +1408,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                                 if len(message) > 250:
                                     audio_url = eleven_labs_service_main([message])
                                     send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                                    redis_client.hset(f"{contact_id}:attachments", audio_url, message)
 
                                 else:
                                     send_callbell_message(phone_number=phone_number, messages=[message])
@@ -1408,8 +1420,9 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                             if len(messages_all_str) > 300:
                                 logger.info(f"[{contact_id}] - Todas as mensagens somam mais de 300 caracteres. Enviando mensagem de áudio.")
 
-                                audio_url = eleven_labs_service_main(messages_all_str)
+                                audio_url = eleven_labs_service_main(response_delivery_json['order'])
                                 send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                                redis_client.hset(f"{contact_id}:attachments", audio_url, messages_all_str)
                             else:
                                 logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
                                 send_callbell_message(phone_number=phone_number, messages=response_delivery_json['order'])
@@ -1418,7 +1431,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                     logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
 
                 if fast_memory_messages:
-                    new_payload = fast_memory_messages.copy()
+                    new_payload = copy.deepcopy(fast_memory_messages)
                     logger.info(f'[{contact_id}] - Payload de point_memory copiado para new_payload.')
 
                     if response_delivery_json['primary_messages_sequence_choosen_index']:
@@ -1436,10 +1449,11 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
 
                     if 'proactive_content_choosen_index' in response_delivery_json and response_delivery_json['proactive_content_choosen_index']:
                         logger.info(f'[{contact_id}] - "proactive_content_choosen_index" existe e não está vazio. Removendo conteúdo proativo.')
+                        logger.info(f'[{contact_id}] - {fast_memory_messages["proactive_content_generated"]}')
                         for index in response_delivery_json['proactive_content_choosen_index']:
                             
                             try:
-                                logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
+                                logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen. [{fast_memory_messages["proactive_content_generated"][index]}].')
                                 new_payload['proactive_content_generated'].remove(fast_memory_messages['proactive_content_generated'][index])
                             except (ValueError, IndexError) as e:
                                 logger.error(f"[{contact_id}] - Erro ao remover índice {index} de proactive_content_generated: {e}", exc_info=True)
@@ -1448,7 +1462,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
 
                     try:
                         logger.info(f'[{contact_id}] - upload no redis das novas mensagens.')
-                        redis_client.set()
+                        redis_client.set(f'{contact_id}:fast_memory_messages', json.dumps(new_payload))
                         logger.info(f'[{contact_id}] - Upsert no Qdrant para FastMemoryMessages CONCLUÍDO.')
                     except Exception as e:
                         logger.error(f'[{contact_id}] - ERRO ao fazer upsert no Qdrant para FastMemoryMessages: {e}', exc_info=True)
@@ -1462,7 +1476,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                     logger.error(f'[{contact_id}] - ERRO ao enviar mensagens do "Final Answer" via CallbellSendTool: {e}', exc_info=True)
 
                 new_response_json = {}
-                new_payload = fast_memory_messages.copy()
+                new_payload = copy.deepcopy(fast_memory_messages)
                 logger.info(f'[{contact_id}] - Payload de point_memory copiado para new_payload.')
 
                 logger.info(f'[{contact_id}] - Copiando itens de response_craft_json["Final Answer"] para new_response_json.')
@@ -1475,7 +1489,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                     for index in new_response_json['primary_messages_sequence_choosen_index']:
                         
                         try:
-                            logger.debug(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
+                            logger.info(f'[{contact_id}] - Removendo índice {index} de primary_messages_sequence.')
                             new_payload['primary_messages_sequence'].remove(fast_memory_messages['primary_messages_sequence'][index])
                         except (ValueError, IndexError) as e:
                             logger.error(f"[{contact_id}] - Índice {index} não encontrado em primary_messages_sequence.")
@@ -1487,7 +1501,7 @@ o sistema enviará o(s) catálogo(s) do(s) plano(s) {', '.join(plans_names_to_se
                     for index in new_response_json['proactive_content_choosen_index']:
                         
                         try:
-                            logger.debug(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
+                            logger.info(f'[{contact_id}] - Removendo índice {index} de proactive_content_choosen_index.')
                             new_payload['proactive_content_generated'].remove(fast_memory_messages['proactive_content_generated'][index])
                         except (ValueError, IndexError) as e:
                             logger.error(f"[{contact_id}] - Índice {index} não encontrado em proactive_content_generated.")

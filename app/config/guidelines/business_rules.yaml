@@ -154,7 +154,7 @@ products:
             sem_bloqueio: 65.00
             com_bloqueio: 75.00
         technology:
-          network: "GSM 4G (Vivo, Claro ou TIM)."
+          network: "GSM 4G (Vivo, Claro, TIM entre outras...)."
           offline_storage: "Em locais sem sinal, dados (trajetos, paradas) são retidos e enviados automaticamente ao reconectar."
           update_frequency_moving: "A cada 30 segundos."
           update_frequency_stopped: "A cada 30 minutos."
@@ -190,7 +190,49 @@ products:
         exclusive_features:
           - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
         catalog_link: "https://wa.me/p/9380395508713863/558006068000"
+      
+      - name: "Rastreador Híbrido SATELITAL"
+        type: "Rastreamento Híbrido (GSM + Satélite)"
+        target_audience: "Veículos que operam em qualquer lugar, incluindo áreas sem sinal de celular como fazendas e rodovias remotas."
+        pricing:
+          adesao: 400.00
+          mensalidade:
+            sem_bloqueio: 180.00
+            com_bloqueio: 200.00
+        technology:
+          network: "Híbrido - GSM (sinal de operadora) e SATÉLITE."
+          how_it_works: "O rastreador utiliza a rede GSM como prioritária e, ao entrar em uma área sem sinal de celular, muda automaticamente para a comunicação via satélite, garantindo cobertura contínua."
+          update_frequency_gsm:
+            moving: "A cada 30 segundos"
+            stopped: "A cada 30 minutos"
+          update_frequency_satellite:
+            moving: "Em média a cada 8 minutos"
+            stopped: "Em média a cada 1 hora"
+          potential_limitation: "Locais com cobertura metálica, como galpões, postos ou túneis, podem gerar atraso na atualização via satélite. O sistema atualiza normalmente assim que o veículo sai desses locais."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo de infrações, uso fora de horário e tempo de motor ligado com veículo parado."
+        contract_terms:
+          vigencia: "24 meses"
+          cancellation_policy: "Isento de multa. Taxa de desinstalação no valor da adesão (R$ 400,00) caso cancele antes do prazo."
+          equipment_regime: "Comodato (equipamento emprestado, deve ser devolvido ao final do contrato)."
+        catalog_link: "https://wa.me/p/8781199928651103/558006068000"
 
+  - category: "Mobilidade Pessoal"
+    plans:
+      - name: "Plano para Scooters, Patinetes e Bikes Elétricas"
+        type: "Rastreamento 4G"
+        target_audience: "Ideal para monitoramento de veículos de mobilidade pessoal, como no acompanhamento de filhos para segurança da família."
+        pricing:
+          adesao: 100.00
+          mensalidade: 45.00
+        technology:
+          network: "4G"
+        contract_terms:
+          vigencia: "24 meses"
+          cancellation_policy: "Isento de multa para rescisão. O custo da mão de obra para retirada do equipamento antes de 24 meses é de R$ 100,00."
+          free_cancellation_condition: "A retirada do equipamento nas lojas da Global System é gratuita após 24 meses de contrato."
+        catalog_link: "https://wa.me/p/8478546275590970/558006068000"
+        
 # 4. Políticas e Procedimentos Operacionais
 operational_procedures:
   installation:
