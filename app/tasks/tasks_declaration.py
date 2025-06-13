@@ -56,6 +56,12 @@ def create_develop_strategy_task(agent: Agent) -> Task:
         agent=agent,
     )
 
+def create_communication_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['communication_task'],
+        agent=agent,
+    )
+
 def create_craft_response_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['craft_response_task'],

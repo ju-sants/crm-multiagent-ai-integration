@@ -13,16 +13,11 @@ context_analysis_task:
 
     - **Mensagem Atual do Cliente (Gatilho):** `{message_text}`
     - **Outros Dados:** 
+
     Histórico 
     
     (`{history}`), 
 
-    ---
-
-    Caches 
-    
-    (`{l0l1_cache}`, `{l2_cache}`), 
-    
     Timestamp (`{timestamp}`)
     Now Turn (`{turn}`)
     Contact ID (`{contact_id}`)
@@ -36,14 +31,14 @@ context_analysis_task:
 
     # --- Parte 2: DECISÃO DE ROTEAMENTO ---
     4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `{message_text}`.
-    5.  Avalie as respostas de cache (`{{l0l1_cache}}`, `{{l2_cache}}`) contra as **CONDIÇÕES ESTRITAS** definidas em seu `backstory` para decidir a `action`. Lembre-se que um processamento completo (3-6 min) é caro. Use "RESPOND_DIRECTLY" somente com 100% de certeza.
-    6.  Se a ação for "INITIATE_FULL_PROCESSING", defina o `operational_context` e o `identified_topic`.
-    7.  **CLASSIFICAÇÃO:** Se a ação for "INITIATE_FULL_PROCESSING", defina o `operational_context` e o `identified_topic` seguindo as **REGRAS DE CLASSIFICAÇÃO DE CONTEXTO** detalhadas em seu `backstory`.
-    8.  **Plano estratégico:** Decida se o plano estratégico de interação atual (se existir) é válido com o contexto, sessão e mensagem atual do cliente. se sim, envie `"is_plan_acceptable": true` em `task_output`, se não `"is_plan_acceptable": false`.
+    5.  Analise o `{strategic_plan}` salvo no `{conversation_state}` contra a `{message_text}`. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
+    6.  Com base na avaliação acima, defina o campo `"action"` para `"PROCEED_WITH_EXISTING_PLAN"` ou `"INITIATE_NEW_STRATEGIC_PLAN"`.
+    7.  **Plano estratégico:** Decida se o plano estratégico de interação atual (se existir) é válido com o contexto, sessão e mensagem atual do cliente. se sim, envie `"is_plan_acceptable": true` em `task_output`, se não `"is_plan_acceptable": false`.
+    9.  IMPORTANTE!: Se o cliente aceitou comprar um serviço de rastreamento, defina operational_context como "BUDGET_ACCEPTED".
 
     # --- Parte 3: PREPARAÇÃO DA SAÍDA ---
-    9.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `current_context`, adicione novas entidades da última mensagem, e incremente os metadados.
-    10.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
+    8.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `session_summary`, adicione novas entidades da última mensagem, e incremente os metadados.
+    9.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
 
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a ESTRUTURA (populada com outros dados) do exemplo.
   expected_output: |
@@ -78,7 +73,6 @@ context_analysis_task:
         }
       },
       "updated_state": {
-        "current_context": { "context_type": "BUDGET", "last_topic": "continuidade_discussao_preco_moto" },
         "session_summary": "Sessão retomada. Cliente perguntou novamente sobre preços para moto.",
         "communication_preference": { "prefers_audio": false, "reason": "default" },
         "entities_extracted": [
@@ -550,6 +544,88 @@ execute_system_operations_task:
     #     ]
     #   }
     # }
+
+
+communication_task:
+  description: |
+    Você é o CommunicationAgent. Sua missão é traduzir o dossiê estratégico em um diálogo de chat perfeito e executar as atualizações de estado necessárias.
+    o dossiê estratégico deve ser usado por várias vezes, por isso, aproveite partes diferentes dele para criar mensagens que sejam relevantes para o cliente.
+
+    **DADOS PARA SUA ANÁLISE E AÇÃO:**
+    Timestamp: "{timestamp}"
+    Now Turn: "{turn}"
+
+    - **Dossiê Estratégico  (O Que Fazer):** 
+    
+    `{develop_strategy_task_output}`
+    
+    - **Estado da Conversa (O Contexto):**  # Use para personalizar suas mensagens e entender o que já foi dito.
+      
+    `{conversation_state}`
+
+    - **Perfil do Cliente (O Histórico):** 
+    
+    `{profile_customer_task_output}`
+
+    - **Histórico de Conversa (O Que Já Foi Falado):**
+    
+    "{history}"
+    
+    - **Catálogos Enviados Recentemente:** 
+    
+    "{recently_sent_catalogs}"
+
+    - **Disclosure Checklist** (O Que Já Foi Comunicada - Jurídico, termos e condições):** 
+    
+    `{disclosure_checklist}`
+
+    -----
+
+    **SEU FLUXO DE TRABALHO DETALHADO:**
+    1.  **Analise profundamente o `{strategic_briefing}`.** Ele contém tudo que você precisa saber para criar as mensagens.
+    2.  **Execute sua principal tarefa de DECONSTRUÇÃO:** Transforme as informações do dossiê (benefícios, preços, limitações, termos) em uma lista de mensagens curtas de uma frase em `primary_messages_sequence`.
+    3.  **Nunca mande mensagens ou assuntos repetidos.** Use o `{{conversation_state}}` e o `{{history}}` para evitar redundâncias e manter a fluidez da conversa.
+    4.  **Isso é um Chat!:** Não envie mensagens demais. Mantenha o dialogo fluido e natural, aprofundando a cada etapa.
+    3.  **Aplique a lógica de envio de catálogo** para popular a lista `plan_names`.
+    4.  **Prepare o `state_update`:**
+        a. **Atualize o Checklist:** Revise as mensagens que você criou. Para cada item do `{disclosure_checklist}` que foi abordado, mude seu `status` para "communicated". Retorne o checklist COMPLETO com os status atualizados.
+        b. **Atualize os Produtos Discutidos:** Adicione os nomes dos planos que você mencionou na lista `products_discussed`.
+        c. **Atualize o Resumo:** Crie um `session_summary` que descreva a ação que você executou.
+    
+    **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
+    - Consulte a lista `{recently_sent_catalogs}`.
+    - **INCLUA um plano em `plan_names` SE:**
+        - É a **primeira vez** que este plano é foco na conversa E seu nome não consta em `{recently_sent_catalogs}`.
+        - OU o cliente **pede diretamente** pelo catálogo/link.
+        - OU o `StrategicAdvisor` instruiu explicitamente o reenvio.
+    - **NÃO INCLUA um plano em `plan_names` SE:**
+        - O catálogo já foi enviado recentemente E o cliente não pediu novamente.
+    - **LEMBRE-SE:** Se você adicionar um plano à lista `plan_names`, uma de suas mensagens em `primary_messages_sequence` DEVE mencionar sutilmente o envio.
+
+    Retorne APENAS um objeto JSON no formato de duas chaves (`task_output` e `state_update_delta`), como no exemplo.
+  expected_output: |
+    {
+      "task_output": {
+        "messages_sequence": [
+          "Juan, entendi sua preocupação com a segurança da sua moto, já que a usa para tudo.",
+          "Com base nisso, nossa recomendação principal é o Plano Proteção Total PGS.",
+          "O grande diferencial dele é a tranquilidade da proteção financeira.",
+          "Se sua moto for roubada e não a recuperarmos, você recebe o valor dela pela tabela FIPE.",
+          "Um ponto importante, para total transparência: nosso serviço é de rastreamento com essa garantia de reembolso, não um seguro tradicional.",
+          "Essa abordagem com foco total na sua segurança faz sentido para você?"
+        ],
+        "plan_names": ["Plano Proteção Total PGS"]
+      },
+      "state_update_delta": {
+        "session_summary": "Estratégia de foco no Plano PGS foi executada, deconstruindo os benefícios e termos em uma sequência de mensagens curtas para o cliente.",
+        "disclosure_checklist": [
+          { "item_id": "IS_NOT_INSURANCE", "topic": "Natureza do Serviço", "status": "communicated" },
+          { "item_id": "REIMBURSEMENT_CLAUSE_PGS", "topic": "Reembolso FIPE (Plano PGS)", "status": "communicated" },
+          { "item_id": "CANCELLATION_POLICY", "topic": "Política de Cancelamento", "status": "pending" }
+        ],
+        "products_discussed": ["Plano Proteção Total PGS"],
+      }
+    }
 
 
 craft_response_task:
