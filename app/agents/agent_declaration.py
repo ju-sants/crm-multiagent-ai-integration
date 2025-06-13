@@ -53,7 +53,15 @@ def get_system_operations_agent() -> Agent:
         verbose=True,
         allow_delegation=False,
     )
-    
+
+def get_communication_agent() -> Agent:
+    return Agent(
+        config=agents_config['CommunicationAgent'],
+        llm=fast_reasoning_X_llm,
+        verbose=True,
+        allow_delegation=False,
+    )
+
 def get_response_craftsman_agent() -> Agent:
     return Agent(
         config=agents_config['ResponseCraftsman'],
