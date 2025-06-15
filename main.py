@@ -5,13 +5,12 @@ import threading
 
 import os
 from time import sleep
-import datetime
 
 import logging
 
 
 from app.core.logger import get_logger
-from app.crews.conversation_crew import run_mvp_crew_3
+from app.crews.conversation_crew import customer_service_orchestrator
 from app.config.settings import settings
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
@@ -200,7 +199,7 @@ def process_requisitions(payload):
                     history = history_response.json()
                     logger.info(f'[{contact_uuid}] - Histórico da Callbell obtido (status {history_response.status_code}). Total de mensagens no histórico: {len(history)}')
 
-                    run_mvp_crew_3(contact_uuid, phone_number, history)
+                    customer_service_orchestrator(contact_uuid, phone_number, history)
                     logger.info(f'[{contact_uuid}] - CHAMADA da função run_mvp_crew (comentada no código).')
 
                 except requests.exceptions.RequestException as e:
