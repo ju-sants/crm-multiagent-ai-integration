@@ -8,8 +8,6 @@ import copy
 from app.agents.agent_declaration import *
 from app.tasks.tasks_declaration import *
 
-from app.tools.cache_tools import L1CacheQueryTool
-
 from app.services.telegram_service import send_single_telegram_message
 from app.services.state_manager_service import StateManagerService
 from app.services.eleven_labs_service import main as eleven_labs_service
@@ -224,6 +222,37 @@ def send_message(state, messages, contact_id, phone_number):
         logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
 
 
+def _process_history(history: Any, contact_id: str) -> str:
+    """Processes the message history and returns a formatted string."""
+    history_messages = ''
+    if history:
+        for message in reversed(history.get('messages', [])[:10]):
+            if message.get("text"):
+                history_messages += f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}\n'
+            elif message.get("attachments"):
+                attachments = message.get("attachments", [])
+                if not attachments:
+                    continue
+
+                list_of_dicts = isinstance(attachments[0], dict)
+
+                for attachment in attachments:
+                    raw_url = attachment.get("payload", {}).get('url', '') if list_of_dicts else attachment
+
+                    if "audio_eleven_agent_AI" in raw_url:
+                        url = raw_url
+                    else:
+                        url = raw_url.split('uploads/')[1].split('?')[0] if 'uploads/' in raw_url else ''
+
+                    if url:
+                        mapped_attachments = redis_client.hgetall(f"{contact_id}:attachments")
+                        if mapped_attachments:
+                            attachment_text = mapped_attachments.get(url, "")
+                            if attachment_text:
+                                history_messages += f'{"AI" if message.get("status", "") == "sent" and "audio_eleven_agent_AI" in url else "collaborator" if not message.get("status", "") == "received" else "customer"} - {attachment_text}\n'
+    return history_messages
+
+
 def customer_service_orchestrator(contact_id: str, phone_number: str, history: Any):
 
     # litellm._turn_on_debug()
@@ -235,37 +264,7 @@ def customer_service_orchestrator(contact_id: str, phone_number: str, history: A
     if not contact_data:
         redis_client.hset(f"contact:{contact_id}", mapping={"system_input": "nenhum"})
 
-    history_messages = ''
-    if history:
-        for message in reversed(history.get('messages', [])[:10]):
-            if message.get("text"):
-                history_messages += f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}\n'
-            elif message.get("attachments"):
-                attachments = message.get("attachments", [])
-
-                list_of_dicts = False
-                if isinstance(attachments[0], dict):
-                    list_of_dicts = True
-                
-                elif isinstance(attachments[0], str):
-                    list_of_dicts = False
-
-                for attachment in attachments:
-                    raw_url = attachment.get("payload", {}).get('url', '') if list_of_dicts else attachment
-
-                    if "audio_eleven_agent_AI" in raw_url:
-                        url = raw_url
-
-                    else:
-                        url = raw_url.split('uploads/')[1].split('?')[0] if 'uploads/' in raw_url else ''
-
-                    if url:
-                        mapped_attachments = redis_client.hgetall(f"{contact_id}:attachments")
-                        if mapped_attachments:
-                            attachment_text = mapped_attachments.get(url, "")
-                            if attachment_text:
-                                history_messages += f'{"AI" if message.get("status", "") == "sent" and "audio_eleven_agent_AI" in url else "collaborator" if not message.get("status", "") == "received" else "customer"} - {attachment_text}\n'
-
+    history_messages = _process_history(history, contact_id)
     state = state_manager.get_state(contact_id)
 
     state["metadata"]["current_turn_number"] += 1

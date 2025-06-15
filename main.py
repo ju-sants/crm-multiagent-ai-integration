@@ -3,7 +3,6 @@ import json
 import requests
 import threading
 
-import os
 from time import sleep
 
 import logging
@@ -16,7 +15,7 @@ from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
 
-CALLBELL_API_KEY = os.environ.get("CALLBELL_API_KEY", "test_gshuPaZoeEG6ovbc8M79w0QyM")
+CALLBELL_API_KEY = settings.CALLBELL_API_KEY
 CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
 IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
@@ -34,7 +33,7 @@ logger:  logging.Logger = get_logger(__name__)
 def get_callbell_headers():
     """Retorna os headers padrão para as requisições Callbell."""
     return {
-        'Authorization': f'Bearer {CALLBELL_API_KEY}',
+        'Authorization': f'Bearer {settings.CALLBELL_API_KEY}',
         'Content-Type': 'application/json',
     }
 
@@ -65,18 +64,7 @@ def send_callbell_message(phone_number, text):
         return False
 
 def get_allowed_chats():
-    return [
-        '71464be80c504971ae263d710b39dd1f', # Juan
-        # '2fa9529f9c1e4ed9b8ddea6c6a4272e8', # valdir ou ana paula
-        # '7b337e574d63473ba0aba7e7de543a48', # valdir ou ana paula
-        # 'd3c9a42068b44b47bfbf6fc8adf62f71', # deibisson empresa
-        # 'e426520a46f54bbeb5b98a76e95b1bbb', # cristiane
-        # 'ff1b97c206e544f89127600a1a074d27', # aila
-        # '8544e093bcdd4f47bb3a5d7da1ac1ad7', # jenifer
-        # '7fee5fb4c62d41f98e027e86f57c16c8', # deibisson pessoal
-        # 'acfe198b10254da0b8c6f1b46df07c94', # Roberta
-        # 'ecad1a70b0004d7580398f96f8074489' # Gisele
-        ]
+    return settings.ALLOWED_CHATS
 
 def process_requisitions(payload):
     logger.info(f'[{payload.get("uuid", "N/A")}] - INICIANDO process_requisitions para payload: {payload.get("uuid", "N/A")} de {payload.get("from", "N/A")}')
