@@ -2,10 +2,7 @@
 from crewai import Task, Agent
 from app.utils.funcs.funcs import obter_caminho_projeto
 
-from app.tools.qdrant_tools import RAGTool
-from app.tools.knowledge_tools import BusinessGuidelinesTool, KnowledgeServiceTool
-
-from app.config.settings import settings
+from app.tools.knowledge_tools import KnowledgeServiceTool
 
 import yaml
 
@@ -22,24 +19,6 @@ def create_context_analysis_task(agent: Agent) -> Task:
         agent=agent,
     )
 
-def create_triage_task(agent: Agent) -> Task:
-    return Task(
-            config=tasks_config['triage_initial_message_task'],
-            agent=agent,
-        )
-
-def create_profile_customer_task(agent: Agent) -> Task:
-    return Task(
-        config=tasks_config['profile_customer_task'],
-        agent=agent,
-    )
-    
-def create_profile_customer_task_purchased(agent: Agent) -> Task:
-    return Task(
-        config=tasks_config['profile_customer_task_purchased'],
-        agent=agent,
-    )
-    
 def create_execute_system_operations_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['execute_system_operations_task'],
@@ -59,18 +38,6 @@ def create_develop_strategy_task(agent: Agent) -> Task:
 def create_communication_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['communication_task'],
-        agent=agent,
-    )
-
-def create_craft_response_task(agent: Agent) -> Task:
-    return Task(
-        config=tasks_config['craft_response_task'],
-        agent=agent,
-    )
-    
-def create_coordinate_delivery_task(agent: Agent) -> Task:
-    return Task(
-        config=tasks_config['coordinate_delivery_task'],
         agent=agent,
     )
 
