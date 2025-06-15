@@ -11,7 +11,7 @@ import logging
 
 
 from app.core.logger import get_logger
-from app.crews.conversation_crew import run_mvp_crew, run_mvp_crew_2
+from app.crews.conversation_crew import run_mvp_crew_3
 from app.config.settings import settings
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
@@ -25,7 +25,9 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 app = Flask(__name__)
 redis_client = get_redis()
 redis_client.delete(f'processing:71464be80c504971ae263d710b39dd1f')
-print(redis_client.hgetall("71464be80c504971ae263d710b39dd1f:attachments"))
+redis_client.delete(f'state:71464be80c504971ae263d710b39dd1f')
+redis_client.delete(f"71464be80c504971ae263d710b39dd1f:customer_profile")
+redis_client.delete(f"contact:71464be80c504971ae263d710b39dd1f")
 
 client_description = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
 logger:  logging.Logger = get_logger(__name__)
@@ -198,7 +200,7 @@ def process_requisitions(payload):
                     history = history_response.json()
                     logger.info(f'[{contact_uuid}] - Histórico da Callbell obtido (status {history_response.status_code}). Total de mensagens no histórico: {len(history)}')
 
-                    run_mvp_crew_2(contact_uuid, phone_number, redis_client, history)
+                    run_mvp_crew_3(contact_uuid, phone_number, history)
                     logger.info(f'[{contact_uuid}] - CHAMADA da função run_mvp_crew (comentada no código).')
 
                 except requests.exceptions.RequestException as e:

@@ -31,19 +31,21 @@ context_analysis_task:
 
     # --- Parte 2: DECISÃO DE ROTEAMENTO ---
     4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `{message_text}`.
-    5.  Analise o `{strategic_plan}` salvo no `{conversation_state}` contra a `{message_text}`. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
+    5.  Analise o `{{strategic_plan}}` salvo no `{{conversation_state}}` contra a `{{message_text}}`. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
+    6.  Se o cliente perguntar por preços, termos, informações ou qualquer coisa que EVIDENTEMENTE não está no plano estratégico, defina `"is_plan_acceptable": false`.
     6.  Com base na avaliação acima, defina o campo `"action"` para `"PROCEED_WITH_EXISTING_PLAN"` ou `"INITIATE_NEW_STRATEGIC_PLAN"`.
     7.  **Plano estratégico:** Decida se o plano estratégico de interação atual (se existir) é válido com o contexto, sessão e mensagem atual do cliente. se sim, envie `"is_plan_acceptable": true` em `task_output`, se não `"is_plan_acceptable": false`.
-    9.  IMPORTANTE!: Se o cliente aceitou comprar um serviço de rastreamento, defina operational_context como "BUDGET_ACCEPTED".
+    8.  IMPORTANTE!: Se o cliente aceitou comprar um serviço de rastreamento e `checklist_status_summary` em `conversation_state` estiver com todos os itens comunicados, defina operational_context como "BUDGET_ACCEPTED".
 
     # --- Parte 3: PREPARAÇÃO DA SAÍDA ---
-    8.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `session_summary`, adicione novas entidades da última mensagem, e incremente os metadados.
-    9.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
-
+    9.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `session_summary`, adicione novas entidades da última mensagem, e incremente os metadados.
+    10.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
+        
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a ESTRUTURA (populada com outros dados) do exemplo.
   expected_output: |
     {
       "task_output": {
+        "is_plan_acceptable": true, # ou false, dependendo da análise
         "action": "INITIATE_FULL_PROCESSING",
         "identified_topic": "continuidade_discussao_preco_moto",
         "operational_context": "BUDGET",
@@ -398,6 +400,11 @@ develop_strategy_task:
     **SEU FLUXO DE TRABALHO:**
     Execute o **"FLUXO DE DEFINIÇÃO DE ESTRATÉGIA"** detalhado em seu `backstory`. Analise os inputs, qualifique o cliente (se necessário), colete dados com a `KnowledgeServiceTool`, defina a estratégia, gere a `structured_message` e, crucialmente, popule o `disclosure_checklist` antes de atualizar o estado da conversa.
     Use a `KnowledgeServiceTool` para obter todas as informações que precise, utilize a query em lote e envie tudo que precisar de uma só vez, sempre envie na query requisições para `get_company_info` e `get_sales_philosophy` ou `get_support_philosophy`.
+    Popule de forma rica e estratégica o plano de conversação, incluindo insights poderosos, tópicos de apresentação, perguntas-chave, possíveis objeções e respostas, e a estratégia de apresentação do produto.
+    Certifique-se de que o `disclosure_checklist` esteja completo e que a `communication_guidance` seja clara e específica.
+    Nunca retire itens de `disclosure_checklist` apenas adicione, para termos total controle do que já foi esclarecido e o que ainda falta esclarecer, NUNCA adicione itens iguais.
+    Retorne `disclosure_checklist` COMPLETO, incluindo itens comunicados, pendentes e os novos que você adicionar.
+    Você tem a liberdade de criar quantas chaves quiser no `task_output`, desde que sejam relevantes para a estratégia de interação e que contenha as obrigatórias.
     
     
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
@@ -423,14 +430,11 @@ develop_strategy_task:
               "sales_angle": "Apresentar como a opção de monitoramento essencial e de excelente custo-benefício, mas reforçar que não possui a proteção financeira que ele demonstrou buscar."
             }
           },
-          "disclosure_and_transparency_plan": {
-            "priority_checklist_items": ["IS_NOT_INSURANCE", "REIMBURSEMENT_CLAUSE_PGS", "CANCELLATION_POLICY"],
-            "communication_approach": "Introduzir proativamente que o PGS não é um seguro tradicional, mas um serviço superior com garantia de reembolso, para evitar confusão e gerar valor."
-          },
           "communication_guidance": {
             "tone_and_style": "Tom empático e seguro. Reconhecer a experiência passada do cliente com o roubo para criar rapport. Evitar jargões, focar na sensação de segurança.",
             "key_talking_points": ["Diferença entre rastreamento e proteção financeira", "Benefício 'Moto Reserva'", "Funcionamento do bloqueio via central"],
             "key_questions_to_ask": ["Considerando sua experiência, ter a garantia do valor da moto de volta é o mais importante para você?", "Para eu te passar o valor exato da mensalidade do plano com proteção, qual o modelo e ano da sua moto?"]
+            "next_step_preview": "Esteja preparado para responder sobre as regras de instalação para motos, pois é uma dúvida comum após a escolha do plano."
           },
           "information_payload": {
             "plano_pgs_data": {
@@ -445,7 +449,17 @@ develop_strategy_task:
             "general_policies": {
               "blocker_rules_moto": "A função de bloqueio NÃO está disponível no aplicativo para motos. O acionamento é feito exclusivamente pela central...",
               "installation_policy_moto": "A instalação de rastreadores em motocicletas é feita EXCLUSIVAMENTE em uma de nossas lojas autorizadas..."
+            },
+          "proactive_information_payload": {
+            "title": "Informações Relevantes para a Próxima Etapa",
+            "installation_policy_moto": {
+              "location": "A instalação de rastreadores em motocicletas é feita EXCLUSIVAMENTE em uma de nossas lojas autorizadas para garantir a qualidade e o sigilo do serviço.",
+              "duration": "O processo leva em média de 1 a 2 horas."
+            },
+            "blocker_rules_moto": {
+              "availability": "A função de bloqueio NÃO está disponível no aplicativo para motos. O acionamento é feito exclusivamente pela central da Global System, mediante solicitação validada do cliente."
             }
+          }
           }
         }
       },
@@ -582,27 +596,31 @@ communication_task:
     -----
 
     **SEU FLUXO DE TRABALHO DETALHADO:**
-    1.  **Analise profundamente o `{strategic_briefing}`.** Ele contém tudo que você precisa saber para criar as mensagens.
+    1.  **Analise profundamente o `{{strategic_briefing}}`.** Ele contém tudo que você precisa saber para criar as mensagens.
     2.  **Execute sua principal tarefa de DECONSTRUÇÃO:** Transforme as informações do dossiê (benefícios, preços, limitações, termos) em uma lista de mensagens curtas de uma frase em `primary_messages_sequence`.
     3.  **Nunca mande mensagens ou assuntos repetidos.** Use o `{{conversation_state}}` e o `{{history}}` para evitar redundâncias e manter a fluidez da conversa.
     4.  **Isso é um Chat!:** Não envie mensagens demais. Mantenha o dialogo fluido e natural, aprofundando a cada etapa.
     3.  **Aplique a lógica de envio de catálogo** para popular a lista `plan_names`.
     4.  **Prepare o `state_update`:**
-        a. **Atualize o Checklist:** Revise as mensagens que você criou. Para cada item do `{disclosure_checklist}` que foi abordado, mude seu `status` para "communicated". Retorne o checklist COMPLETO com os status atualizados.
+        a. **Atualize o Checklist:** Revise as mensagens que você criou. Para cada item do `{{disclosure_checklist}}` que foi abordado, mude seu `status` para "communicated". Retorne o checklist COMPLETO com os status atualizados.
+         - Se o item foi comunicado, mude o `status` para "communicated".
+         - Nunca comunique itens que já foram comunicados anteriormente. A menos que o cliente solicite novamente.
+         - Se o item não foi comunicado, mantenha o `status` como "pending".
         b. **Atualize os Produtos Discutidos:** Adicione os nomes dos planos que você mencionou na lista `products_discussed`.
         c. **Atualize o Resumo:** Crie um `session_summary` que descreva a ação que você executou.
     
     **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
-    - Consulte a lista `{recently_sent_catalogs}`.
+    - Consulte a lista `{{recently_sent_catalogs}}`.
     - **INCLUA um plano em `plan_names` SE:**
-        - É a **primeira vez** que este plano é foco na conversa E seu nome não consta em `{recently_sent_catalogs}`.
+        - É a **primeira vez** que este plano é foco na conversa E seu nome não consta em `{{recently_sent_catalogs}}`.
         - OU o cliente **pede diretamente** pelo catálogo/link.
         - OU o `StrategicAdvisor` instruiu explicitamente o reenvio.
     - **NÃO INCLUA um plano em `plan_names` SE:**
         - O catálogo já foi enviado recentemente E o cliente não pediu novamente.
     - **LEMBRE-SE:** Se você adicionar um plano à lista `plan_names`, uma de suas mensagens em `primary_messages_sequence` DEVE mencionar sutilmente o envio.
+    Nomes de planos para catálogo: "MOTO GSM/PGS", "GSM Padrão", "GSM FROTA", "SATELITAL FROTA", "HÍBRIDO", "GSM+WiFi", "Scooters/Patinetes".
 
-    Retorne APENAS um objeto JSON no formato de duas chaves (`task_output` e `state_update_delta`), como no exemplo.
+    Retorne APENAS um objeto JSON no formato de duas chaves (`task_output` e `updated_state`), como no exemplo.
   expected_output: |
     {
       "task_output": {
@@ -616,14 +634,29 @@ communication_task:
         ],
         "plan_names": ["Plano Proteção Total PGS"]
       },
-      "state_update_delta": {
-        "session_summary": "Estratégia de foco no Plano PGS foi executada, deconstruindo os benefícios e termos em uma sequência de mensagens curtas para o cliente.",
-        "disclosure_checklist": [
-          { "item_id": "IS_NOT_INSURANCE", "topic": "Natureza do Serviço", "status": "communicated" },
-          { "item_id": "REIMBURSEMENT_CLAUSE_PGS", "topic": "Reembolso FIPE (Plano PGS)", "status": "communicated" },
-          { "item_id": "CANCELLATION_POLICY", "topic": "Política de Cancelamento", "status": "pending" }
+     "updated_state": {
+        "session_summary": "Mensagens sobre os planos de moto foram preparadas e ordenadas para envio ao cliente.",
+        "products_discussed": [
+          {
+            "plan_name": "Plano Rastreamento Moto",
+            "details_provided": ["pricing"],
+            "presented_at_turn": 4
+          }
         ],
-        "products_discussed": ["Plano Proteção Total PGS"],
+        "disclosure_checklist": [
+          {
+          "item_id": "natureza_servico_pgs",
+          "topic": "Natureza do Serviço (Plano PGS)",
+          "content": "Este contrato NÃO é um seguro, mas em caso de NÃO recuperação da motocicleta, haverá REEMBOLSO do valor da motocicleta de acordo com a tabela FIPE, respeitando o valor máximo do plano contratado.",
+          "status": "pending"
+          },
+          {
+            "item_id": "responsabilidade_recuperacao",
+            "topic": "Responsabilidade de Recuperação",
+            "content": "A recuperação do veículo é atividade única e exclusiva das autoridades policiais.",
+            "status": "communicated"
+          },
+        ],
       }
     }
 
@@ -667,7 +700,7 @@ craft_response_task:
     6.  **Decida sobre o envio de catálogos e popule a lista `plan_names` seguindo as regras abaixo.**
 
     **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
-    - Consulte a lista `{recently_sent_catalogs}`.
+    - Consulte a lista `{{recently_sent_catalogs}}`.
     - **INCLUA um plano em `plan_names` SE:**
         - É a **primeira vez** que este plano é foco na conversa E seu nome não consta em `{recently_sent_catalogs}`.
         - OU o cliente **pede diretamente** pelo catálogo/link.
