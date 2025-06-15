@@ -303,8 +303,6 @@ def customer_service_orchestrator(contact_id: str, phone_number: str, history: A
         "contact_id": contact_id,
         "message_text": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
         "timestamp": datetime.datetime.now().isoformat(), 
-        "l0l1_cache": str(L1CacheQueryTool()._run(contact_id)),
-        "l2_cache": str(redis_client.get(f'{contact_id}:fast_memory_messages')),
         "history": history_messages,
         "conversation_state": str(distill_conversation_state('ContextAnalysisAgent', state)),
         "turn": state["metadata"]["current_turn_number"],
