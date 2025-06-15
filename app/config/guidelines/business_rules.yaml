@@ -1,6 +1,6 @@
 # business_rules.yaml
 # Fonte de Verdade para Regras de Negócio, Políticas, Produtos e Procedimentos da Global System.
-# Versão 5.0 - Criado em 07/06/2025 (Consolidado com Contratos PGS, Não-PGS, Planos de Frota e Diretrizes de Atendimento)
+# Versão 5.1 - Criado em 13/06/2025
 
 # 1. Informações da Empresa
 company_info:
@@ -146,51 +146,6 @@ products:
   # 3.2. Planos Padrão (Carros, Frotas, etc.)
   - category: "Frotas e Veículos Leves"
     plans:
-      - name: "Rastreador GSM 4G"
-        type: "Rastreamento de Frotas"
-        pricing:
-          adesao: 200.00
-          mensalidade:
-            sem_bloqueio: 65.00
-            com_bloqueio: 75.00
-        technology:
-          network: "GSM 4G (Vivo, Claro, TIM entre outras...)."
-          offline_storage: "Em locais sem sinal, dados (trajetos, paradas) são retidos e enviados automaticamente ao reconectar."
-          update_frequency_moving: "A cada 30 segundos."
-          update_frequency_stopped: "A cada 30 minutos."
-        contract_terms:
-          vigencia: "24 meses."
-          cancellation_policy: "Isento de multa. Taxa de desinstalação de R$ 200,00 se cancelado antes de 24 meses. Gratuita após 24 meses em unidades próprias."
-          maintenance_policy: "Manutenção gratuita para defeitos de fabricação. Danos externos são avaliados e cobrados à parte."
-          contract_transfer: "É possível transferir o contrato para um novo titular em caso de venda do veículo."
-        exclusive_features:
-          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
-        catalog_link: "https://wa.me/p/9321097734636816/558006068000"
-
-      - name: "Rastreador GSM (2G+3G+4G) + WI-FI"
-        target_audience: "Fazendas ou locais remotos."
-        pricing:
-          adesao: 300.00
-          mensalidade:
-            sem_bloqueio: 75.00
-            com_bloqueio: 85.00
-        technology:
-          network: "GSM (Vivo, Claro, TIM) e Wi-Fi local."
-          offline_storage: "Memória interna para até 50.000 posições (aproximadamente 3 meses de histórico), com descarregamento automático via GSM ou Wi-Fi. O sistema prioriza a rede GSM e usa o Wi-Fi como backup."
-        includes:
-          - "2 roteadores Wi-Fi pré-configurados que funcionam como repetidores do sinal de internet existente no local (ex: Starlink, rádio, fibra)."
-          - "Suporte técnico para configuração de roteadores adicionais."
-        blocker_functionality:
-          recommendation: "Não recomendamos a instalação do bloqueio para veículos em fazendas ou áreas remotas devido à dificuldade de assistência em caso de falha elétrica ou pane."
-          availability: "A instalação é possível se o cliente estiver ciente dos riscos operacionais e os assumir."
-        contract_terms:
-          vigencia: "24 meses."
-          cancellation_policy: "Sem multa. Taxa de desinstalação de R$ 300,00 se cancelado antes de 24 meses. Gratuita após 24 meses."
-          cancellation_fee_justification: "A taxa de desinstalação não é uma multa, mas sim o pagamento pelo serviço técnico especializado de remoção do equipamento."
-        exclusive_features:
-          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
-        catalog_link: "https://wa.me/p/9380395508713863/558006068000"
-      
       - name: "Rastreador Híbrido SATELITAL"
         type: "Rastreamento Híbrido (GSM + Satélite)"
         target_audience: "Veículos que operam em qualquer lugar, incluindo áreas sem sinal de celular como fazendas e rodovias remotas."
@@ -216,6 +171,55 @@ products:
           cancellation_policy: "Isento de multa. Taxa de desinstalação no valor da adesão (R$ 400,00) caso cancele antes do prazo."
           equipment_regime: "Comodato (equipamento emprestado, deve ser devolvido ao final do contrato)."
         catalog_link: "https://wa.me/p/8781199928651103/558006068000"
+
+      - name: "Rastreador GSM (2G+3G+4G) + WI-FI"
+        target_audience: "Fazendas ou locais remotos."
+        pricing:
+          adesao: 300.00
+          mensalidade:
+            sem_bloqueio: 75.00
+            com_bloqueio: 85.00
+        technology:
+          network: "GSM (Vivo, Claro, TIM) e Wi-Fi local."
+          offline_storage: "Memória interna para até 50.000 posições (aproximadamente 3 meses de histórico), com descarregamento automático via GSM ou Wi-Fi. O sistema prioriza a rede GSM e usa o Wi-Fi como backup."
+        includes:
+          - "2 roteadores Wi-Fi pré-configurados que funcionam como repetidores do sinal de internet existente no local (ex: Starlink, rádio, fibra)."
+          - "Suporte técnico para configuração de roteadores adicionais."
+        blocker_functionality:
+          recommendation: "Não recomendamos a instalação do bloqueio para veículos em fazendas ou áreas remotas devido à dificuldade de assistência em caso de falha elétrica ou pane."
+          availability: "A instalação é possível se o cliente estiver ciente dos riscos operacionais e os assumir."
+        contract_terms:
+          vigencia: "24 meses."
+          cancellation_policy: "Sem multa. Taxa de desinstalação de R$ 300,00 se cancelado antes de 24 meses. Gratuita após 24 meses."
+          cancellation_fee_justification: "A taxa de desinstalação não é uma multa, mas sim o pagamento pelo serviço técnico especializado de remoção do equipamento."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
+        catalog_link: "https://wa.me/p/9380395508713863/558006068000"
+        
+      - name: "Rastreador GSM 4G"
+        type: "Rastreamento de Frotas"
+        pricing:
+          adesao: 200.00
+          mensalidade:
+            sem_bloqueio: 65.00
+            com_bloqueio: 75.00
+        technology:
+          network: "GSM 4G (Vivo, Claro, TIM entre outras...)."
+          offline_storage: "Em locais sem sinal, dados (trajetos, paradas) são retidos e enviados automaticamente ao reconectar."
+          update_frequency_moving: "A cada 30 segundos."
+          update_frequency_stopped: "A cada 30 minutos."
+        contract_terms:
+          vigencia: "24 meses."
+          cancellation_policy: "Isento de multa. Taxa de desinstalação de R$ 200,00 se cancelado antes de 24 meses. Gratuita após 24 meses em unidades próprias."
+          maintenance_policy: "Manutenção gratuita para defeitos de fabricação. Danos externos são avaliados e cobrados à parte."
+          contract_transfer: "É possível transferir o contrato para um novo titular em caso de venda do veículo."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
+        catalog_link: "https://wa.me/p/9321097734636816/558006068000"
+
+     
+      
+     
 
   - category: "Mobilidade Pessoal"
     plans:

@@ -99,40 +99,82 @@ def distill_conversation_state(agent_name: str, full_state: Dict[str, Any]) -> D
 
     # --- Destilação Específica por Agente ---
 
+
     if agent_name == "ContextAnalysisAgent":
         distilled_state['strategic_plan'] = full_state.get("strategic_plan")
+
         distilled_state["session_summary"] = full_state.get("session_summary", "")
-        distilled_state["recent_entities"] = full_state.get("entities_extracted", [])[-5:]
-        distilled_state["checklist_status_summary"] = {
-            "total_items": len(full_state.get("disclosure_checklist", [])),
-            "items_communicated": sum(1 for item in full_state.get("disclosure_checklist", []) if item.get("status") == "communicated")
-        }
+
+        all_entities = full_state.get("entities_extracted", [])
+        
+        high_value_entities = [
+            entity for entity in all_entities 
+            if entity and entity.get("entity") not in ["greeting", "confirmation"]
+        ]
+        distilled_state["recent_key_entities"] = high_value_entities[-7:]
+
+        disclosure_items = full_state.get("disclosure_checklist", [])
+        if disclosure_items:
+            distilled_state["checklist_status_summary"] = {
+                "total_items": len(disclosure_items),
+                "items_communicated": sum(1 for item in disclosure_items if item and item.get("status") == "communicated")
+            }
+
 
     elif agent_name == "StrategicAdvisor":
         distilled_state["session_summary"] = full_state.get("session_summary")
-        key_entities = ["customer_name", "vehicle_type", "use_case"]
-        distilled_state["key_entities"] = [e for e in full_state.get("entities_extracted", []) if e and e.get("entity") in key_entities]
-        distilled_state["products_being_discussed"] = [p.get("plan_name") for p in full_state.get("products_discussed", [])]
+        
+        entities = full_state.get("entities_extracted", [])
+        key_entities_map = {}
+        for entity in reversed(entities): # Começa do mais recente
+            if entity and entity.get("entity") not in key_entities_map:
+                key_entities_map[entity.get("entity")] = entity.get("value")
+        
+        distilled_state["current_key_entities"] = {
+            "customer_name": key_entities_map.get("customer_name"),
+            "vehicle_type": key_entities_map.get("vehicle_type"),
+            "use_case": key_entities_map.get("use_case"),
+            "key_concern": key_entities_map.get("key_concern")
+        }
+
+        # Sintetiza os produtos discutidos para uma lista de nomes únicos, evitando redundância.
+        discussed_plan_names = [p.get("plan_name") for p in full_state.get("products_discussed", []) if p]
+        if discussed_plan_names:
+            distilled_state["products_being_discussed"] = list(set(discussed_plan_names))
+
         distilled_state['disclosure_checklist'] = full_state.get("disclosure_checklist", [])
         
-
-    elif agent_name in ["ResponseCraftsman", "CommunicationAgent"]:
-        last_entities = full_state.get("entities_extracted", [])
-        distilled_state["customer_name"] = next((e["value"] for e in last_entities if e["entity"] == "customer_name"), None)
-        last_sentiment_entry = full_state.get("user_sentiment_history", [{}])[-1] if full_state.get("user_sentiment_history", []) else {}
+    elif agent_name == "CommunicationAgent":
+        entities = full_state.get("entities_extracted", [])
+        distilled_state["customer_name"] = next((e.get("value") for e in reversed(entities) if e.get("entity") == "customer_name"), None)
+        
+        user_sentiment_history = full_state.get("user_sentiment_history", [])
+        last_sentiment_entry = user_sentiment_history[-1] if user_sentiment_history else {}
         distilled_state["sentiment_of_last_turn"] = last_sentiment_entry.get("sentiment")
 
-    elif agent_name == "DeliveryCoordinator":
-        distilled_state["user_sentiment_history_summary"] = [s.get("sentiment") for s in full_state.get("user_sentiment_history", [])]
-        distilled_state["checklist_status_summary"] = {
-            "total_items": len(full_state.get("disclosure_checklist", [])),
-            "items_communicated": sum(1 for item in full_state.get("disclosure_checklist", []) if item.get("status") == "communicated"),
-            "is_complete": all(item.get("status") == "communicated" for item in full_state.get("disclosure_checklist", []) if full_state.get("disclosure_checklist"))
-        }
-        distilled_state['disclosure_topics'] = [{f'{item.get("topic")} - {item.get("content")}': "pending"} for item in full_state.get("disclosure_checklist", []) if item.get("status") == "pending"]
-
-
     return distilled_state
+
+
+def distill_customer_profile(full_profile: dict) -> dict:
+    """
+    Recebe o perfil completo de longo prazo e o destila em um "briefing"
+    leve para ser usado pelos agentes.
+    """
+    if not full_profile:
+        return None
+
+    distilled_profile = {
+        "contact_id": full_profile.get("contact_id"),
+        "customer_identity": full_profile.get("customer_identity"),
+        "executive_summary": full_profile.get("executive_summary"),
+        "strategic_insights": full_profile.get("strategic_insights"),
+        "assets": full_profile.get("assets")
+    }
+
+    timeline = full_profile.get("relationship_timeline", [])
+    distilled_profile["recent_timeline_events"] = timeline[-5:]
+
+    return distilled_profile
 
 
 def run_mvp_crew(contact_id: str, phone_number: str, redis_client: redis.Redis, history: Any):
@@ -1586,7 +1628,7 @@ def send_message(state, messages, contact_id, phone_number):
 
     except Exception as e:
         logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
-        
+
 
 def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
 
@@ -1646,7 +1688,7 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
 
         context_analisys_task: Task = create_context_analysis_task(context_analisys_agent_instance)
 
-        triage_crew = Crew(
+        context_analisys_crew = Crew(
             agents=[
                 context_analisys_agent_instance,
             ],
@@ -1658,6 +1700,11 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
             planning=False,
         )
 
+        try:
+            profile = json.loads(redis_client.get(f"{contact_id}:customer_profile") or "{}")
+        except json.JSONDecodeError:
+            profile = {}
+
         inputs_context_analysis = {
         "contact_id": contact_id,
         "message_text": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
@@ -1667,11 +1714,11 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
         "history": history_messages,
         "conversation_state": str(distill_conversation_state('ContextAnalysisAgent', state)),
         "turn": state["metadata"]["current_turn_number"],
-        "customer_profile": str(redis_client.get(f"{contact_id}:customer_profile")),
+        "customer_profile": str(distill_customer_profile(profile)),
         }
 
         logger.info(f"MVP Crew: Executando kickoff com inputs: {inputs_context_analysis}")
-        triage_crew.kickoff(inputs_context_analysis)
+        context_analisys_crew.kickoff(inputs_context_analysis)
         logger.info(f"MVP Crew: Kickoff executado com sucesso para contact_id {contact_id}")
 
         response_context = context_analisys_task.output.raw
@@ -1701,7 +1748,16 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
                     redis_client.set(f"{contact_id}:plan_details", json_response.get('plan_details', ""))
 
                 if 'profile' in json_response:
-                    redis_client.set(f"{contact_id}:customer_profile", json.dumps(json_response['profile']))
+                    profile_copy = copy.deepcopy(json_response['profile'])
+
+                    for k in profile_copy:
+                        if k == "relationship_timeline" and k in profile:
+                            profile[k].extend(profile_copy[k])
+                        
+                        else:
+                            profile[k] = profile_copy[k]
+
+                    redis_client.set(f"{contact_id}:customer_profile", json.dumps(profile))
 
             else:
                 logger.warning(f"MVP Crew: Nenhuma resposta JSON válida gerada para contact_id {contact_id}")
@@ -1731,9 +1787,11 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
             verbose=True
         )
         
+        last_messages_processed = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+
         inputs_for_registration = {
             "history": history_messages,
-            "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
+            "message_text_original": '\n'.join(last_messages_processed),
             "collected_data_so_far": str(user_data_so_far),
             "plan_details": str(plan_details),
             "turn": state["metadata"]["current_turn_number"],
@@ -1743,6 +1801,16 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
 
         registration_crew.kickoff(inputs_for_registration)
         
+        all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+        messages_left = [x for x in all_messages if x not in last_messages_processed]
+
+        pipe = redis_client.pipeline()
+        pipe.delete(f'contacts_messages:waiting:{contact_id}')
+        if messages_left:
+            pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+        
+        pipe.execute()
+
         registration_task_str = registration_task.output.raw
         registration_task_json, updated_state = parse_json_from_string(registration_task_str)
         
@@ -1782,7 +1850,7 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
             )
 
             inputs_strategic = {
-                "profile_customer_task_output": str(redis_client.get(f"{contact_id}:customer_profile")),
+                "profile_customer_task_output": str(distill_customer_profile(profile)),
                 "message_text_original": '\n'.join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
                 "operational_context": json_response.get('operational_context', ''),
                 "identified_topic": json_response.get('identified_topic', ''),
@@ -1829,16 +1897,16 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
 
         inputs_communication = {
             "develop_strategy_task_output": str(redis_client.get(f"{contact_id}:strategic_plan")),
-            "profile_customer_task_output": str(redis_client.get(f"{contact_id}:customer_profile")),
+            "profile_customer_task_output": str(distill_customer_profile(profile)),
             "message_text_original": '\n'.join(last_messages_processed),
             "operational_context": json_response.get('operational_context', ''),
             "identified_topic": json_response.get('identified_topic', ''),
             "recently_sent_catalogs": ', '.join(recently_sent_catalogs),
-            "conversation_state": str(distill_conversation_state('ResponseCraftsman', state)),
+            "conversation_state": str(distill_conversation_state('CommunicationAgent', state)),
             "timestamp": datetime.datetime.now().isoformat(),
             "turn": state["metadata"]["current_turn_number"],
             "history": history_messages,
-            "disclousure_checklist": state.get('disclosure_checklist', []),
+            "disclosure_checklist": str(state.get('disclosure_checklist', [])),
         }
 
         
@@ -1847,7 +1915,7 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
         response_communication_json = None
         response_communication_str = communication_task.output.raw
 
-        response_communication_json = parse_json_from_string(response_communication_str)
+        response_communication_json, updated_state = parse_json_from_string(response_communication_str)
 
         # Atualizando estado
         if updated_state and isinstance(updated_state, dict):
@@ -1862,7 +1930,7 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
 
         # ============================================================
 
-        # Parseando resposta do ResponseCraftsman
+        # Parseando resposta do CommunicationAgent
         redo = False
         if response_communication_json:
             if 'Final Answer' in response_communication_json:
@@ -1871,12 +1939,10 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
                 
                 else:
                     primary_messages = response_communication_json['Final Answer']['messages_sequence']
-                    proactive_content = response_communication_json['Final Answer'].get('proactive_content_generated', [])
                     
                     del response_communication_json['Final Answer']
                     
                     response_communication_json['messages_sequence'] = primary_messages
-                    response_communication_json['proactive_content_generated'] = proactive_content
 
             if not 'messages_sequence' in response_communication_json:
                 redo = True
@@ -1885,60 +1951,60 @@ def run_mvp_crew_3(contact_id: str, phone_number: str, history: Any):
             redo = True
             
         if redo:
-            run_mvp_crew_3(contact_id, phone_number, redis_client, history)
+            run_mvp_crew_3(contact_id, phone_number, history)
             return
 
-    # =============================================================================================================================
+        # =============================================================================================================================
 
-    # Envio de mensagens
+        # Envio de mensagens
 
 
-    # Preparando mensagens para envio
-    from app.config.utils.messages_plans import plans_messages
-    
-    messages_plans_to_send = []
-    plans_names_to_send = []
-    
-    plans = response_communication_json.get('plan_names', [])
-    for plan in plans if plans else []:
-        if plan in plans_messages:
-            messages_plans_to_send.append(plans_messages[plan])
-            plans_names_to_send.append(plan)
+        # Preparando mensagens para envio
+        from app.config.utils.messages_plans import plans_messages
+        
+        messages_plans_to_send = []
+        plans_names_to_send = []
+        
+        plans = response_communication_json.get('plan_names', [])
+        for plan in plans if plans else []:
+            if plan in plans_messages:
+                messages_plans_to_send.append(plans_messages[plan])
+                redis_client.rpush(f"{contact_id}:sended_catalogs", plan)
 
-    messages_to_send = response_communication_json.get('messages_sequence', [])
-    messages_to_send.extend(messages_plans_to_send)
+        messages_to_send = response_communication_json.get('messages_sequence', [])
+        messages_to_send.extend(messages_plans_to_send)
 
-    # Envio de mensagens para Callbell
+        # Envio de mensagens para Callbell
 
-    if messages_to_send:
-        logger.info(f'[{contact_id}] - Enviando mensagens para Callbell: {messages_to_send}')
+        if messages_to_send:
+            logger.info(f'[{contact_id}] - Enviando mensagens para Callbell: {messages_to_send}')
+            try:
+                send_message(state, messages_to_send, contact_id, phone_number)
+                logger.info(f'[{contact_id}] - Mensagens enviadas com sucesso para Callbell.')
+            except Exception as e:
+                logger.error(f'[{contact_id}] - ERRO ao enviar mensagens para Callbell: {e}', exc_info=True)
+
+        # =============================================================================================================================
+        
+        # Processamento de mensagens na fila Redis
+        logger.info(f'[{contact_id}] - Iniciando processamento de mensagens restantes no Redis.')
         try:
-            send_message(state, messages_to_send, contact_id, phone_number)
-            logger.info(f'[{contact_id}] - Mensagens enviadas com sucesso para Callbell.')
+            all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+            logger.info(f'[{contact_id}] - Todas as mensagens na fila Redis antes da filtragem: {len(all_messages)} itens.')
+            messages_left = [x for x in all_messages if x not in last_messages_processed]
+            logger.info(f'[{contact_id}] - Mensagens restantes após filtragem (não processadas): {len(messages_left)} itens.')
+
+            pipe = redis_client.pipeline()
+            logger.info(f'[{contact_id}] - Pipeline Redis criado.')
+
+            pipe.delete(f'contacts_messages:waiting:{contact_id}')
+            logger.info(f'[{contact_id}] - Comando DELETE adicionado ao pipeline para contacts_messages:waiting:{contact_id}.')
+
+            if messages_left:
+                pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+                logger.info(f'[{contact_id}] - Comando RPUSH adicionado ao pipeline para {len(messages_left)} mensagens restantes.')
+
+            pipe.execute()
+            logger.info(f'[{contact_id}] - Pipeline Redis EXECUTADO.')
         except Exception as e:
-            logger.error(f'[{contact_id}] - ERRO ao enviar mensagens para Callbell: {e}', exc_info=True)
-
-    # =============================================================================================================================
-    
-    # Processamento de mensagens na fila Redis
-    logger.info(f'[{contact_id}] - Iniciando processamento de mensagens restantes no Redis.')
-    try:
-        all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
-        logger.info(f'[{contact_id}] - Todas as mensagens na fila Redis antes da filtragem: {len(all_messages)} itens.')
-        messages_left = [x for x in all_messages if x not in last_messages_processed]
-        logger.info(f'[{contact_id}] - Mensagens restantes após filtragem (não processadas): {len(messages_left)} itens.')
-
-        pipe = redis_client.pipeline()
-        logger.info(f'[{contact_id}] - Pipeline Redis criado.')
-
-        pipe.delete(f'contacts_messages:waiting:{contact_id}')
-        logger.info(f'[{contact_id}] - Comando DELETE adicionado ao pipeline para contacts_messages:waiting:{contact_id}.')
-
-        if messages_left:
-            pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
-            logger.info(f'[{contact_id}] - Comando RPUSH adicionado ao pipeline para {len(messages_left)} mensagens restantes.')
-
-        pipe.execute()
-        logger.info(f'[{contact_id}] - Pipeline Redis EXECUTADO.')
-    except Exception as e:
-        logger.error(f'[{contact_id}] - ERRO durante o processamento das mensagens restantes no Redis: {e}', exc_info=True)
+            logger.error(f'[{contact_id}] - ERRO durante o processamento das mensagens restantes no Redis: {e}', exc_info=True)

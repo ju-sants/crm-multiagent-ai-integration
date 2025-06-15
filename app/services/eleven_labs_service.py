@@ -14,13 +14,10 @@ def number_to_words(num):
     
     # Unidades
     units = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"]
-    
     # Dezenas
     tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"]
-    
     # Números especiais de 10 a 19
     teens = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"]
-    
     # Centenas
     hundreds = ["", "cento", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"]
     
@@ -83,24 +80,38 @@ def number_to_words(num):
     
     return " ".join(parts)
 
+def decimal_to_words(decimal_str):
+    """Converte a parte decimal para extenso"""
+    # Remove zeros à direita desnecessários
+    decimal_str = decimal_str.rstrip('0')
+    if not decimal_str:
+        return ""
+    
+    # Para casos como "033" -> "zero zero três" ou decimais pequenos que começam com zeros
+    if len(decimal_str) <= 3 and decimal_str.startswith('0'):
+        digits = []
+        for digit in decimal_str:
+            digits.append(number_to_words(int(digit)))
+        return " ".join(digits)
+    else:
+        # Para casos normais, converte o número decimal como inteiro
+        return number_to_words(int(decimal_str))
 
-def normalize_currency_for_tts(text: str) -> str:
+def normalize_numbers_for_tts(text: str) -> str:
     """
-    Converte valores monetários do formato R$ X.XXX,XX para extenso
-    Exemplo: R$ 15.110,65 -> quinze mil cento e dez reais e sessenta e cinco centavos
+    Função universal que converte para extenso:
+    - Valores monetários: R$ 15.110,65 -> quinze mil cento e dez reais e sessenta e cinco centavos
+    - Porcentagens: 3% -> três porcento | 0,033% -> zero vírgula zero três três porcento
+    - Números decimais: 3,14 -> três vírgula quatorze
     """
-    pattern = r'R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{2}))?'
-
-    def replace_match(match):
-        # Remove pontos dos milhares e converte para inteiro
+    
+    # 1. MOEDAS: R$ X.XXX,XX
+    def replace_currency(match):
         inteiros_str = match.group(1).replace('.', '')
         centavos_str = match.group(2)
-        
         inteiros = int(inteiros_str)
-        
         parts = []
         
-        # Converte a parte dos reais para extenso
         if inteiros > 0:
             inteiros_extenso = number_to_words(inteiros)
             if inteiros == 1:
@@ -108,26 +119,111 @@ def normalize_currency_for_tts(text: str) -> str:
             else:
                 parts.append(f"{inteiros_extenso} reais")
         
-        # Converte a parte dos centavos para extenso
         if centavos_str:
             centavos = int(centavos_str)
             if centavos > 0:
-                # Se também havia reais, adiciona o conectivo "e"
                 if inteiros > 0:
                     parts.append("e")
-                
                 centavos_extenso = number_to_words(centavos)
                 if centavos == 1:
                     parts.append(f"{centavos_extenso} centavo")
                 else:
                     parts.append(f"{centavos_extenso} centavos")
-
+        
         return ' '.join(parts)
-
-    # Aplica a substituição
-    normalized_text = re.sub(pattern, replace_match, text)
     
-    return normalized_text
+    # 2. PORCENTAGENS: X% ou X,XXX%
+    def replace_percentage(match):
+        inteiro_str = match.group(1)
+        decimal_str = match.group(2)
+        
+        inteiro = int(inteiro_str)
+        parts = []
+        
+        # Converte a parte inteira
+        if inteiro > 0:
+            parts.append(number_to_words(inteiro))
+        else:
+            parts.append("zero")
+        
+        # Converte a parte decimal se existir
+        if decimal_str:
+            parts.append("vírgula")
+            decimal_extenso = decimal_to_words(decimal_str)
+            parts.append(decimal_extenso)
+        
+        parts.append("porcento")
+        return " ".join(parts)
+    
+    # 3. NÚMEROS DECIMAIS: X,XXX (que não sejam porcentagens)
+    def replace_decimal(match):
+        inteiro_str = match.group(1)
+        decimal_str = match.group(2)
+        
+        inteiro = int(inteiro_str)
+        parts = []
+        
+        parts.append(number_to_words(inteiro))
+        parts.append("vírgula")
+        
+        decimal_extenso = decimal_to_words(decimal_str)
+        parts.append(decimal_extenso)
+        
+        return " ".join(parts)
+    
+    # Aplica as substituições em ordem:
+    
+    # 1. Primeiro as moedas
+    currency_pattern = r'R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{2}))?'
+    text = re.sub(currency_pattern, replace_currency, text)
+    
+    # 2. Depois as porcentagens
+    percentage_pattern = r'(\d+)(?:,(\d+))?%'
+    text = re.sub(percentage_pattern, replace_percentage, text)
+    
+    # 3. Por último os números decimais restantes
+    decimal_pattern = r'\b(\d+),(\d+)\b'
+    text = re.sub(decimal_pattern, replace_decimal, text)
+    
+    return text
+
+def normalize_symbols_for_tts(text: str) -> str:
+
+    symbols_to_words = {
+        '+': 'mais',
+        '-': 'menos',
+        '*': 'vezes',
+        '/': 'dividido por',
+        '=': 'igual a',
+        '(': 'abre parênteses',
+        ')': 'fecha parênteses',
+    }
+
+    for symbol, word in symbols_to_words.items():
+        text = text.replace(symbol, f' {word} ')
+
+    return text
+
+def normalize_words_for_tts(text: str) -> str:
+    words_to_replace = {
+        'WI-FI': 'wifi',
+        'wi-fi': 'wifi',
+        'wi fi': 'wifi',
+    }
+
+    for word, replacement in words_to_replace.items():
+        text = text.replace(word, replacement)
+    
+    return text
+
+def apply_normalizations(text: str) -> str:
+    """
+    Aplica normalizações de números, símbolos e palavras para o texto.
+    """
+    text = normalize_numbers_for_tts(text)
+    text = normalize_symbols_for_tts(text)
+    text = normalize_words_for_tts(text)
+    return text
 
 def host_audio(audio_bytes: bytes):
     audio_name = f'audio_eleven_agent_AI_{datetime.now().strftime("%Y%m%d%H%M%S")}.mp3'
@@ -143,7 +239,7 @@ def host_audio(audio_bytes: bytes):
 def main(messages: List[str]):
     messages_str = '\n'.join(messages)
 
-    messages_normalized = normalize_currency_for_tts(messages_str)
+    messages_normalized = apply_normalizations(messages_str)
 
     voice_settings = VoiceSettings(
             stability=0.71,
