@@ -22,10 +22,10 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
 app = Flask(__name__)
 redis_client = get_redis()
-redis_client.delete(f'processing:71464be80c504971ae263d710b39dd1f')
-redis_client.delete(f'state:71464be80c504971ae263d710b39dd1f')
-redis_client.delete(f"71464be80c504971ae263d710b39dd1f:customer_profile")
-redis_client.delete(f"contact:71464be80c504971ae263d710b39dd1f")
+# redis_client.delete(f'processing:71464be80c504971ae263d710b39dd1f')
+# redis_client.delete(f'state:71464be80c504971ae263d710b39dd1f')
+# redis_client.delete(f"71464be80c504971ae263d710b39dd1f:customer_profile")
+# redis_client.delete(f"contact:71464be80c504971ae263d710b39dd1f")
 
 client_description = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
 logger:  logging.Logger = get_logger(__name__)
@@ -163,11 +163,6 @@ def process_requisitions(payload):
             logger.info(f'[{contact_uuid}] - NENHUMA nova mensagem chegou durante o período de espera. Tentando obter lock de processamento.')
 
             contact_lock = None
-            # if contact_uuid == "71464be80c504971ae263d710b39dd1f":
-            #     redis_client.delete(f'state:{contact_uuid}')
-            #     redis_client.delete(f"{contact_uuid}:customer_profile")
-            #     redis_client.delete(f"contact:{contact_uuid}")
-                
             try:
                 contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True, ex=300)
                 logger.info(f'[{contact_uuid}] - Tentativa de obter lock "processing:{contact_uuid}" com resultado: {contact_lock}.')

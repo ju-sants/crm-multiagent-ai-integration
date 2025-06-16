@@ -4,9 +4,14 @@ import json
 import litellm
 from typing import Any, Dict
 import copy
+import re
 
 from app.agents.agent_declaration import *
 from app.tasks.tasks_declaration import *
+
+from app.tools.knowledge_tools import knowledge_service_tool
+
+from app.config.llm_config import default_openai_llm
 
 from app.services.telegram_service import send_single_telegram_message
 from app.services.state_manager_service import StateManagerService
@@ -51,15 +56,20 @@ state_manager = StateManagerService()
 
 def parse_json_from_string(json_string, update=True):
     try:
-        if '```json' in json_string:
-                    json_string = json_string.split('```json')[-1].split('```')[0]
-                
-        if '```' in json_string:
-            json_string = json_string.replace('```', '')
+        match = re.search(r'\{.*\}', json_string, re.DOTALL)
+        if not match:
+            print("Nenhum objeto JSON (iniciando com '{') foi encontrado na string.")
+            return None
+        
+        json_string = match.group(0)
+
+        # 2. Corrigir erros comuns de sintaxe de LLMs
+        json_string = json_string.replace(': True', ': true').replace(': False', ': false')
+        json_string = json_string.replace(': None', ': null')
     
         json_response = json.loads(json_string)
 
-        if 'task_output' and 'updated_state' in json_response and update:
+        if 'task_output' in json_response and 'updated_state' in json_response and update:
             task_output = json_response['task_output']
             updated_state = json_response['updated_state']
 
@@ -69,6 +79,7 @@ def parse_json_from_string(json_string, update=True):
             return json_response
         
         return json_response, None
+    
     except json.JSONDecodeError as e:
         return None, None
 
@@ -352,7 +363,7 @@ def customer_service_orchestrator(contact_id: str, phone_number: str, history: A
 
             else:
                 logger.warning(f"MVP Crew: Nenhuma resposta JSON válida gerada para contact_id {contact_id}")
-                customer_service_orchestrator(contact_id, phone_number, redis_client, history)
+                customer_service_orchestrator(contact_id, phone_number, history)
                 return
 
         else:
@@ -413,6 +424,7 @@ def customer_service_orchestrator(contact_id: str, phone_number: str, history: A
         redis_client.set(f"{contact_id}:user_data_so_far", json.dumps(registration_task_json))
 
         if registration_task_json and all([registration_task_json.get("is_data_collection_complete"), registration_task_json.get("status") == 'COLLECTION_COMPLETE']):
+            send_callbell_message(phone_number=phone_number, messages=[registration_task_json["next_message_to_send"]])
             send_single_telegram_message(registration_task_str, '-4854533163')
             redis_client.delete(f"{contact_id}:getting_data_from_user")
         
@@ -424,8 +436,8 @@ def customer_service_orchestrator(contact_id: str, phone_number: str, history: A
         logger.info(f"MVP Crew: Iniciando processamento para contact_id {contact_id}")
 
         if not json_response.get('is_plan_acceptable'):
-            strategic_advisor_instance = get_strategic_advisor_agent()
-            
+            default_openai_llm_with_tools = default_openai_llm.bind_tools([knowledge_service_tool])
+            strategic_advisor_instance = get_strategic_advisor_agent(default_openai_llm_with_tools)
             strategic_advise_task = create_develop_strategy_task(strategic_advisor_instance)
             
             # Criando estratégia

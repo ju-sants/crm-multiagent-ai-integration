@@ -5,6 +5,7 @@ from app.config.llm_config import *
 
 from app.utils.funcs.funcs import obter_caminho_projeto
 
+from app.tools.knowledge_tools import KnowledgeServiceTool
 
 
 base_path = obter_caminho_projeto()
@@ -22,10 +23,11 @@ def get_context_analysis_agent() -> Agent:
         allow_delegation=False,
     )
 
-def get_strategic_advisor_agent() -> Agent:
+def get_strategic_advisor_agent(llm = None) -> Agent:
     return Agent(
         config=agents_config['StrategicAdvisor'],
-        llm=pro_Google_llm,
+        llm=default_openai_llm if not llm else llm,
+        tools=[KnowledgeServiceTool()],
         verbose=True,
         allow_delegation=False,
     )
