@@ -102,7 +102,7 @@ products:
         contract_type: "moto_standard"
         catalog_link: "https://wa.me/p/9380524238652852/558006068000"
       - name: "Plano Proteção Total PGS"
-        type: "Rastreamento com Cobertura (Reembolso FIPE)"
+        type: "Rastreamento com Cobertura (Reembolso FIPE), APENAS PARA MOTOS!"
         pricing:
           adesao: 120.00
           reinstalacao: 100.00
@@ -124,6 +124,8 @@ products:
         contract_rules:
             - "É possível contratar o plano sem possuir CNH."
             - "É possível transferir o contrato para outro veículo, mediante pagamento de desinstalação e nova instalação."
+        observations:
+          - "Apenas para MOTOS!, esse plano NÃO é válido para carros, caminhões ou outros veículos."
         technology:
           update_frequency_moving: "A cada 30 segundos."
           update_frequency_stopped: "A cada 8 horas (para economia de bateria)."

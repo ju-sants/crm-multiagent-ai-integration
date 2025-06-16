@@ -1,4 +1,5 @@
 from crewai import LLM
+from langchain_openai import ChatOpenAI
 from app.config.settings import settings
 
 
@@ -36,7 +37,7 @@ flash_Google_llm_reason = LLM(
     thinking={"type": "enabled", "budget": 2048},
 )
 
-default_openai_llm = LLM(
-    model='openai/o4-mini-2025-04-16',
+default_openai_llm = ChatOpenAI(
+    name="o4-mini-2025-04-16",
     api_key=settings.OPENAI_API_KEY,
 )

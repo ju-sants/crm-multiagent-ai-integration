@@ -28,10 +28,6 @@ def create_execute_system_operations_task(agent: Agent) -> Task:
 def create_develop_strategy_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['develop_strategy_task'],
-        tools=[
-            # BusinessGuidelinesTool(), RAGTool(),
-            KnowledgeServiceTool(),
-        ],
         agent=agent,
     )
 

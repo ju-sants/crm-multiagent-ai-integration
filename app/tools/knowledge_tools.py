@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Literal, Type
 from crewai.tools import BaseTool
+from langchain_core.tools import tool
 import json
 from typing import Type, Any, Dict, List, Union
 
@@ -53,3 +54,25 @@ class KnowledgeServiceTool(BaseTool):
             
         return json.dumps(final_result, indent=2, ensure_ascii=False)
 
+@tool("KnowledgeServiceTool")
+def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
+    """
+    Use esta ferramenta para obter informações da base de conhecimento da Global System.
+    Para máxima eficiência, agrupe múltiplas perguntas em uma única chamada.
+    O input deve ser uma lista de dicionários de query. Ex: [{'topic': 'pricing', 'params': {'plan_name': 'Plano X'}}]
+    """
+
+    if not isinstance(queries, list):
+             return "Erro de formato: O input deve ser uma lista de dicionários de query."
+
+    # Itera sobre a lista de queries e coleta os resultados
+    results = [knowledge_service_instance.find_information(query) for query in queries]
+
+    # Retorna a lista de resultados como uma string formatada para o agente
+    if len(results) == 1:
+        # Se houver apenas um resultado, retorna-o diretamente para simplicidade
+        final_result = results[0]
+    else:
+        final_result = results
+        
+    return json.dumps(final_result, indent=2, ensure_ascii=False)

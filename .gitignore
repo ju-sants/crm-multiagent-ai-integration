@@ -6,7 +6,7 @@ __pycache__/
 log.txt
 Global-Agent/
 tests/
-tests.py
+tests*.py
 minha_arvore.txt
 app.log
 tmp_files/

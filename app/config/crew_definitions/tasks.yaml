@@ -30,7 +30,7 @@ context_analysis_task:
     3.  Analise a conversa para identificar possíveis dificuldades de leitura e atualize o campo `communication_preference` no `{{conversation_state}}` se necessário.
 
     # --- Parte 2: DECISÃO DE ROTEAMENTO ---
-    4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `{message_text}`.
+    4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `{{message_text}}`.
     5.  Analise o `{{strategic_plan}}` salvo no `{{conversation_state}}` contra a `{{message_text}}`. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
     6.  Se o cliente perguntar por preços, termos, informações ou qualquer coisa que EVIDENTEMENTE não está no plano estratégico, defina `"is_plan_acceptable": false`.
     6.  Com base na avaliação acima, defina o campo `"action"` para `"PROCEED_WITH_EXISTING_PLAN"` ou `"INITIATE_NEW_STRATEGIC_PLAN"`.
@@ -39,6 +39,7 @@ context_analysis_task:
 
     # --- Parte 3: PREPARAÇÃO DA SAÍDA ---
     9.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `session_summary`, adicione novas entidades da última mensagem, e incremente os metadados.
+    10. `operational_context` SEMPRE deverá ser um desses: BUDGET, BUDGET_ACCEPTED, CUSTOMER_SERVICE e SUPPORT.
     10.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
         
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a ESTRUTURA (populada com outros dados) do exemplo.
@@ -325,12 +326,12 @@ communication_task:
     -----
 
     **SEU FLUXO DE TRABALHO DETALHADO:**
-    1.  **Analise profundamente o `{{strategic_briefing}}`.** Ele contém tudo que você precisa saber para criar as mensagens.
+    1.  **Análise e Foco:** Analise profundamente o `{{strategic_briefing}}`. **Ele é a sua única fonte da verdade para definir o assunto da conversa.** Use o `{{conversation_state}}` e o `{{history}}` apenas para dar contexto, personalizar e evitar repetições. O histórico NUNCA deve ser o tópico principal.   
     2.  **Execute sua principal tarefa de DECONSTRUÇÃO:** Transforme as informações do dossiê (benefícios, preços, limitações, termos) em uma lista de mensagens curtas de uma frase em `primary_messages_sequence`.
     3.  **Nunca mande mensagens ou assuntos repetidos.** Use o `{{conversation_state}}` e o `{{history}}` para evitar redundâncias e manter a fluidez da conversa.
     4.  **Isso é um Chat!:** Não envie mensagens demais. Mantenha o dialogo fluido e natural, aprofundando a cada etapa.
-    3.  **Aplique a lógica de envio de catálogo** para popular a lista `plan_names`.
-    4.  **Prepare o `state_update`:**
+    5.  **Aplique a lógica de envio de catálogo** para popular a lista `plan_names`.
+    6.  **Prepare o `state_update`:**
         a. **Atualize o Checklist:** Revise as mensagens que você criou. Para cada item do `{{disclosure_checklist}}` que foi abordado, mude seu `status` para "communicated". Retorne o checklist COMPLETO com os status atualizados.
          - Se o item foi comunicado, mude o `status` para "communicated".
          - Nunca comunique itens que já foram comunicados anteriormente. A menos que o cliente solicite novamente.
