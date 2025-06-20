@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     X_GLADIA_KEY: str = "..."
     APPID_IMAGE_DESCRIPTION: str = '...'
     SECRET_IMAGE_DESCRIPTION: str = '...'
+
+    PLATAFORMA_X_TOKEN: str = "..."
     
     LOG_LEVEL: str = "INFO"
     
