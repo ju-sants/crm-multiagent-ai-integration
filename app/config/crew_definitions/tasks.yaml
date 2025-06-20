@@ -135,7 +135,9 @@ develop_strategy_task:
     Nunca retire itens de `disclosure_checklist` apenas adicione, para termos total controle do que já foi esclarecido e o que ainda falta esclarecer, NUNCA adicione itens iguais.
     Retorne `disclosure_checklist` COMPLETO, incluindo itens comunicados, pendentes e os novos que você adicionar.
     Você tem a liberdade de criar quantas chaves quiser no `task_output`, desde que sejam relevantes para a estratégia de interação e que contenha as obrigatórias.
-    
+    **SOLICITAÇÃO DE AÇÃO DE SISTEMA:** Após definir sua estratégia, avalie se você precisa de alguma informação de um sistema interno para continuar. Se sim, adicione a chave `"system_action_request"` ao seu `task_output`. O valor deve ser uma **string em linguagem natural** descrevendo claramente o que você precisa. Por exemplo: `"Preciso do diagnóstico em tempo real do veículo de placa 'ABC-1234' e também do histórico financeiro completo do cliente associado a essa placa."`.
+      - Essa solicitação será processada pelo `SystemActionAgent`, que tem a capacidade de interagir com outros sistemas e coletar informações adicionais.
+      - Capacidades do `SystemOperationsAgent`: buscar dados do rastreamento do veículo assim como quaisquer dados do veículo cadastrado (um report geral do veículo, com vários relatórios e informações, como cercas eletrõnicas e etc...), buscar informações do cadastro do cliente, todos os veiculos de um cliente, informações sobre o histórico financeiro do cliente, enviar comandos de RESET ao rastreador do veículo.
     
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
     NÃO adicione comentários no JSON final.
@@ -144,6 +146,7 @@ develop_strategy_task:
   expected_output: |
     {
       "task_output": {
+        "system_action_request": "Preciso do diagnóstico em tempo real do veículo de placa 'ABC-1234' e também do histórico financeiro completo do cliente associado a essa placa.", | "" | null
         "conversation_blueprint": {
           "customer_context_summary": {
             "relevant_profile_insights": "Cliente com histórico de roubo. Principal motivador é o medo de perda e o desejo de não ficar 'a pé'. Não é sensível a preço, mas sim à percepção de segurança e garantia.",
@@ -214,80 +217,54 @@ develop_strategy_task:
 
 execute_system_operations_task:
   description: |
-    Você é o SystemOperationsAgent, um executor de tarefas de sistema.
+    Você é o SystemOperationsAgent. Sua missão é interpretar a diretiva do StrategicAdvisor, executar as ações de sistema correspondentes, e retornar uma análise completa dos resultados.
 
-    Timestamp: "{timestamp}"
-    Now Turn: "{turn}"
-
-    **DADOS PARA SUA ANÁLISE:**
-    - **Solicitação de Ação de Sistema (Seu Gatilho):** "{develop_strategy_task.task_output_system_action_request}"
-      # Este é o comando que você deve executar.
-    - **Estado da Conversa (Contexto para Repassar):** 
+    **DADOS PARA SUA ANÁLISE E AÇÃO:**
+    - **Solicitação de ação do agente StrategicAdvisor:** 
+    
+    `{action_requested}`
+    
+    - **Estado da Conversa (Contexto para Parâmetros):** 
     
     `{conversation_state}`
     
-      # Você não precisa analisar este estado, mas DEVE retorná-lo intacto na sua saída para manter a continuidade do fluxo.
+    - **Perfil do Cliente (Contexto para Parâmetros):** 
+
+    `{customer_profile}`
+
+    - **Histórico de Conversa (Contexto para Parâmetros):**
+
+    `{history}`
 
     **SEU FLUXO DE TRABALHO:**
-    1.  Verifique se a `system_action_request` não é nula. Se for, retorne um status de "no_action_requested".
-    2.  Caso contrário, mapeie o `action_type` para a ferramenta interna correta.
-    3.  Execute a ferramenta com os `parameters` fornecidos.
-    4.  Estruture o resultado da sua execução (sucesso ou falha) no campo `task_output` da sua resposta.
-    5.  Inclua o objeto `{{conversation_state}}` que você recebeu, sem modificações, no campo `updated_state` da sua resposta.
-
-    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
-    NÃO adicione comentários no JSON final.
-    o `excpected_output` é um exemplo de saída esperada.
-
+    1.  **INTERPRETE a solicitação de ação:** Converta a instrução em linguagem natural em uma lista de `queries` técnicas do seu catálogo.
+    2.  **VALIDE os parâmetros** para cada query identifique os parãmetros necessários e os liste.
+    3.  **COLETA de parâmetros:** colete os parâmetros buscando os dados no Estado da conversa, no perfil do cliente e no histórico de conversa.
+    4.  **DECIDA O CAMINHO:**
+        - Se faltarem dados, retorne um `status: "INSUFFICIENT_DATA"` com o `message_to_user`.
+        - Se faltarem parâmetros internos: Parâmetros internos são os IDs e outras informações internas do nosso sistema e que o cliente nunca terá acesso, se precisar delas, execute outras ações de sistema antes da principal, para obtê-las.
+        - Se os dados estiverem completos, execute as queries via `SystemOperationsTool`.
+    5.  **SystemOperationsTool:** Envie uma lista de queries para o SystemOperationsTool, cada query deve ser um dicionário com `action_type` e `params`.
+    6.  **SINTETIZE OS RESULTADOS:** Após a execução, construa um JSON final. Ele DEVE conter:
+        - `status: "ACTION_COMPLETE"`.
+        - `message_to_user` (condicional): Uma mensagem para o usuário, requisitando dados, como placa do veículo..
+        - `synthesis`: Um parágrafo rico em informações que conecta os dados e gera insights.
+        - `data_payload`: Um dicionário enxuto com as informações estáticas e acionáveis para o CommunicationAgent, como links, dados de cadastro, observações e etc...
+    
+    SUA SAIDA DEVE SER APENAS UM JSON COM O ESQUEMA ABAIXO:
   expected_output: |
-    # {
-    #   "task_output": {
-    #     "action_type_executed": "GET_TRACKING_PLAN_DETAILS",
-    #     "status": "success",
-    #     "data": {
-    #       "plan_name": "Plano Proteção Total PGS",
-    #       "details": "Adesão de R$120,00. Mensalidade baseada na FIPE. Inclui reembolso em caso de não recuperação."
-    #     },
-    #     "error_message": null
-    #   },
-    #   "updated_state": {
-    #     "metadata": {
-    #       "contact_id": "71464be80c504971ae263d710b39dd1f",
-    #       "session_start_time": "2025-06-07T21:50:00.000Z",
-    #       "last_updated": "2025-06-07T22:15:00.000Z",
-    #       "current_turn_number": 4
-    #     },
-    #     "current_context": {
-    #         "context_type": "BUDGET",
-    #         "last_topic": "apresentacao_planos_moto",
-    #         "updated_at": "2025-06-07T22:15:00.000Z"
-    #     },
-    #     "session_summary": "Estratégia definida para apresentar opções de moto. O sistema agora busca detalhes do plano PGS.",
-    #     "communication_preference": {
-    #           "prefers_audio": Bool,
-    #           "reason": ""
-    #       },
-    #     "entities_extracted": [
-    #       { "entity": "vehicle_type", "value": "moto", "turn": 2 }
-    #     ],
-    #     "products_discussed": [
-    #       {
-    #         "plan_name": "Plano Proteção Total PGS",
-    #         "details_provided": [],
-    #         "presented_at_turn": 3
-    #       }
-    #     ],
-    #     "disclosure_checklist": [...],
-    #     "last_agent_action": {
-    #       "agent_name": "SystemOperationsAgent",
-    #       "goal": "Executar a busca de detalhes do plano PGS.",
-    #       "action_timestamp": "{timestamp}"
-    #     },
-    #     "user_sentiment_history": [
-    #       { "turn": 2, "sentiment": "curioso" }
-    #     ]
-    #   }
-    # }
+    {
+      "status": "ACTION_COMPLETE" | INSUFFICIENT_DATA
+      "synthesis": "A consulta para o cliente Juan Bispo (ID: 123) foi concluída. Ele está adimplente, sem boletos em aberto. O diagnóstico do veículo de placa ABC-1234 mostra que ele se comunicou pela última vez hoje às 14:10, com voltagem de bateria normal (12.5V) e bom sinal GSM (85%).",
+      "message_to_user": "" | "..."
+      "data_payload": {
+        "customer_id": "123",
+        "is_payment_due": false,
+        "vehicle_status_summary": "Última comunicação: hoje às 14:10. Bateria: 12.5V. Sinal GSM: OK. Sinal SATELITAL: OK. Diagnóstico: OK.",
+        ... # Crie as chaves que julgar necessárias.
+      },
+      "follow_up_suggestions": []
+    }
 
 
 communication_task:
@@ -302,6 +279,10 @@ communication_task:
     - **Dossiê Estratégico  (O Que Fazer):** 
     
     `{develop_strategy_task_output}`
+
+    - Sumário da ação no sistema (Ação no sistema orquestrada pelo SystemOperationsAgent, podendo trazer informações valiosas do nosso sistema interno. Pode ser None):
+
+    `{system_operations_task_output}`
     
     - **Estado da Conversa (O Contexto):**  # Use para personalizar suas mensagens e entender o que já foi dito.
       
@@ -329,7 +310,7 @@ communication_task:
     1.  **Análise e Foco:** Analise profundamente o `{{strategic_briefing}}`. **Ele é a sua única fonte da verdade para definir o assunto da conversa.** Use o `{{conversation_state}}` e o `{{history}}` apenas para dar contexto, personalizar e evitar repetições. O histórico NUNCA deve ser o tópico principal.   
     2.  **Execute sua principal tarefa de DECONSTRUÇÃO:** Transforme as informações do dossiê (benefícios, preços, limitações, termos) em uma lista de mensagens curtas de uma frase em `primary_messages_sequence`.
     3.  **Nunca mande mensagens ou assuntos repetidos.** Use o `{{conversation_state}}` e o `{{history}}` para evitar redundâncias e manter a fluidez da conversa.
-    4.  **Isso é um Chat!:** Não envie mensagens demais. Mantenha o dialogo fluido e natural, aprofundando a cada etapa.
+    4.  **Isso é um Chat!:** Não envie mensagens demais, nem mensagens grandes demais. Mantenha o dialogo fluido e natural, aprofundando a cada etapa.
     5.  **Aplique a lógica de envio de catálogo** para popular a lista `plan_names`.
     6.  **Prepare o `state_update`:**
         a. **Atualize o Checklist:** Revise as mensagens que você criou. Para cada item do `{{disclosure_checklist}}` que foi abordado, mude seu `status` para "communicated". Retorne o checklist COMPLETO com os status atualizados.
