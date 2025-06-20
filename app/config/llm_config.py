@@ -38,6 +38,6 @@ flash_Google_llm_reason = LLM(
 )
 
 default_openai_llm = ChatOpenAI(
-    name="o4-mini-2025-04-16",
+    model="o4-mini-2025-04-16",
     api_key=settings.OPENAI_API_KEY,
 )
