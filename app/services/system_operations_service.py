@@ -7,6 +7,8 @@ import datetime
 from app.core.logger import get_logger
 from app.config.settings import settings 
 
+from app.utils.funcs.reset_sending import process_reset_sending
+
 logger = get_logger(__name__)
 
 class SystemOperationsService:
@@ -29,6 +31,7 @@ class SystemOperationsService:
             "GET_VEHICLE_POSITIONS": self._get_vehicle_positions,
             "GET_PAYMENT_HISTORY": self._get_payment_history,
             "SEARCH_CLIENTS": self._search_clients,
+            "SEARCH_VEHICLES": self._search_vehicles,
             "GET_CLIENT_VEHICLES": self._get_client_vehicles,
             "GET_VEHICLE_TRIPS_REPORT": self._get_vehicle_trips_report,
             "GET_VEHICLE_EVENTS_REPORT": self._get_vehicle_events_report,
@@ -66,13 +69,25 @@ class SystemOperationsService:
         return response.json()
 
     def _get_vehicle_positions(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Busca o histórico de posições de um veículo."""
-        required = ["vehicle_id", "initial_date", "final_date"]
-        if not all(p in params for p in required): raise ValueError(f"Parâmetros obrigatórios: {required}")
-        
+        """
+        Busca o histórico de posições de um veículo.
+        Adaptação da função get_vehicle_positions.
+        """
+        required_params = ["vehicle_id", "initial_date", "final_date"]
+        if not all(p in params for p in required_params):
+            raise ValueError(f"Parâmetros obrigatórios ausentes. Necessário: {', '.join(required_params)}")
+
         url = f"{self.plataforma_api_base_url}/report/{params['vehicle_id']}/positions"
-        # ... (restante da lógica como antes)
-        response = requests.get(url, params=params, headers={"X-TOKEN": settings.PLATAFORMA_X_TOKEN}, timeout=30)
+        request_params = {
+            "initial_date": params['initial_date'],
+            "final_date": params['final_date'],
+            "ignition_state": params.get("ignition_state", 2),
+            "speed_above": params.get("speed_above", 0)
+        }
+        headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN}
+
+        logger.info(f"SERVICE: Buscando posições com parâmetros: {request_params}")
+        response = requests.get(url, headers=headers, params=request_params, timeout=30)
         response.raise_for_status()
         return response.json()
 
@@ -117,7 +132,7 @@ class SystemOperationsService:
             'active': params.get('active_filter'),
             'financial_alert': params.get('financial_alert_filter')
         }
-        # Remove chaves com valor None para não enviar parâmetros vazios
+
         request_params = {k: v for k, v in request_params.items() if v is not None}
         
         logger.info(f"SERVICE: Buscando clientes com parâmetros: {request_params}")
@@ -199,6 +214,73 @@ class SystemOperationsService:
         response.raise_for_status()
         return response.json()
     
+    def _get_vehicle_data_by_plate(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Busca detalhes de um veículo com base em sua placa.
+        Adaptação da função get_vehicle_details.
+        """
+        plate = params.get("plate")
+        if not plate: raise ValueError("'plate' é obrigatório.")
+
+        search_result = self._search_vehicles(search_term=plate)
+        if not search_result:
+            raise ValueError(f"Nenhum veículo encontrado com a placa {plate}.")
+        
+        return search_result
+
+    def _search_vehicles(search_term=None, current_page=None, items_per_page=None):
+        """Obter TODOS os veículos cadastrados, paginado e por pesquisa"""
+
+        # --- Configurações da API ---
+        API_URL = "https://api.plataforma.app.br/manager/vehicles"
+        # Token e headers baseados no geofence_deleter.py e informações fornecidas
+        HEADERS = {
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 OPR/117.0.0.0",
+            "Origin": "https://globalsystem.plataforma.app.br",
+            "Referer": "https://globalsystem.plataforma.app.br/",
+            "x-token": settings.PLATAFORMA_X_TOKEN,
+        }
+        PARAMS = {
+            "items_per_page": 50 if not items_per_page else items_per_page,
+            "paginate": 1,
+            "current_page": 1 if not current_page else current_page,
+            "sort_by_field": "license_plate",
+            "sort_direction": "asc"
+        }
+
+        if search_term:
+            PARAMS['all'] = search_term
+
+        # --- Botão para Buscar Dados ---
+        try:
+            response = requests.get(API_URL, headers=HEADERS, params=PARAMS, timeout=60)
+            response.raise_for_status() # Lança exceção para status HTTP 4xx/5xx
+            data = response.json()
+
+            data_v = data.get('data', [])
+            if data_v:
+                if not current_page:
+                    logger.info(f"{len(data_v)} registros de veículos carregados.")
+
+                return data_v
+            else:
+                return []
+                    
+        except requests.exceptions.HTTPError as http_err:
+            logger.error(f"Erro HTTP ao buscar dados: {http_err}")
+            logger.error(f"Detalhes: {response.text}")
+            return []
+        
+        except requests.exceptions.RequestException as req_err:
+            logger.error(f"Erro de requisição ao buscar dados: {req_err}")
+            return []
+        
+        except ValueError as json_err: # Trata erro de decodificação do JSON
+            logger.error(f"Erro ao decodificar JSON da resposta da API: {json_err}")
+            logger.info(f"Conteúdo da resposta: {response.text if 'response' in locals() else 'Não disponível'}")
+            return []
+
     # --- Implementação de Workflows de Negócio ---
 
     def _wf_get_vehicle_full_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -238,38 +320,28 @@ class SystemOperationsService:
         Abstrai a complexidade de múltiplos sistemas (Eseye, SMSBarato, resets de rede).
         """
         plate = params.get("plate")
-        command_type = params.get("command_type", "SMS_RESET") # Ex: SMS_RESET, NETWORK_RESET_VIVO
         if not plate: raise ValueError("'plate' é obrigatório para este workflow.")
 
-        logger.info(f"SERVICE WORKFLOW: Iniciando reset '{command_type}' para a placa: {plate}")
-
         # ETAPA 1: Obter os dados do veículo/rastreador usando a placa (função placeholder)
-        # vehicle_data = self._get_vehicle_data_by_plate(plate)
-        # if not vehicle_data:
-        #     return {"status": "error", "message": f"Veículo com placa {plate} não encontrado."}
+        vehicle_data = self._get_vehicle_data_by_plate({"plate": plate})
+        if not vehicle_data:
+            return {"status": "error", "message": f"Veículo com placa {plate} não encontrado."}
         
-        # ETAPA 2: Executar a lógica da função original `process_initial_failure_GSM`
-        # Aqui, você chamaria as funções de login, get_iccid, send_sms, reset_rede, etc.
-        # Como as funções auxiliares (sanitize_tel, qual_fornecedora, etc.) não foram
-        # fornecidas, esta parte permanece como um placeholder lógico.
+        results = []
+        for vehicle in vehicle_data:
+            result = process_reset_sending(vehicle)
+            results.append(result)
         
-        # Lógica de simulação:
-        report = []
-        report.append(f"Iniciado workflow de reset para a placa {plate}.")
-        report.append(f"Tipo de comando solicitado: {command_type}.")
-        report.append("Ação: A lógica de múltiplos passos (login, busca, envio) seria executada aqui.")
-        report.append("Resultado: Comando de reset para {plate} simulado com sucesso.")
-
-        logger.warning(f"SERVICE WORKFLOW: O workflow _wf_send_tracker_reset_command está usando lógica de exemplo (placeholder).")
-        return {"execution_report": report}
+        return results
 
     def _wf_find_client_and_get_financials(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         WORKFLOW: Encontra um cliente pelo nome ou documento e retorna seu
         histórico financeiro completo.
         """
-        search_term = params.get("search_term")
-        if not search_term: raise ValueError("'search_term' é obrigatório.")
+        search_term = params.get("nome_cliente")
+        
+        if not search_term: raise ValueError("'nome_cliente' é obrigatório.")
 
         logger.info(f"SERVICE WORKFLOW: Iniciando busca de cliente e histórico financeiro para: {search_term}")
 
@@ -280,15 +352,19 @@ class SystemOperationsService:
         if not client_data:
             raise ValueError(f"Nenhum cliente encontrado para o termo de busca: '{search_term}'")
         
-        customer_id = client_data[0].get("id")
-        
-        # 2. Segunda chamada de API: Obter o histórico financeiro com o ID encontrado
-        financial_history = self._get_payment_history({"customer_id": customer_id})
+        payload = []
+        for customer in client_data:
+            customer_id = customer.get("id")
+            
+            # 2. Segunda chamada de API: Obter o histórico financeiro com o ID encontrado
+            financial_history = self._get_payment_history({"customer_id": customer_id})
+            payload.append({
+                "customer_details": customer,
+                "financial_history": financial_history
+            })
 
-        return {
-            "customer_details": client_data[0],
-            "financial_history": financial_history
-        }
+        return payload
+    
 
 # Instância Singleton do serviço
 system_operations_service = SystemOperationsService()
