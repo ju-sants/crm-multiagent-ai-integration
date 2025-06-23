@@ -222,13 +222,13 @@ class SystemOperationsService:
         plate = params.get("plate")
         if not plate: raise ValueError("'plate' é obrigatório.")
 
-        search_result = self._search_vehicles(search_term=plate)
+        search_result = self._search_vehicles({"search_term": plate})
         if not search_result:
             raise ValueError(f"Nenhum veículo encontrado com a placa {plate}.")
         
         return search_result
 
-    def _search_vehicles(search_term=None, current_page=None, items_per_page=None):
+    def _search_vehicles(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Obter TODOS os veículos cadastrados, paginado e por pesquisa"""
 
         # --- Configurações da API ---
@@ -241,6 +241,11 @@ class SystemOperationsService:
             "Referer": "https://globalsystem.plataforma.app.br/",
             "x-token": settings.PLATAFORMA_X_TOKEN,
         }
+
+        items_per_page = params.get('items_per_page')
+        current_page = params.get('current_page')
+        search_term = params.get('search_term')
+
         PARAMS = {
             "items_per_page": 50 if not items_per_page else items_per_page,
             "paginate": 1,
@@ -296,9 +301,9 @@ class SystemOperationsService:
         # 1. Primeira chamada de API: Obter detalhes do veículo
         details = self._get_vehicle_details({"vehicle_id": vehicle_id})
         
-        # 2. Segunda chamada de API: Obter posições dos últimos 7 dias
+        # 2. Segunda chamada de API: Obter posições dos últimos 2 dias
         today = datetime.date.today()
-        seven_days_ago = today - datetime.timedelta(days=7)
+        seven_days_ago = today - datetime.timedelta(days=2)
         positions_params = {
             "vehicle_id": vehicle_id,
             "initial_date": seven_days_ago.strftime("%Y-%m-%d"),
@@ -323,13 +328,14 @@ class SystemOperationsService:
         if not plate: raise ValueError("'plate' é obrigatório para este workflow.")
 
         # ETAPA 1: Obter os dados do veículo/rastreador usando a placa (função placeholder)
-        vehicle_data = self._get_vehicle_data_by_plate({"plate": plate})
-        if not vehicle_data:
+        vehicles_data = self._get_vehicle_data_by_plate({"plate": plate})
+        if not vehicles_data:
             return {"status": "error", "message": f"Veículo com placa {plate} não encontrado."}
         
         results = []
-        for vehicle in vehicle_data:
-            result = process_reset_sending(vehicle)
+        for v in vehicles_data:
+            vehicle_data = self._get_vehicle_details({"vehicle_id": v["id"]})
+            result = process_reset_sending(vehicle_data)
             results.append(result)
         
         return results
