@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     
     ALLOWED_CHATS: list[str] = [
         '71464be80c504971ae263d710b39dd1f', # Juan
-        '2fa9529f9c1e4ed9b8ddea6c6a4272e8', # valdir
+        # '2fa9529f9c1e4ed9b8ddea6c6a4272e8', # valdir
         # '7b337e574d63473ba0aba7e7de543a48', # ana paula
         # 'd3c9a42068b44b47bfbf6fc8adf62f71', # deibisson empresa
         # 'e426520a46f54bbeb5b98a76e95b1bbb', # cristiane
