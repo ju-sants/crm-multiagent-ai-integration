@@ -11,7 +11,7 @@ def main(session, recipient, logger):
 
     try:
         # 1. Autenticar para obter o Token Bearer
-        auth_payload = {'username': settings.LINK_LOGIN, 'password': 'Global5656@%'}
+        auth_payload = {'username': settings.LINK_LOGIN, 'password': settings.LINK_PASSWORD}
         # Headers mínimos para autenticação
         auth_headers = {
             'Accept': 'application/json, text/plain, */*',

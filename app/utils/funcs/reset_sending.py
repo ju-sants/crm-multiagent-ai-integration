@@ -34,6 +34,8 @@ def process_reset_sending(vehicle_data):
         return "Nenhuma observação encontrada. É crucial para identificar o provedor do chip para identificar o procedimento de network reset correto."
     
     resets_sent = ["SMS", "NETWORK"]
+    resets_not_sent = []
+
     message = "Tracker reset successfully."
     try:
         logger.info(f"Processing tracker {tracker_id}.")
@@ -65,7 +67,7 @@ def process_reset_sending(vehicle_data):
 
         if command and recipient:
             recipient_sanitized = sanitize_tel(recipient)
-            fornecedora = qual_fornecedora(id_vehicle)
+            fornecedora = qual_fornecedora(observation)
 
             # 1: SMS RESET
             if recipient_sanitized:
@@ -74,19 +76,21 @@ def process_reset_sending(vehicle_data):
                 if not is_eseye:
                     try:
                         logger.info(f'Sending SMS reset command to {recipient_sanitized} for tracker {tracker_id}. Command: {command}')
-                        reset_sms(recipient_sanitized, command, logger)
+                        reset_sms(recipient_sanitized, command)
 
                     except Exception as e:
                         logger.error(f"Error sending SMS reset command: {e}")
-                        resets_sent.remove("SMS")
+                        resets_not_sent.append(resets_sent.pop(resets_sent.index("SMS")))
 
                 else:
                     try:
                         logger.info(f'Sending ESEYE reset for tracker {tracker_id} to {recipient_sanitized}. Command: {command}')
-                        reset_eseye(recipient_sanitized, command, logger, session)
+                        reset_eseye(recipient_sanitized, command, session)
                     except Exception as e:
                         logger.error(f"Error sending ESEYE reset command: {e}")
-                        resets_sent.remove("SMS")
+                        resets_not_sent.append(resets_sent.pop(resets_sent.index("SMS")))
+
+
 
             else:
                 logger.warning(f"Invalid recipient phone number format for initial SMS: {recipient}")
@@ -143,5 +147,7 @@ def process_reset_sending(vehicle_data):
         return {"status": "error", "message": f"Error processing tracker {tracker_id}: {e}", "vehicle_details": {"tracker_id": tracker_id, "plate": vehicle_data.get('license_plate', 'N/A'), "model": vehicle_data.get('model', 'N/A'), "owner": vehicle_data.get('owner', {}).get('name', 'N/A')}}
     
     else:
+        if resets_not_sent:
+            message += "\nSome resets were not sent, you can try again if wanted"
         logger.info(f"Tracker {tracker_id} reset successfully.")
-        return {"status": "success", "message": message, "resets_sent": resets_sent, "vehicle_details": {"tracker_id": tracker_id, "plate": vehicle_data.get('license_plate', 'N/A'), "model": vehicle_data.get('model', 'N/A'), "owner": vehicle_data.get('owner', {}).get('name', 'N/A')}}
+        return {"status": "success", "message": message, "resets_sent": resets_sent, "resets_not_sent": resets_not_sent, "vehicle_details": {"tracker_id": tracker_id, "plate": vehicle_data.get('license_plate', 'N/A'), "model": vehicle_data.get('model', 'N/A'), "owner": vehicle_data.get('owner', {}).get('name', 'N/A')}}

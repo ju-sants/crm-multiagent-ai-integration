@@ -8,7 +8,7 @@ from time import sleep
 import threading
 import redis # Importado redis
 import pytz
-
+from app.services.redis_service import get_redis
 
 # Carrega variáveis de ambiente do arquivo .env
 dotenv.load_dotenv()
@@ -32,7 +32,7 @@ REDIS_NUMBERS_TIME_HASH_KEY = 'numbers:time'
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-redis_client = None
+redis_client = get_redis(3)
 
 def get_callbell_headers():
     """Retorna os headers padrão para as requisições Callbell."""
