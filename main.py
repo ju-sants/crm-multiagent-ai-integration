@@ -23,6 +23,7 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 app = Flask(__name__)
 redis_client = get_redis()
 # redis_client.delete(f'processing:71464be80c504971ae263d710b39dd1f')
+# redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
 # redis_client.delete(f'state:71464be80c504971ae263d710b39dd1f')
 # redis_client.delete(f"71464be80c504971ae263d710b39dd1f:customer_profile")
 # redis_client.delete(f"contact:71464be80c504971ae263d710b39dd1f")
@@ -76,6 +77,7 @@ def process_requisitions(payload):
 
     contact_uuid = contact_info.get("uuid")
     phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
+    contact_name = contact_info.get("name", "")
     logger.info(f'[{contact_uuid}] - Extraídas informações do contato: UUID={contact_uuid}, Telefone={phone_number}')
 
     allowed_chats = get_allowed_chats()
@@ -89,6 +91,7 @@ def process_requisitions(payload):
         
         content = payload.get('attachments', [])
         logger.info(f'[{contact_uuid}] - Texto inicial: "{text}", Anexos encontrados: {len(content)}')
+
 
         content_audio = [attach for attach in content if '.mp3' in attach]
         logger.info(f'[{contact_uuid}] - Áudios identificados ({len(content_audio)}): {content_audio}')
@@ -182,7 +185,7 @@ def process_requisitions(payload):
                     history = history_response.json()
                     logger.info(f'[{contact_uuid}] - Histórico da Callbell obtido (status {history_response.status_code}). Total de mensagens no histórico: {len(history)}')
 
-                    customer_service_orchestrator(contact_uuid, phone_number, history)
+                    customer_service_orchestrator(contact_uuid, phone_number, history, contact_name)
                     logger.info(f'[{contact_uuid}] - CHAMADA da função run_mvp_crew (comentada no código).')
 
                 except requests.exceptions.RequestException as e:
