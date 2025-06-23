@@ -33,20 +33,24 @@ context_analysis_task:
     4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `{{message_text}}`.
     5.  Analise o `{{strategic_plan}}` salvo no `{{conversation_state}}` contra a `{{message_text}}`. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
     6.  Se o cliente perguntar por preços, termos, informações ou qualquer coisa que EVIDENTEMENTE não está no plano estratégico, defina `"is_plan_acceptable": false`.
-    6.  Com base na avaliação acima, defina o campo `"action"` para `"PROCEED_WITH_EXISTING_PLAN"` ou `"INITIATE_NEW_STRATEGIC_PLAN"`.
-    7.  **Plano estratégico:** Decida se o plano estratégico de interação atual (se existir) é válido com o contexto, sessão e mensagem atual do cliente. se sim, envie `"is_plan_acceptable": true` em `task_output`, se não `"is_plan_acceptable": false`.
-    8.  IMPORTANTE!: Se o cliente aceitou comprar um serviço de rastreamento e `checklist_status_summary` em `conversation_state` estiver com todos os itens comunicados, defina operational_context como "BUDGET_ACCEPTED".
+    7.  Com base na avaliação acima, defina o campo `"action"` para `"PROCEED_WITH_EXISTING_PLAN"` ou `"INITIATE_NEW_STRATEGIC_PLAN"`.
+    8.  **Plano estratégico:** Decida se o plano estratégico de interação atual (se existir) é válido com o contexto, sessão e mensagem atual do cliente. se sim, envie `"is_plan_acceptable": true` em `task_output`, se não `"is_plan_acceptable": false`.
+    9.  IMPORTANTE!: Se o cliente aceitou comprar um serviço de rastreamento e `checklist_status_summary` em `conversation_state` estiver com todos os itens comunicados, defina operational_context como "BUDGET_ACCEPTED".
+    10.  IMPORTANTE!: Na nossa equipe temos um agente capaz de realizar ações no sistema, como buscar dados do rastreamento do veículo assim como quaisquer dados do veículo cadastrado (um report geral do veículo, com vários relatórios e informações, como cercas eletrõnicas e etc...), buscar informações do cadastro do cliente, todos os veiculos de um cliente, informações sobre o histórico financeiro do cliente, enviar comandos de RESET ao rastreador do veículo (um comando que instrui o rastreador a reiniciar seu hardware).
+          - Caso note que o cliente solicita uma dessas ações e o plano estratégico for aceitável, envie o comando para o agente de ações adicionando a chave "system_action_request" com uma solicitação em linguagem natural detalhando o que precisa.
+          - Caso note que o cliente solicita uma dessas ações e o plano estratégico NÃO for aceitável, apenas defina `is_plan_acceptable: false` em `task_output` e não envie nenhum comando para o agente de ações.
 
     # --- Parte 3: PREPARAÇÃO DA SAÍDA ---
-    9.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `session_summary`, adicione novas entidades da última mensagem, e incremente os metadados.
-    10. `operational_context` SEMPRE deverá ser um desses: BUDGET, BUDGET_ACCEPTED, CUSTOMER_SERVICE e SUPPORT.
-    10.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
+    11.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `session_summary`, adicione novas entidades da última mensagem, e incremente os metadados.
+    12. `operational_context` SEMPRE deverá ser um desses: BUDGET, BUDGET_ACCEPTED, CUSTOMER_SERVICE e SUPPORT.
+    13.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
         
     Retorne APENAS um objeto JSON, seguindo EXATAMENTE a ESTRUTURA (populada com outros dados) do exemplo.
   expected_output: |
     {
       "task_output": {
         "is_plan_acceptable": true, # ou false, dependendo da análise
+        "system_action_request": "Buscar dados do rastreamento do veículo" | "Enviar um RESET ao rastreador do veículo" | "..." | null,
         "action": "INITIATE_FULL_PROCESSING",
         "identified_topic": "continuidade_discussao_preco_moto",
         "operational_context": "BUDGET",
@@ -236,6 +240,10 @@ execute_system_operations_task:
 
     `{history}`
 
+
+    - **Mensagem atual do cliente (Contexto para Parâmetros):** `{message_text_original}`
+    - **Nome do cliente no whatsapp (Contexto para Parâmetros, pode estar vazio):** `{customer_name}`
+
     **SEU FLUXO DE TRABALHO:**
     1.  **INTERPRETE a solicitação de ação:** Converta a instrução em linguagem natural em uma lista de `queries` técnicas do seu catálogo.
     2.  **VALIDE os parâmetros** para cada query identifique os parãmetros necessários e os liste.
@@ -254,7 +262,7 @@ execute_system_operations_task:
     SUA SAIDA DEVE SER APENAS UM JSON COM O ESQUEMA ABAIXO:
   expected_output: |
     {
-      "status": "ACTION_COMPLETE" | INSUFFICIENT_DATA
+      "status": "ACTION_COMPLETE" | "INSUFFICIENT_DATA"
       "synthesis": "A consulta para o cliente Juan Bispo (ID: 123) foi concluída. Ele está adimplente, sem boletos em aberto. O diagnóstico do veículo de placa ABC-1234 mostra que ele se comunicou pela última vez hoje às 14:10, com voltagem de bateria normal (12.5V) e bom sinal GSM (85%).",
       "message_to_user": "" | "..."
       "data_payload": {

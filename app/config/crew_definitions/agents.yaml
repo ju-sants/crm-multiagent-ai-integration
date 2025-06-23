@@ -144,22 +144,22 @@ SystemOperationsAgent:
     ## CATÁLOGO DE OPERAÇÕES DE SISTEMA (SUA DOCUMENTAÇÃO DE API)
 
     # --- Funções Técnicas (Ações Granulares) ---
-    - action_type: 'SEARCH_CLIENTS', params: {'search_term': '...'} # parãmetros do tipo "search_term" podem ser qualquer informação relatada ao cliente/veículo que o sistema o encontrará.
-    - action_type: 'SEARCH_VEHICLES', params: {'search_term': '...'} # parãmetros do tipo "search_term" podem ser qualquer informação relatada ao cliente/veículo que o sistema o encontrará.
-    - action_type: 'GET_CLIENT_VEHICLES', params: {'client_id': '...'}
-    - action_type: 'GET_VEHICLE_DETAILS', params: {'vehicle_id': '...'}
-    - action_type: 'GET_VEHICLE_POSITIONS', params: {'vehicle_id': '...', 'initial_date': '...', 'final_date': '...'}
-    - action_type: 'GET_VEHICLE_TRIPS_REPORT', params: {'vehicle_id': '...', 'start_date': '...', 'end_date': '...'}
-    - action_type: 'GET_VEHICLE_EVENTS_REPORT', params: {'vehicle_id': '...', 'start_date': '...', 'end_date': '...'}
-    - action_type: 'GET_VEHICLE_GEOFENCES', params: {'vehicle_id': '...'}
-    - action_type: 'GET_VEHICLES_WITH_SIGNAL_FAIL', params: {}
-    - action_type: 'GET_PAYMENT_HISTORY', params: {'customer_id': '...'}
+    - action_type: 'SEARCH_CLIENTS', params: {{'search_term': '...'}} # parâmetros do tipo "search_term" podem ser qualquer informação relatada ao cliente/veículo que o sistema o encontrará.
+    - action_type: 'SEARCH_VEHICLES', params: {{'search_term': '...'}} # parâmetros do tipo "search_term" podem ser qualquer informação relatada ao cliente/veículo que o sistema o encontrará.
+    - action_type: 'GET_CLIENT_VEHICLES', params: {{'client_id': '...'}}
+    - action_type: 'GET_VEHICLE_DETAILS', params: {{'vehicle_id': '...'}}
+    - action_type: 'GET_VEHICLE_POSITIONS', params: {{'vehicle_id': '...', 'initial_date': '...', 'final_date': '...'}} # Para relatórios use intervalos de data de até um dia atrás, pois o sistema backend pode falhar em intervalos longos, formato: YYYY-MM-DD HH:MM:SS.
+    - action_type: 'GET_VEHICLE_TRIPS_REPORT', params: {{'vehicle_id': '...', 'start_date': '...', 'end_date': '...'}} # Para relatórios use intervalos de data de até um dia atrás, pois o sistema backend pode falhar em intervalos longos, formato: YYYY-MM-DD HH:MM:SS.
+    - action_type: 'GET_VEHICLE_EVENTS_REPORT', params: {{'vehicle_id': '...', 'start_date': '...', 'end_date': '...'}} # Para relatórios use intervalos de data de até um dia atrás, pois o sistema backend pode falhar em intervalos longos, formato: YYYY-MM-DD HH:MM:SS.
+    - action_type: 'GET_VEHICLE_GEOFENCES', params: {{'vehicle_id': '...'}}
+    - action_type: 'GET_VEHICLES_WITH_SIGNAL_FAIL', params: {{}}
+    - action_type: 'GET_PAYMENT_HISTORY', params: {{'customer_id': '...'}}
 
     # --- Workflows de Negócio (Ações Orquestradas) ---
-    - action_type: 'WF_FIND_CLIENT_AND_GET_FINANCIALS', params: {'search_term': '...'}
-    - action_type: 'WF_GET_VEHICLE_FULL_REPORT', params: {'vehicle_id': '...'}
-    - action_type: 'WF_SEND_TRACKER_RESET', params: {'plate': '...'}
-    - action_type: 'WF_CALCULATE_DISPLACEMENT_COST', params: {'destination_city': '...', 'destination_state': '...'}
+    - action_type: 'WF_FIND_CLIENT_AND_GET_FINANCIALS', params: {{'search_term': '...'}}
+    - action_type: 'WF_GET_VEHICLE_FULL_REPORT', params: {{'vehicle_id': '...'}}
+    - action_type: 'WF_SEND_TRACKER_RESET', params: {{'plate': '...'}}
+    - action_type: 'WF_CALCULATE_DISPLACEMENT_COST', params: {{'destination_city': '...', 'destination_state': '...'}}
     ---
   verbose: true
   allow_delegation: false
