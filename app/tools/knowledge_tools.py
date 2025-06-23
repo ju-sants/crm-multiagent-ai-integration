@@ -54,14 +54,8 @@ class KnowledgeServiceTool(BaseTool):
             
         return json.dumps(final_result, indent=2, ensure_ascii=False)
 
-@tool("KnowledgeServiceTool")
+@tool("KnowledgeServiceTool", description="Use esta ferramenta para obter informações da base de conhecimento da Global System. Para máxima eficiência, agrupe múltiplas perguntas em uma única chamada. O input deve ser uma lista de dicionários de query. Ex: [{'topic': 'pricing', 'params': {'plan_name': 'Plano X'}}]")
 def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
-    """
-    Use esta ferramenta para obter informações da base de conhecimento da Global System.
-    Para máxima eficiência, agrupe múltiplas perguntas em uma única chamada.
-    O input deve ser uma lista de dicionários de query. Ex: [{'topic': 'pricing', 'params': {'plan_name': 'Plano X'}}]
-    """
-
     if not isinstance(queries, list):
              return "Erro de formato: O input deve ser uma lista de dicionários de query."
 
