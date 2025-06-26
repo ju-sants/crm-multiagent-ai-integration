@@ -457,8 +457,6 @@ def customer_service_orchestrator(contact_id: str, phone_number: str, history: A
 
 
     # ================================ System Operations ====================================
-
-
     action_requested = None
     if state.get("system_action_request"): action_requested = state.get("system_action_request")
     elif state.get("strategic_plan").get("system_action_request"): action_requested = state.get("strategic_plan").get("system_action_request")
