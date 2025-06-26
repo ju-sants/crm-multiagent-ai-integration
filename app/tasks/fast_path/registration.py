@@ -1,0 +1,64 @@
+import json
+from crewai import Crew, Process
+from app.services.celery_Service import celery_app
+from app.core.logger import get_logger
+from app.agents.agent_declaration import get_registration_agent
+from app.tasks.tasks_declaration import create_collect_registration_data_task
+from app.models.data_models import ConversationState
+from app.services.state_manager_service import StateManagerService
+from app.utils.funcs.funcs import parse_json_from_string
+from app.services.redis_service import get_redis
+from app.services.callbell_service import send_callbell_message
+from app.services.telegram_service import send_single_telegram_message
+
+logger = get_logger(__name__)
+state_manager = StateManagerService()
+redis_client = get_redis()
+
+@celery_app.task(name='fast_path.registration')
+def registration_task(contact_id: str):
+    """
+    Task for handling the customer registration data collection process.
+    """
+    logger.info(f"[{contact_id}] - Starting registration task.")
+    state = state_manager.get_state(contact_id)
+
+    try:
+        agent = get_registration_agent()
+        task = create_collect_registration_data_task(agent)
+        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+
+        user_data_so_far = redis_client.get(f"{contact_id}:user_data_so_far")
+        plan_details = redis_client.get(f"{contact_id}:plan_details")
+        messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+
+        inputs = {
+            "conversation_state": state.model_dump_json(),
+            "message_text_original": "\n".join(messages),
+            "collected_data_so_far": user_data_so_far.decode('utf-8') if user_data_so_far else "{}",
+            "plan_details": plan_details.decode('utf-8') if plan_details else "{}",
+        }
+
+        result = crew.kickoff(inputs=inputs)
+        response_json, updated_state_dict = parse_json_from_string(result)
+
+        if updated_state_dict:
+            state = ConversationState(**{**state.model_dump(), **updated_state_dict})
+        
+        state_manager.save_state(contact_id, state)
+
+        if response_json:
+            redis_client.set(f"{contact_id}:user_data_so_far", json.dumps(response_json))
+            
+            if response_json.get("status") == 'COLLECTION_COMPLETE':
+                send_callbell_message(phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
+                send_single_telegram_message(result, '-4854533163')
+                redis_client.delete(f"{contact_id}:getting_data_from_user")
+            elif response_json.get("next_message_to_send"):
+                send_callbell_message(phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
+                redis_client.set(f"{contact_id}:getting_data_from_user", "1")
+
+        return contact_id
+    except Exception as e:
+        logger.error(f"[{contact_id}] - Error in registration_task: {e}", exc_info=True)
+        raise e

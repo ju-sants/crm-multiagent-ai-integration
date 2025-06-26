@@ -1,16 +1,19 @@
 from flask import Flask, jsonify, request
 import json
 import requests
-import threading
-
-from time import sleep
+from datetime import datetime, timedelta
 
 import logging
 
-
+from app.services.celery_Service import celery_app
 from app.core.logger import get_logger
-from app.crews.conversation_crew import customer_service_orchestrator
 from app.config.settings import settings
+from app.config.patches import apply_litellm_patch
+from app.models.data_models import ConversationState, StateMetadata
+from app.services.state_manager_service import StateManagerService
+from app.tasks.fast_path.context_analysis import context_analysis_task
+from app.tasks.fast_path.routing import routing_task
+from celery import chain
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
@@ -21,7 +24,9 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
 
 app = Flask(__name__)
+apply_litellm_patch()
 redis_client = get_redis()
+state_manager = StateManagerService()
 # redis_client.delete(f'processing:71464be80c504971ae263d710b39dd1f')
 # redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
 # redis_client.delete(f'state:71464be80c504971ae263d710b39dd1f')
@@ -65,184 +70,146 @@ def send_callbell_message(phone_number, text):
         return False
 
 
-def process_requisitions(payload):
-    logger.info(f'[{payload.get("uuid", "N/A")}] - INICIANDO process_requisitions para payload: {payload.get("uuid", "N/A")} de {payload.get("from", "N/A")}')
+@celery_app.task(name='io.process_audio_attachment')
+def process_audio_attachment_task(contact_uuid, url):
+    logger.info(f"[{contact_uuid}] - Transcribing audio from URL: {url}")
+    transcription = transcript(url)
+    if transcription:
+        redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', f"(Áudio transcrito): {transcription}")
+        static_url_part = url.split('uploads/')[1].split('?')[0]
+        redis_client.hset(f'{contact_uuid}:attachments', static_url_part, transcription)
 
-    contact_info = payload.get("contact")
-    if not contact_info:
-        logger.error(f'[{payload.get("uuid", "N/A")}] - ERRO: Informações de contato não encontradas no payload.')
+@celery_app.task(name='io.process_image_attachment')
+def process_image_attachment_task(contact_uuid, url):
+    logger.info(f"[{contact_uuid}] - Describing image from URL: {url}")
+    description_json = client_description.describe_image(image_url=url)
+    description = description_json.get('data', {}).get('content')
+    if description:
+        message = f"(Descrição de imagem): {description}"
+        redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', message)
+        static_url_part = url.split('uploads/')[1].split('?')[0]
+        redis_client.hset(f'{contact_uuid}:attachments', static_url_part, message)
+
+@celery_app.task(name='main.process_message_task')
+def process_message_task(contact_uuid):
+    """
+    This task processes the aggregated messages for a contact after a debounce period.
+    It now serves as the entrypoint to the Celery State Machine.
+    """
+    logger.info(f"[{contact_uuid}] - Debounced task started. Initializing state machine.")
+    
+    redis_client.delete(f'pending_task:{contact_uuid}')
+
+    contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True, ex=300)
+    if not contact_lock:
+        logger.warning(f"[{contact_uuid}] - Could not acquire lock. Another process is already handling this contact.")
         return
 
-    contact_uuid = contact_info.get("uuid")
-    phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
-    contact_name = contact_info.get("name", "")
-    logger.info(f'[{contact_uuid}] - Extraídas informações do contato: UUID={contact_uuid}, Telefone={phone_number}')
-
-    if contact_info.get("team", {}).get("uuid", "") == "d468731afdba45c3a3a65895e4b08a5a":
-        logger.info(f'[{contact_uuid}] - Contato {contact_uuid} está associado ao usuário Alessandro. Continuando.')
-        
-        text = str(payload.get('text', ''))
-        text = '' if text == 'None' else text
-        
-        content = payload.get('attachments', [])
-        logger.info(f'[{contact_uuid}] - Texto inicial: "{text}", Anexos encontrados: {len(content)}')
-
-
-        content_audio = [attach for attach in content if '.mp3' in attach]
-        logger.info(f'[{contact_uuid}] - Áudios identificados ({len(content_audio)}): {content_audio}')
-
-        content_image = [attach for attach in content if any([extension in attach for extension in IMAGE_EXTENSIONS])]
-        logger.info(f'[{contact_uuid}] - Imagens identificadas ({len(content_image)}): {content_image}')
-
-        transcription = None
-        if content_audio:
-            try:
-                url = content_audio[0]
-                logger.info(f'[{contact_uuid}] - Iniciando transcrição de áudio para {len(content_audio)} anexos.')
-                transcription = transcript(url)
-                if transcription:
-                    logger.info(f'[{contact_uuid}] - Transcrição de áudio CONCLUÍDA. Conteúdo: "{transcription[:50]}..."')
-                    logger.info(f'[{contact_uuid}] - Adicionando transcrição de áudio ao texto final.')
-                    text += f'\n{transcription}'
-
-                    static_url_part = url.split('uploads/')[1].split('?')[0]
-                    redis_client.hset(f'{contact_uuid}:attachments', static_url_part, transcription)
-                else:
-                    logger.warning(f'[{contact_uuid}] - Transcrição de áudio RETORNOU VAZIO.')
-            except Exception as e:
-                logger.error(f'[{contact_uuid}] - ERRO durante a transcrição de áudio: {e}', exc_info=True)
-                transcription = None
-
-        for attach in content_image:
-            logger.info(f'[{contact_uuid}] - Processando imagem: {attach}')
-            description = None
-            try:
-                description_json = client_description.describe_image(image_url=attach)
-                description = description_json.get('data', {}).get('content')
-                if description:
-                    logger.info(f'[{contact_uuid}] - Descrição da imagem obtida. Adicionando ao texto.')
-                    text += f'\n\n(SISTEMA): O CLIENTE MANDOU UMA IMAGEM QUE FOI DESCRITA POR UMA IA:\n\n{description}\nFIM DA DESCRIÇÃO DE IMAGEM.'
-
-                    static_url_part = attach.split('uploads/')[1].split('?')[0]
-                    redis_client.hset(f'{contact_uuid}:attachments', static_url_part, description)
-                else:
-                    logger.warning(f'[{contact_uuid}] - Descrição da imagem VAZIA para {attach}.')
-            except Exception as e:
-                logger.error(f'[{contact_uuid}] - ERRO ao descrever imagem {attach}: {e}', exc_info=True)
-            
-
-        logger.info(f'[{contact_uuid}] - Texto FINAL a ser salvo no Redis: "{text[:100]}..."')
-        try:
-            redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', text)
-            logger.info(f'[{contact_uuid}] - Texto adicionado à fila Redis "contacts_messages:waiting:{contact_uuid}".')
-        except Exception as e:
-            logger.error(f'[{contact_uuid}] - ERRO ao adicionar texto ao Redis: {e}', exc_info=True)
+    try:
+        # 1. Fetch initial data
+        contact_info_raw = redis_client.get(f"contact_info:{contact_uuid}")
+        if not contact_info_raw:
+            logger.error(f"[{contact_uuid}] - Could not retrieve contact info from Redis. Aborting task.")
             return
+        contact_info = json.loads(contact_info_raw)
+        phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
+        contact_name = contact_info.get("name", "")
 
-        try:
-            messages_before = redis_client.lrange(f'contacts_messages:waiting:{contact_uuid}', 0, -1)
-            logger.info(f'[{contact_uuid}] - Mensagens ANTES do sleep no Redis: {len(messages_before)} itens.')
-        except Exception as e:
-            logger.error(f'[{contact_uuid}] - ERRO ao obter messages_before do Redis: {e}', exc_info=True)
-            messages_before = []
+        headers = get_callbell_headers()
+        history_response = requests.get(f'https://api.callbell.eu/v1/contacts/{contact_uuid}/messages', headers=headers)
+        history_response.raise_for_status()
+        raw_history = history_response.json()
 
-        logger.info(f'[{contact_uuid}] - Iniciando sleep de 4 segundos para agregação de mensagens.')
-        sleep(4)
-        logger.info(f'[{contact_uuid}] - Sleep concluído.')
+        # 2. Get or create the initial state
+        state = state_manager.get_state(contact_uuid)
+        # Store raw history temporarily for the enrichment pipeline at the end of the chain
+        redis_client.set(f"raw_history:{contact_uuid}", json.dumps(raw_history), ex=3600) # Expire after 1 hour
+        state.metadata.phone_number = phone_number
+        state.metadata.contact_name = contact_name
+        state_manager.save_state(contact_uuid, state)
+        
+        # 3. Trigger the full state machine chain
+        pipeline = chain(
+            context_analysis_task.s(contact_id=contact_uuid),
+            routing_task.s()
+        )
+        pipeline.apply_async()
+        logger.info(f"[{contact_uuid}] - Celery state machine triggered.")
 
-        try:
-            messages_after = redis_client.lrange(f'contacts_messages:waiting:{contact_uuid}', 0, -1)
-            logger.info(f'[{contact_uuid}] - Mensagens DEPOIS do sleep no Redis: {len(messages_after)} itens.')
-        except Exception as e:
-            logger.error(f'[{contact_uuid}] - ERRO ao obter messages_after do Redis: {e}', exc_info=True)
-            messages_after = []
-
-        if messages_after == messages_before:
-            logger.info(f'[{contact_uuid}] - NENHUMA nova mensagem chegou durante o período de espera. Tentando obter lock de processamento.')
-
-            contact_lock = None
-            try:
-                contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True, ex=300)
-                logger.info(f'[{contact_uuid}] - Tentativa de obter lock "processing:{contact_uuid}" com resultado: {contact_lock}.')
-            except Exception as e:
-                logger.error(f'[{contact_uuid}] - ERRO ao tentar obter lock no Redis: {e}', exc_info=True)
-
-            if contact_lock:
-                logger.info(f'[{contact_uuid}] - Lock de processamento OBTIDO com sucesso.')
-                try:
-                    logger.info(f'[{contact_uuid}] - Buscando histórico de mensagens na Callbell API.')
-                    headers = {
-                        "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
-                        "Content-Type": "application/json"
-                    }
-                    history_response = requests.get(f'https://api.callbell.eu/v1/contacts/{contact_uuid}/messages', headers=headers)
-                    history_response.raise_for_status()
-                    history = history_response.json()
-                    logger.info(f'[{contact_uuid}] - Histórico da Callbell obtido (status {history_response.status_code}). Total de mensagens no histórico: {len(history)}')
-
-                    customer_service_orchestrator(contact_uuid, phone_number, history, contact_name)
-                    logger.info(f'[{contact_uuid}] - CHAMADA da função run_mvp_crew (comentada no código).')
-
-                except requests.exceptions.RequestException as e:
-                    logger.error(f'[{contact_uuid}] - ERRO de requisição HTTP ao obter histórico da Callbell: {e}', exc_info=True)
-                except Exception as e:
-                    logger.error(f'[{contact_uuid}] - ERRO INESPERADO ao processar a mensagem do contato {contact_uuid}. Erro:\n\n{e}', exc_info=True)
-                finally:
-                    logger.info(f'[{contact_uuid}] - Bloco try/except/finally da lógica principal CONCLUÍDO. Tentando liberar lock.')
-                    tries = 1
-                    while True:
-                        if tries > 5:
-                            logger.error(f'[{contact_uuid}] - Não foi possível liberar o lock "processing:{contact_uuid}" após 5 tentativas. Possível lock órfão.')
-                            break
-                        
-                        try:
-                            redis_client.delete(f'processing:{contact_uuid}')
-                            logger.info(f'[{contact_uuid}] - Lock "processing:{contact_uuid}" LIBERADO no Redis.')
-                            break
-                        except Exception as e:
-                            logger.error(f'[{contact_uuid}] - Ocorreu um erro ao tentar liberar o lock (tentativa {tries}/5): {e}', exc_info=True)
-                            tries += 1
-                            sleep(1)
-            else:
-                logger.warning(f'[{contact_uuid}] - Não foi possível obter o lock "processing:{contact_uuid}". Outro processo já está processando ou o lock já existe.')
-        else:
-            logger.info(f'[{contact_uuid}] - NOVAS mensagens chegaram durante o período de espera. A tarefa atual será ignorada para evitar processamento duplicado/concorrência. As novas mensagens serão processadas por uma nova execução da tarefa.')
-    else:
-        logger.info(f'[{contact_uuid}] - Contato {contact_uuid} NÃO ESTÀ associado a alessandro. A tarefa será ignorada.')
-
-    logger.info(f'[{payload.get("uuid", "N/A")}] - FINALIZANDO process_requisitions para payload: {payload.get("uuid", "N/A")}.')
+    except Exception as e:
+        logger.error(f"[{contact_uuid}] - CRITICAL ERROR at the start of the state machine: {e}", exc_info=True)
+    finally:
+        redis_client.delete(f'processing:{contact_uuid}')
+        logger.info(f'[{contact_uuid}] - Lock "processing:{contact_uuid}" LIBERADO no Redis.')
 
 
                         
+def process_incoming_message(payload):
+    """
+    Handles the initial processing of an incoming message webhook.
+    - Extracts message text and attachments.
+    - Saves data to Redis.
+    - Schedules the debounced processing task.
+    """
+    contact_info = payload.get("contact")
+    contact_uuid = contact_info.get("uuid")
+    logger.info(f'[{contact_uuid}] - INICIANDO process_incoming_message')
+
+    # Store contact info for the async task
+    redis_client.set(f"contact_info:{contact_uuid}", json.dumps(contact_info), ex=86400) # Expire after 1 day
+
+    text = str(payload.get('text', ''))
+    text = '' if text == 'None' else text
+    
+    content = payload.get('attachments', [])
+    
+    # --- Attachment Processing ---
+    content_audio = [attach for attach in content if '.mp3' in attach]
+    content_image = [attach for attach in content if any(ext in attach for ext in IMAGE_EXTENSIONS)]
+
+    for audio_url in content_audio:
+        process_audio_attachment_task.delay(contact_uuid, audio_url)
+    
+    for image_url in content_image:
+        process_image_attachment_task.delay(contact_uuid, image_url)
+
+    if text:
+        redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', text)
+        logger.info(f'[{contact_uuid}] - Message text added to Redis queue.')
+
+    # --- Debounce Logic ---
+    pending_task_key = f'pending_task:{contact_uuid}'
+    existing_task_id = redis_client.get(pending_task_key)
+    
+    if existing_task_id:
+        celery_app.control.revoke(existing_task_id.decode('utf-8'))
+        logger.info(f"[{contact_uuid}] - Revoked previous pending task: {existing_task_id.decode('utf-8')}")
+
+    # Schedule the new task to run in 10 seconds
+    new_task = process_message_task.apply_async(args=[contact_uuid], eta=datetime.utcnow() + timedelta(seconds=10))
+    redis_client.set(pending_task_key, new_task.id, ex=30) # Keep track of the new task ID
+    logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} in 10 seconds.")
+
+
 @app.route('/receive_message', methods=['POST'])
 def receive_message():
     webhook_payload = request.get_json()
-    print(webhook_payload)
     if not webhook_payload:
         logger.info("Webhook: Payload vazio recebido.")
         return jsonify({"status": "ok", "message": "Empty payload"}), 200
 
     event = webhook_payload.get("event")
     payload = webhook_payload.get("payload")
-    logger.debug(f"Webhook recebido: Evento='{event}' Payload='{json.dumps(payload, indent=4)}'") # Log detalhado
-    logger.info('recebida uma mensagem via webhook')
 
-    # --- Processamento de Mensagens Recebidas ---
     if event == "message_created" and payload and payload.get("status") == "received":
-
         contact_info = payload.get("contact")
-
         if not contact_info or not contact_info.get("uuid"):
             logger.warning("Webhook: Mensagem recebida sem 'contact.uuid'. Ignorando.")
             return jsonify({"status": "ok", "message": "No contact UUID"}), 200
-
-        thread = threading.Thread(
-            target=process_requisitions,
-            args=(payload,),
-            daemon=True
-        )
         
-        thread.start()
+        # Alessandro's team UUID
+        if contact_info.get("team", {}).get("uuid") == "d468731afdba45c3a3a65895e4b08a5a":
+            process_incoming_message(payload)
                 
     return jsonify({'status': 'ok'}), 200
 

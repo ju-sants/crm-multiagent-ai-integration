@@ -25,6 +25,30 @@ def create_execute_system_operations_task(agent: Agent) -> Task:
         agent=agent,
     )
 
+def create_summarize_history_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['summarize_history_task'],
+        agent=agent,
+    )
+
+def create_clean_noisy_data_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['clean_noisy_data_task'],
+        agent=agent,
+    )
+
+def create_summarize_state_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['summarize_state_task'],
+        agent=agent,
+    )
+
+def create_enhance_profile_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['enhance_profile_task'],
+        agent=agent,
+    )
+
 def create_develop_strategy_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['develop_strategy_task'],

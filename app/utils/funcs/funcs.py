@@ -109,3 +109,37 @@ def padronizar_telefone(telefone):
     else:
         # Caso não caiba em nenhuma regra
         return None
+
+
+def parse_json_from_string(json_string, update=True):
+    """
+    Parses a JSON object from a string, attempting to fix common LLM syntax errors.
+    """
+    try:
+        # Use a regex to find the JSON object within the string
+        match = re.search(r'\{.*\}', json_string, re.DOTALL)
+        if not match:
+            logger.warning("No JSON object found in the string.")
+            return None
+        
+        json_string = match.group(0)
+
+        # Correct common syntax errors made by LLMs
+        json_string = json_string.replace(': True', ': true').replace(': False', ': false')
+        json_string = json_string.replace(': None', ': null')
+    
+        json_response = json.loads(json_string)
+
+        if 'task_output' in json_response and 'updated_state' in json_response and update:
+            task_output = json_response['task_output']
+            updated_state = json_response['updated_state']
+            return task_output, updated_state
+        
+        elif not update:
+            return json_response
+        
+        return json_response, None
+    
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to decode JSON string: {e}\nString was: {json_string}")
+        return None, None

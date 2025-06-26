@@ -2,10 +2,12 @@ import redis
 import json
 import datetime
 from typing import Dict, Any, Optional
+from pydantic import ValidationError
 
 from app.core.logger import get_logger
 
 from app.services.redis_service import get_redis
+from app.models.data_models import ConversationState, StateMetadata
 
 logger = get_logger(__name__)
 
@@ -24,85 +26,64 @@ class StateManagerService:
         """Gera a chave padronizada para armazenar o estado no Redis."""
         return f"state:{contact_id}"
 
-    def _get_initial_state(self, contact_id: str) -> Dict[str, Any]:
+    def _get_initial_state(self, contact_id: str) -> ConversationState:
         """
-        Cria e retorna a estrutura de dados padrão para um novo estado de conversa.
+        Creates and returns a new ConversationState object.
         """
-        return {
-          "metadata": {
-            "contact_id": contact_id,
-            "current_turn_number": 0
-          },
-          "current_context": {
-          "context_type": "",
-          "last_topic": "",
-          "updated_at": ""
-          },
-          "communication_preference": {
-                "prefers_audio": False,
-                "reason": "default"
-          },
-          "session_summary": "Início da conversa.",
-          "entities_extracted": [],
-          "products_discussed": [],
-          "disclousure_checklist": [],
-          "last_agent_action": None,
-          "user_sentiment_history": []
-        }
+        metadata = StateMetadata(contact_id=contact_id)
+        return ConversationState(metadata=metadata)
 
-    def get_state(self, contact_id: str) -> Dict[str, Any]:
+    def get_state(self, contact_id: str) -> ConversationState:
         """
-        Busca o estado atual da conversa para um determinado contato.
+        Retrieves the current conversation state for a given contact.
 
-        Se nenhum estado existir para o contato, um novo estado inicial é criado
-        e retornado, mas não é salvo no Redis até a primeira chamada de save_state.
+        If no state exists, a new initial state is created and returned.
+        If the stored state is invalid, it logs an error and returns an initial state.
 
         Args:
-            contact_id (str): O ID único do contato.
+            contact_id (str): The unique ID of the contact.
 
         Returns:
-            Dict[str, Any]: O estado da conversa como um dicionário Python.
+            ConversationState: The Pydantic model of the conversation state.
         """
         state_key = self._get_state_key(contact_id)
         try:
-            stored_state = self.redis_client.get(state_key)
+            stored_state_json = self.redis_client.get(state_key)
             
-            if stored_state:
-                logger.info(f"[{contact_id}] - Estado da conversa encontrado e carregado do Redis.")
-                return json.loads(stored_state)
+            if stored_state_json:
+                logger.info(f"[{contact_id}] - Conversation state found, loading from Redis.")
+                return ConversationState.model_validate_json(stored_state_json)
             else:
-                logger.info(f"[{contact_id}] - Nenhum estado encontrado. Criando um novo estado inicial em memória.")
+                logger.info(f"[{contact_id}] - No state found. Creating a new initial state in memory.")
                 return self._get_initial_state(contact_id)
 
         except redis.exceptions.RedisError as e:
-            logger.error(f"[{contact_id}] - Erro ao conectar ou buscar dados do Redis: {e}")
-            # Em caso de falha do Redis, retorna um estado inicial para não quebrar o fluxo.
+            logger.error(f"[{contact_id}] - Redis error when fetching state: {e}")
             return self._get_initial_state(contact_id)
-        except json.JSONDecodeError as e:
-            logger.error(f"[{contact_id}] - Erro ao decodificar o estado armazenado no Redis. Retornando estado inicial. Erro: {e}")
+        except ValidationError as e:
+            logger.error(f"[{contact_id}] - Pydantic validation error when loading state from Redis. Data may be corrupt. Error: {e}")
             return self._get_initial_state(contact_id)
 
-    def save_state(self, contact_id: str, state: Dict[str, Any]):
+    def save_state(self, contact_id: str, state: ConversationState):
         """
-        Salva (ou sobrescreve) o estado completo da conversa no Redis.
+        Saves the complete conversation state to Redis.
 
         Args:
-            contact_id (str): O ID único do contato.
-            state (Dict[str, Any]): O objeto de estado completo a ser salvo.
+            contact_id (str): The unique ID of the contact.
+            state (ConversationState): The Pydantic state object to be saved.
         """
         state_key = self._get_state_key(contact_id)
         
-        # Atualiza o timestamp e o número do turno antes de salvar
-        state.get("metadata", {})["last_updated"] = datetime.datetime.now().isoformat()
-        state.get("metadata", {})["current_turn_number"] = state.get("metadata", {}).get("current_turn_number", 0) + 1
+        # Update timestamp and turn number before saving
+        state.metadata.last_updated = datetime.datetime.now().isoformat()
         
         try:
-            # Serializa o dicionário para uma string JSON antes de salvar
-            state_json = json.dumps(state, ensure_ascii=False)
+            # Serialize the Pydantic model to a JSON string
+            state_json = state.model_dump_json()
             self.redis_client.set(state_key, state_json)
-            logger.info(f"[{contact_id}] - Estado da conversa salvo com sucesso no Redis.")
+            logger.info(f"[{contact_id}] - Conversation state saved successfully to Redis.")
 
         except redis.exceptions.RedisError as e:
-            logger.error(f"[{contact_id}] - Erro ao salvar o estado no Redis: {e}")
-        except TypeError as e:
-            logger.error(f"[{contact_id}] - Erro ao serializar o estado para JSON: {e}")
+            logger.error(f"[{contact_id}] - Error saving state to Redis: {e}")
+        except Exception as e:
+            logger.error(f"[{contact_id}] - An unexpected error occurred during state serialization: {e}")

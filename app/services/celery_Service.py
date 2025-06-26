@@ -1,20 +1,23 @@
 from celery import Celery
 from app.config.settings import settings
 
+# Centralized Celery app instance
+celery_app = Celery(
+    'agent_tasks',
+    broker=f'redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB_MAIN + 1}',
+    backend=f'redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB_MAIN + 1}',
+    include=[
+        'app.tasks.fast_path.context_analysis',
+        'app.tasks.fast_path.strategy',
+        'app.tasks.fast_path.communication',
+        'app.tasks.fast_path.system_operations',
+        'app.tasks.fast_path.registration',
+        'app.tasks.fast_path.routing',
+        'app.crews.enrichment_crew',
+        'main'
+    ]
+)
 
-def make_celery(app):
-    celery_app = Celery(
-        'main',
-        broker=f'redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB_MAIN + 1}',
-        backend=f'redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB_MAIN + 1}',
-    )
-    celery_app.conf.update(app.config)
-
-    # Configuração para que as tarefas possam acessar o contexto da aplicação Flask
-    class ContextTask(celery_app.Task):
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return self.run(*args, **kwargs)
-
-    celery_app.Task = ContextTask
-    return celery_app
+celery_app.conf.update(
+    task_track_started=True
+)
