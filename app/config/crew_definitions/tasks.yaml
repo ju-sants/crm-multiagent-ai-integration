@@ -245,7 +245,7 @@ execute_system_operations_task:
     - **Nome do cliente no whatsapp (Contexto para Parâmetros, pode estar vazio):** `{customer_name}`
 
     **SEU FLUXO DE TRABALHO:**
-    1.  **INTERPRETE a solicitação de ação:** Converta a instrução em linguagem natural em uma lista de `queries` técnicas do seu catálogo.
+    1.  **INTERPRETAÇÃO E PLANEJAMENTO:** Receba a diretiva. Sua primeira tarefa é traduzi-la em um **plano de ação sequencial**. Este plano deve listar as `queries` que você pretende executar e a razão para cada uma. Por exemplo: "1. Usar SEARCH_VEHICLES para encontrar o ID do veículo. 2. Usar WF_GET_VEHICLE_FULL_REPORT com o ID obtido para obter o diagnóstico completo."    
     2.  **VALIDE os parâmetros** para cada query identifique os parãmetros necessários e os liste.
     3.  **COLETA de parâmetros:** colete os parâmetros buscando os dados no Estado da conversa, no perfil do cliente e no histórico de conversa.
     4.  **DECIDA O CAMINHO:**
@@ -258,6 +258,18 @@ execute_system_operations_task:
         - `message_to_user` (condicional): Uma mensagem para o usuário, requisitando dados, como placa do veículo..
         - `synthesis`: Um parágrafo rico em informações que conecta os dados e gera insights.
         - `data_payload`: Um dicionário enxuto com as informações estáticas e acionáveis para o CommunicationAgent, como links, dados de cadastro, observações e etc...
+    
+    ---
+    ## EXEMPLO DE EXECUÇÃO CORRETA (CENÁRIO: "verificar o veículo SJS 6D51")
+
+    **1. Pensamento e Planejamento Interno do Agente:**
+    "O usuário quer verificar o veículo SJS 6D51. Eu não tenho o `vehicle_id`, que é necessário para o workflow `WF_GET_VEHICLE_FULL_REPORT`.
+    **Plano:**
+    1.  Executar `SEARCH_VEHICLES` com `search_term: "SJS 6D51"` para obter o `vehicle_id`.
+    2.  Após receber o ID, executar `WF_GET_VEHICLE_FULL_REPORT` com o `vehicle_id` extraído.
+    3.  Sintetizar a resposta final usando os dados do workflow."
+
+    ---
     
     SUA SAIDA DEVE SER APENAS UM JSON COM O ESQUEMA ABAIXO:
   expected_output: |
