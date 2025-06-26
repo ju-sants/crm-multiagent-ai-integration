@@ -35,8 +35,6 @@ def send_callbell_message(phone_number: str, messages: str = None, type: str = N
             statuses.append(response.status_code)
         else:
             for i, message in enumerate(messages):
-                message = f'*Alessandro - Assistente Global System*:\n{message}'
-                
                 sleep(2 if i % 3 != 0 else 5)
                 
                 url = "https://api.callbell.eu/v1/messages/send"
@@ -53,7 +51,8 @@ def send_callbell_message(phone_number: str, messages: str = None, type: str = N
                     "content": {
                         "text": message
                     },
-                    "fields": "conversation,contact"
+                    "fields": "conversation,contact",
+                    "assigned_user": "alessandro-ia@alessandro-ia.com"
                 }
                 
                 response = requests.post(url, json=payload, headers=headers)
