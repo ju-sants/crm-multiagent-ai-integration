@@ -1,5 +1,6 @@
 import json
 from crewai import Crew, Process
+from datetime import datetime, timezone
 from app.services.celery_Service import celery_app
 from app.crews.enrichment_crew import trigger_enrichment_pipeline
 from app.core.logger import get_logger
@@ -54,17 +55,22 @@ def communication_task(self, contact_id: str):
             for topic in history_summary.get("topics", [])
         ])
 
+        system_op_output = redis_client.get(f"{contact_id}:last_system_operation_output")
+
         inputs = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "turn": state.metadata.current_turn_number,
             "develop_strategy_task_output": json.dumps(state.strategic_plan),
-            "profile_customer_task_output": distilled_profile_json.decode('utf-8') if distilled_profile_json else "{}",
+            "system_operations_task_output": system_op_output if system_op_output else "{}",
+            "profile_customer_task_output": distilled_profile_json if distilled_profile_json else "{}",
             "conversation_state": state.model_dump_json(),
             "history": history_messages,
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
-            "disclosure_checklist": json.dumps(state.disclosure_checklist),
+            "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]),
         }
 
         result = crew.kickoff(inputs=inputs)
-        response_json, updated_state_dict = parse_json_from_string(result)
+        response_json, updated_state_dict = parse_json_from_string(result.raw)
 
         if updated_state_dict:
             state = ConversationState(**{**state.model_dump(), **updated_state_dict})
@@ -85,11 +91,23 @@ def communication_task(self, contact_id: str):
                     send_text_message_task.delay(phone_number, message)
 
         # Final step: trigger the enrichment for the next turn
-        raw_history_json = redis_client.get(f"raw_history:{contact_id}")
-        if raw_history_json:
-            raw_history = json.loads(raw_history_json)
-            trigger_enrichment_pipeline(contact_id, raw_history, state.model_dump())
-            redis_client.delete(f"raw_history:{contact_id}") # Clean up the temporary key
+        # 1. Get historical messages and new messages
+        base_history_json = redis_client.get(f"raw_history:{contact_id}")
+        base_history = json.loads(base_history_json) if base_history_json else {"messages": []}
+        
+        new_messages_raw = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+        
+        new_messages_dicts = [
+            {"from": "contact", "text": msg, "timestamp": datetime.now(timezone.utc).isoformat(), "type": "text"}
+            for msg in new_messages_raw
+        ]
+
+        # The API returns newest first. So new messages should be at the start.
+        # 2. Trigger enrichment pipeline (now self-sufficient)
+        trigger_enrichment_pipeline(contact_id, state.model_dump())
+
+        # 3. Clean up Redis keys for the next turn
+        redis_client.delete(f"contacts_messages:waiting:{contact_id}")
 
         return {"status": "communication_dispatched"}
     except Exception as e:

@@ -11,6 +11,8 @@ from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
 from app.services.telegram_service import send_single_telegram_message
 
+from datetime import datetime, timezone
+
 logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
@@ -33,14 +35,16 @@ def registration_task(contact_id: str):
         messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
 
         inputs = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "turn": state.metadata.current_turn_number,
             "conversation_state": state.model_dump_json(),
             "message_text_original": "\n".join(messages),
-            "collected_data_so_far": user_data_so_far.decode('utf-8') if user_data_so_far else "{}",
-            "plan_details": plan_details.decode('utf-8') if plan_details else "{}",
+            "collected_data_so_far": user_data_so_far if user_data_so_far else "{}",
+            "plan_details": plan_details if plan_details else "{}",
         }
 
         result = crew.kickoff(inputs=inputs)
-        response_json, updated_state_dict = parse_json_from_string(result)
+        response_json, updated_state_dict = parse_json_from_string(result.raw)
 
         if updated_state_dict:
             state = ConversationState(**{**state.model_dump(), **updated_state_dict})

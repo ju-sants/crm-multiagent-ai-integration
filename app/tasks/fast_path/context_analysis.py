@@ -37,16 +37,11 @@ def context_analysis_task(self, contact_id: str):
         }
 
         result = crew.kickoff(inputs=inputs)
-        json_response, updated_state_dict = parse_json_from_string(result)
+        json_response, updated_state_dict = parse_json_from_string(result.raw)
 
         if updated_state_dict:
             state = ConversationState(**{**state.model_dump(), **updated_state_dict})
         
-        if json_response:
-            state.identified_topic = json_response.get("identified_topic")
-            state.operational_context = json_response.get("operational_context")
-            state.is_plan_acceptable = json_response.get("is_plan_acceptable", False)
-
         state_manager.save_state(contact_id, state)
         
         # Pass the contact_id to the next task in the chain

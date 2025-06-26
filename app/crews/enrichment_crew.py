@@ -7,6 +7,7 @@ from app.core.logger import get_logger
 from app.services.redis_service import get_redis
 from app.services.celery_Service import celery_app
 from app.utils.funcs.funcs import parse_json_from_string
+from app.services.callbell_service import get_contact_messages
 
 # Import agent and task creation functions
 from app.agents.agent_declaration import (
@@ -27,15 +28,21 @@ logger = get_logger(__name__)
 redis_client = get_redis()
 
 @celery_app.task(name='enrichment.history_summarizer')
-def history_summarizer_task(contact_id: str, raw_history: list):
+def history_summarizer_task(contact_id: str):
     """
     Asynchronous task to summarize conversation history.
+    - Fetches the last 50 messages from Callbell.
     - Creates a hierarchical summary of the conversation.
     - Detects noisy data and flags it.
     - Stores the summary and topic details in Redis.
     """
     logger.info(f"[{contact_id}] - Starting history summarization.")
     
+    raw_history = get_contact_messages(contact_id, limit=50)
+    if not raw_history:
+        logger.warning(f"[{contact_id}] - No history found. Skipping summarization.")
+        return f"No history to summarize for {contact_id}."
+
     agent = get_history_summarizer_agent()
     task = create_summarize_history_task(agent)
     
@@ -48,7 +55,7 @@ def history_summarizer_task(contact_id: str, raw_history: list):
     
     result = crew.kickoff(inputs=inputs)
     
-    output = parse_json_from_string(result, update=False)
+    output = parse_json_from_string(result.raw, update=False)
     
     if output:
         # Save the main summary
@@ -102,7 +109,7 @@ def data_quality_task(contact_id: str, topic_id: str, raw_history_snippet: str, 
     
     result = crew.kickoff(inputs=inputs)
     
-    output = parse_json_from_string(result, update=False)
+    output = parse_json_from_string(result.raw, update=False)
 
     if output:
         details_key = f"history:topic_details:{contact_id}:{topic_id}"
@@ -138,7 +145,7 @@ def state_summarizer_task(contact_id: str, last_turn_state: dict):
     
     result = crew.kickoff(inputs=inputs)
     
-    enriched_state = parse_json_from_string(result, update=False)
+    enriched_state = parse_json_from_string(result.raw, update=False)
 
     if enriched_state:
         state_key = f"state:{contact_id}"
@@ -148,9 +155,10 @@ def state_summarizer_task(contact_id: str, last_turn_state: dict):
     return f"State for {contact_id} summarized."
 
 @celery_app.task(name='enrichment.profile_enhancer')
-def profile_enhancer_task(contact_id: str):
+def profile_enhancer_task(results, contact_id: str):
     """
     Asynchronous task to enhance the long-term customer profile.
+    'results' is the ignored output from the preceding parallel tasks.
     """
     logger.info(f"[{contact_id}] - Starting profile enhancement.")
     
@@ -166,14 +174,14 @@ def profile_enhancer_task(contact_id: str):
 
     inputs = {
         "contact_id": contact_id,
-        "history_summary": history_summary.decode('utf-8') if history_summary else "{}",
-        "enriched_state": enriched_state.decode('utf-8') if enriched_state else "{}",
-        "existing_profile": existing_profile.decode('utf-8') if existing_profile else "{}"
+        "history_summary": history_summary if history_summary else "{}",
+        "enriched_state": enriched_state if enriched_state else "{}",
+        "existing_profile": existing_profile if existing_profile else "{}"
     }
     
     result = crew.kickoff(inputs=inputs)
     
-    output = parse_json_from_string(result, update=False)
+    output = parse_json_from_string(result.raw, update=False)
 
     if output:
         profile_key = f"{contact_id}:customer_profile"
@@ -191,7 +199,7 @@ def profile_enhancer_task(contact_id: str):
     return f"Profile for {contact_id} enhanced."
 
 
-def trigger_enrichment_pipeline(contact_id: str, raw_history: list, last_turn_state: dict):
+def trigger_enrichment_pipeline(contact_id: str, last_turn_state: dict):
     """
     Triggers the full asynchronous enrichment pipeline.
     The history and state are summarized in parallel. Once both are complete,
@@ -199,13 +207,8 @@ def trigger_enrichment_pipeline(contact_id: str, raw_history: list, last_turn_st
     """
     logger.info(f"[{contact_id}] - Triggering asynchronous enrichment pipeline.")
     
-    # Celery Chord: Run a group of tasks in parallel, then execute a callback with the results.
-    # A Celery chord: run history and state summarizers in parallel,
-    # and when both are complete, run the profile enhancer.
-    # The .s() signature creates a task signature, which is a blueprint of the task to be executed.
-    # The group runs tasks in parallel. The pipe `|` sends the result of the group to the next task.
     pipeline = group(
-        history_summarizer_task.s(contact_id=contact_id, raw_history=raw_history),
+        history_summarizer_task.s(contact_id=contact_id),
         state_summarizer_task.s(contact_id=contact_id, last_turn_state=last_turn_state)
     ) | profile_enhancer_task.s(contact_id=contact_id)
     

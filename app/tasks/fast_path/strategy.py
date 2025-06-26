@@ -50,12 +50,12 @@ def strategy_task(self, contact_id: str):
             "conversation_state": state.model_dump_json(),
             "profile_customer_task_output": profile.model_dump_json(),
             "message_text_original": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
-            "operational_context": state.operational_context,
-            "identified_topic": state.identified_topic,
+            "operational_context": state.operational_context or "",
+            "identified_topic": state.identified_topic or "",
         }
 
         result = crew.kickoff(inputs=inputs)
-        strategic_plan, updated_state_dict = parse_json_from_string(result)
+        strategic_plan, updated_state_dict = parse_json_from_string(result.raw)
 
         if updated_state_dict:
             state = ConversationState(**{**state.model_dump(), **updated_state_dict})

@@ -1,102 +1,498 @@
 context_analysis_task:
   description: |
-    Você é o ContextAnalysisAgent, um roteador rápido. Sua única missão é decidir se o plano estratégico existente é adequado para a mensagem atual do cliente.
+    Você é o ContextAnalysisAgent. Sua missão é realizar a análise completa da interação, atualizar o perfil de longo prazo do cliente e decidir o próximo passo.
+    
+    **DADOS PARA SUA ANÁLISE 360°:**
+    - **Estado da Conversa (Curto Prazo):** 
+    
+    `{conversation_state}`
 
-    **DADOS PARA SUA ANÁLISE:**
-    - **Estado da Conversa (Curto Prazo):** `{conversation_state}`
+    - **Perfil do Cliente (Longo Prazo, pode ser nulo):** 
+    
+    `{customer_profile}`
+
     - **Mensagem Atual do Cliente (Gatilho):** `{message_text}`
+    - **Outros Dados:** 
 
-    **SEU FLUXO DE TRABALHO:**
-    1.  Analise o `strategic_plan` dentro do `{conversation_state}` em relação à `{message_text}`.
-    2.  Siga as regras do seu backstory para decidir. Na dúvida, o plano NÃO é aceitável.
-    3.  Retorne um JSON simples com sua decisão.
+    Histórico 
+    
+    (`{history}`), 
 
+    Timestamp (`{timestamp}`)
+    Now Turn (`{turn}`)
+    Contact ID (`{contact_id}`)
+
+    **SEU FLUXO DE TRABALHO UNIFICADO E DETALHADO:**
+
+    # --- Parte 1: SÍNTESE DO PERFIL ---
+    1.  Primeiro, use os insights do `{{conversation_state}}` (resumo da sessão, entidades extraídas, produtos discutidos) para atualizar o `{{profile}}`. Se o perfil antigo não existir, crie um novo.
+    2.  O `profile_summary` deve ser reescrito para refletir o conhecimento mais recente. O `sales_stage` e o `current_sentiment` devem ser atualizados com base na conclusão da última sessão. As novas `entities_extracted` do estado devem ser adicionadas às `preferences` do perfil.
+    3.  Analise a conversa para identificar possíveis dificuldades de leitura e atualize o campo `communication_preference` no `{{conversation_state}}` se necessário.
+
+    # --- Parte 2: DECISÃO DE ROTEAMENTO ---
+    4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `{{message_text}}`.
+    5.  Analise o `{{strategic_plan}}` salvo no `{{conversation_state}}` contra a `{{message_text}}`. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
+    6.  Se o cliente perguntar por preços, termos, informações ou qualquer coisa que EVIDENTEMENTE não está no plano estratégico, defina `"is_plan_acceptable": false`.
+    7.  Com base na avaliação acima, defina o campo `"action"` para `"PROCEED_WITH_EXISTING_PLAN"` ou `"INITIATE_NEW_STRATEGIC_PLAN"`.
+    8.  **Plano estratégico:** Decida se o plano estratégico de interação atual (se existir) é válido com o contexto, sessão e mensagem atual do cliente. se sim, envie `"is_plan_acceptable": true` em `task_output`, se não `"is_plan_acceptable": false`.
+    9.  IMPORTANTE!: Se o cliente aceitou comprar um serviço de rastreamento e `checklist_status_summary` em `conversation_state` estiver com todos os itens comunicados, defina operational_context como "BUDGET_ACCEPTED".
+    10.  IMPORTANTE!: Na nossa equipe temos um agente capaz de realizar ações no sistema, como buscar dados do rastreamento do veículo assim como quaisquer dados do veículo cadastrado (um report geral do veículo, com vários relatórios e informações, como cercas eletrõnicas e etc...), buscar informações do cadastro do cliente, todos os veiculos de um cliente, informações sobre o histórico financeiro do cliente, enviar comandos de RESET ao rastreador do veículo (um comando que instrui o rastreador a reiniciar seu hardware).
+          - Caso note que o cliente solicita uma dessas ações e o plano estratégico for aceitável, envie o comando para o agente de ações adicionando a chave "system_action_request" com uma solicitação em linguagem natural detalhando o que precisa.
+          - Caso note que o cliente solicita uma dessas ações e o plano estratégico NÃO for aceitável, apenas defina `is_plan_acceptable: false` em `task_output` e não envie nenhum comando para o agente de ações.
+
+    # --- Parte 3: PREPARAÇÃO DA SAÍDA ---
+    11.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `session_summary`, adicione novas entidades da última mensagem, e incremente os metadados.
+    12. `operational_context` SEMPRE deverá ser um desses: BUDGET, BUDGET_ACCEPTED, CUSTOMER_SERVICE e SUPPORT.
+    13.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
+        
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a ESTRUTURA (populada com outros dados) do exemplo.
   expected_output: |
     {
       "task_output": {
-        "is_plan_acceptable": false,
-        "identified_topic": "novo_questionamento_sobre_precos",
-        "operational_context": "BUDGET"
+        "is_plan_acceptable": true, # ou false, dependendo da análise
+        "system_action_request": "Buscar dados do rastreamento do veículo" | "Enviar um RESET ao rastreador do veículo" | "..." | null,
+        "action": "INITIATE_FULL_PROCESSING",
+        "identified_topic": "continuidade_discussao_preco_moto",
+        "operational_context": "BUDGET",
+        "profile": {
+          "contact_id": "{contact_id}",
+          "customer_identity": {
+            "name": "Juan Bispo dos Santos",
+            "roles": ["Gestor"]
+          },
+          "executive_summary": "Cliente valioso com histórico de compras. Demonstra conhecimento técnico e interesse em soluções para áreas rurais (fazendas). Possui baixa tolerância a explicações textuais, preferindo áudio. Atualmente reengajou a conversa para avaliar em detalhes o plano GSM+WiFi.",
+          "relationship_timeline": [
+            { "timestamp": "2025-06-09T11:00:00Z", "event_type": "SALES_INQUIRY", "summary": "Iniciou conversa sobre planos para frota." },
+            { "timestamp": "{timestamp}", "event_type": "SALES_INQUIRY", "summary": "Retomou a conversa com foco específico no plano para fazenda com Wi-Fi." }
+          ],
+          "strategic_insights": {
+            "communication_preferences": {
+              "format": "Áudio",
+              "reason": "Relatou explicitamente dificuldade com texto."
+            },
+            "key_motivations": [ "Solução para cobertura de sinal em área rural", "Detalhes técnicos de funcionamento", "Termos contratuais claros" ],
+            "potential_frustrations": [ "Respostas genéricas", "Explicações longas em texto" ],
+            "sales_recommendations": [ "Focar a conversa no plano 'Rastreador GSM (2G+3G+4G) + WI-FI'", "Ser proativo ao explicar limitações técnicas", "Enviar respostas longas ou complexas via áudio." ]
+          },
+          "assets": {
+            "vehicles": ["caminhões", "carros", "moto"],
+            "active_plans": ["Rastreador GSM 4G"]
+        }
       },
       "updated_state": {
-        "session_summary": "Cliente iniciou um novo tópico sobre preços, invalidando o plano anterior."
+        "session_summary": "Sessão retomada. Cliente perguntou novamente sobre preços para moto.",
+        "communication_preference": { "prefers_audio": false, "reason": "default" },
+        "entities_extracted": [
+          { 
+            "entity": "customer_name", 
+            "value": "juan", 
+            "turn": 6 # Insira o turno atual
+          },
+          { 
+            "entity": "vehicle_type", 
+            "value": "moto", 
+            "turn": 6 # Insira o turno atual
+          }, 
+          { 
+            "entity": "use_case", 
+            "value": "fazenda", 
+            "turn": 6 # Insira o turno atual
+          }
+        ],
+        "user_sentiment": [
+            { 
+            "turn": 1, # Insira o turno atual
+            "sentiment": "curioso" 
+            }
+        ],
       }
     }
 
 develop_strategy_task:
   description: |
-    Você é o StrategicAdvisor. Sua missão é formular a melhor estratégia de interação usando a memória hierárquica da conversa.
+    Você é o StrategicAdvisor. Sua missão é formular a melhor estratégia de interação e ATUALIZAR o estado da conversa com os insights da sua análise.
+
+    Timestamp: "{timestamp}"
+    Now Turn: "{turn}"
+
 
     **DADOS PARA SUA ANÁLISE ESTRATÉGICA:**
-    - **ID do Contato:** `{contact_id}`
-    - **Histórico Resumido (Visão Geral):** `{history}`
-    - **Estado da Conversa (Contexto de Curto Prazo):** `{conversation_state}`
-    - **Perfil do Cliente (Contexto de Longo Prazo):** `{profile_customer_task_output}`
-    - **Mensagem Original do Cliente (O Gatilho Imediato):** `{message_text_original}`
-    - **Contexto Operacional:** `{operational_context}`
-    - **Tópico Identificado:** `{identified_topic}`
+    - **Estado da Conversa (Contexto de Curto Prazo):**   # Use para entender o fluxo da sessão atual, entidades já extraídas e produtos discutidos. 
+    
+    `{conversation_state}`
+    
+    - **Perfil do Cliente (Contexto de Longo Prazo):** 
+    
+    `{profile_customer_task_output}`
+    
+      # Use para entender o histórico completo e as preferências do cliente com a empresa.
+    
+    - **Mensagem Original do Cliente (O Gatilho Imediato):** "{message_text_original}"
+    - **Contexto Operacional:** "{operational_context}"
+    - **Tópico Identificado:** "{identified_topic}"
 
     **SEU FLUXO DE TRABALHO:**
-    1.  **Análise Inicial:** Use o `{history}` para ter uma visão geral dos tópicos já discutidos.
-    2.  **Aprofundamento (se necessário):** Se a `{message_text_original}` se refere a um tópico passado, use a `DrillDownTopicTool` com o `contact_id` e o `topic_id` relevante para obter os detalhes completos.
-    3.  **Coleta de Fatos:** Use a `KnowledgeServiceTool` para buscar informações de produtos, políticas, etc., necessárias para a estratégia.
-    4.  **Construção do Dossiê:** Siga seu backstory para construir o `conversation_blueprint`, popular o `disclosure_checklist` e preparar a atualização do estado.
+    Execute o **"FLUXO DE DEFINIÇÃO DE ESTRATÉGIA"** detalhado em seu `backstory`. Analise os inputs, qualifique o cliente (se necessário), colete dados com a `KnowledgeServiceTool`, defina a estratégia, gere a `structured_message` e, crucialmente, popule o `disclosure_checklist` antes de atualizar o estado da conversa.
+    Use a `KnowledgeServiceTool` para obter todas as informações que precise, utilize a query em lote e envie tudo que precisar de uma só vez, sempre envie na query requisições para `get_company_info` e `get_sales_philosophy` ou `get_support_philosophy`.
+    Popule de forma rica e estratégica o plano de conversação, incluindo insights poderosos, tópicos de apresentação, perguntas-chave, possíveis objeções e respostas, e a estratégia de apresentação do produto.
+    Certifique-se de que o `disclosure_checklist` esteja completo e que a `communication_guidance` seja clara e específica.
+    Nunca retire itens de `disclosure_checklist` apenas adicione, para termos total controle do que já foi esclarecido e o que ainda falta esclarecer, NUNCA adicione itens iguais.
+    Retorne `disclosure_checklist` COMPLETO, incluindo itens comunicados, pendentes e os novos que você adicionar.
+    Você tem a liberdade de criar quantas chaves quiser no `task_output`, desde que sejam relevantes para a estratégia de interação e que contenha as obrigatórias.
+    **SOLICITAÇÃO DE AÇÃO DE SISTEMA:** Após definir sua estratégia, avalie se você precisa de alguma informação de um sistema interno para continuar. Se sim, adicione a chave `"system_action_request"` ao seu `task_output`. O valor deve ser uma **string em linguagem natural** descrevendo claramente o que você precisa. Por exemplo: `"Preciso do diagnóstico em tempo real do veículo de placa 'ABC-1234' e também do histórico financeiro completo do cliente associado a essa placa."`.
+      - Essa solicitação será processada pelo `SystemActionAgent`, que tem a capacidade de interagir com outros sistemas e coletar informações adicionais.
+      - Capacidades do `SystemOperationsAgent`: buscar dados do rastreamento do veículo assim como quaisquer dados do veículo cadastrado (um report geral do veículo, com vários relatórios e informações, como cercas eletrõnicas e etc...), buscar informações do cadastro do cliente, todos os veiculos de um cliente, informações sobre o histórico financeiro do cliente, enviar comandos de RESET ao rastreador do veículo.
+    
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    NÃO adicione comentários no JSON final.
+    o `excpected_output` é um exemplo de saída esperada.
+
+  expected_output: |
+    {
+      "task_output": {
+        "system_action_request": "Preciso do diagnóstico em tempo real do veículo de placa 'ABC-1234' e também do histórico financeiro completo do cliente associado a essa placa.", | "" | null
+        "conversation_blueprint": {
+          "customer_context_summary": {
+            "relevant_profile_insights": "Cliente com histórico de roubo. Principal motivador é o medo de perda e o desejo de não ficar 'a pé'. Não é sensível a preço, mas sim à percepção de segurança e garantia.",
+            "insights_from_current_session": "Na última mensagem, perguntou sobre a 'proteção' dos planos, indicando que o reembolso FIPE é seu principal ponto de interesse."
+          },
+          "product_presentation_strategy": {
+            "presentation_order": ["Plano Proteção Total PGS", "Plano Rastreamento Moto"],
+            "primary_offer": {
+              "plan_name": "Plano Proteção Total PGS",
+              "sales_angle": "Focar na tranquilidade absoluta: a garantia do reembolso FIPE e o benefício exclusivo da 'moto reserva'. Atacar diretamente o medo de ficar a pé."
+            },
+            "secondary_offer": {
+              "plan_name": "Plano Rastreamento Moto",
+              "sales_angle": "Apresentar como a opção de monitoramento essencial e de excelente custo-benefício, mas reforçar que não possui a proteção financeira que ele demonstrou buscar."
+            }
+          },
+          "communication_guidance": {
+            "tone_and_style": "Tom empático e seguro. Reconhecer a experiência passada do cliente com o roubo para criar rapport. Evitar jargões, focar na sensação de segurança.",
+            "key_talking_points": ["Diferença entre rastreamento e proteção financeira", "Benefício 'Moto Reserva'", "Funcionamento do bloqueio via central"],
+            "key_questions_to_ask": ["Considerando sua experiência, ter a garantia do valor da moto de volta é o mais importante para você?", "Para eu te passar o valor exato da mensalidade do plano com proteção, qual o modelo e ano da sua moto?"]
+            "next_step_preview": "Esteja preparado para responder sobre as regras de instalação para motos, pois é uma dúvida comum após a escolha do plano."
+          },
+          "information_payload": {
+            "plano_pgs_data": {
+              "pricing": { "adesao": 120.00, "faixas_mensalidade": [ { "fipe_range": "Até R$ 15.000,00", "valor": 77.00 }, { "...": "..." } ] },
+              "contract_terms": { "contract_id": "moto_pgs_com_cobertura", "reimbursement_clause": { "payment_deadline": "90 dias" }, "inadimplencia": { "consequences": ["Suspensão com 1 dia de atraso"] } },
+              "faq": [{"question": "Perco a garantia da moto?", "answer": "Não a garantia completa, mas pode impactar partes elétricas..."}]
+            },
+            "plano_rastreamento_data": {
+              "pricing": { "adesao": 120.00, "mensalidade": 60.00 },
+              "contract_terms": { "contract_id": "standard_rastreamento", "cancellation": { "policy": "Não há multa, apenas taxa de desinstalação." } }
+            },
+            "general_policies": {
+              "blocker_rules_moto": "A função de bloqueio NÃO está disponível no aplicativo para motos. O acionamento é feito exclusivamente pela central...",
+              "installation_policy_moto": "A instalação de rastreadores em motocicletas é feita EXCLUSIVAMENTE em uma de nossas lojas autorizadas..."
+            },
+          "proactive_information_payload": {
+            "title": "Informações Relevantes para a Próxima Etapa",
+            "installation_policy_moto": {
+              "location": "A instalação de rastreadores em motocicletas é feita EXCLUSIVAMENTE em uma de nossas lojas autorizadas para garantir a qualidade e o sigilo do serviço.",
+              "duration": "O processo leva em média de 1 a 2 horas."
+            },
+            "blocker_rules_moto": {
+              "availability": "A função de bloqueio NÃO está disponível no aplicativo para motos. O acionamento é feito exclusivamente pela central da Global System, mediante solicitação validada do cliente."
+            }
+          }
+          }
+        }
+      },
+      "updated_state": {
+        "disclosure_checklist": [
+          {
+          "item_id": "natureza_servico_pgs",
+          "topic": "Natureza do Serviço (Plano PGS)",
+          "content": "Este contrato NÃO é um seguro, mas em caso de NÃO recuperação da motocicleta, haverá REEMBOLSO do valor da motocicleta de acordo com a tabela FIPE, respeitando o valor máximo do plano contratado.",
+          "status": "pending"
+          },
+          {
+            "item_id": "responsabilidade_recuperacao",
+            "topic": "Responsabilidade de Recuperação",
+            "content": "A recuperação do veículo é atividade única e exclusiva das autoridades policiais.",
+            "status": "pending"
+          },
+        ],
+    }
+
+
 
 execute_system_operations_task:
   description: |
     Você é o SystemOperationsAgent. Sua missão é interpretar a diretiva do StrategicAdvisor, executar as ações de sistema correspondentes, e retornar uma análise completa dos resultados.
 
     **DADOS PARA SUA ANÁLISE E AÇÃO:**
-    - **Solicitação de ação do agente StrategicAdvisor:** `{action_requested}`
-    - **Estado da Conversa (Contexto para Parâmetros):** `{conversation_state}`
-    - **Perfil do Cliente (Contexto para Parâmetros):** `{customer_profile}`
-    - **Histórico de Conversa (Contexto para Parâmetros):** `{history}`
+    - **Solicitação de ação do agente StrategicAdvisor:** 
+    
+    `{action_requested}`
+    
+    - **Estado da Conversa (Contexto para Parâmetros):** 
+    
+    `{conversation_state}`
+    
+    - **Perfil do Cliente (Contexto para Parâmetros):** 
+
+    `{customer_profile}`
+
+    - **Histórico de Conversa (Contexto para Parâmetros):**
+
+    `{history}`
+
+
     - **Mensagem atual do cliente (Contexto para Parâmetros):** `{message_text_original}`
     - **Nome do cliente no whatsapp (Contexto para Parâmetros, pode estar vazio):** `{customer_name}`
 
     **SEU FLUXO DE TRABALHO:**
-    1.  **INTERPRETAÇÃO E PLANEJAMENTO:** Receba a diretiva. Sua primeira tarefa é traduzi-la em um **plano de ação sequencial**.
-    2.  **VALIDAÇÃO DE PARÂMETROS:** Para cada query que você identificou, verifique se todos os parâmetros necessários estão disponíveis.
-    3.  **EXECUÇÃO:** Execute as queries via `SystemOperationsTool`.
-    4.  **SÍNTESE:** Analise os dados brutos e escreva uma `synthesis` rica e informativa.
+    1.  **INTERPRETAÇÃO E PLANEJAMENTO:** Receba a diretiva. Sua primeira tarefa é traduzi-la em um **plano de ação sequencial**. Este plano deve listar as `queries` que você pretende executar e a razão para cada uma. Por exemplo: "1. Usar SEARCH_VEHICLES para encontrar o ID do veículo. 2. Usar WF_GET_VEHICLE_FULL_REPORT com o ID obtido para obter o diagnóstico completo."    
+    2.  **VALIDE os parâmetros** para cada query identifique os parãmetros necessários e os liste.
+    3.  **COLETA de parâmetros:** colete os parâmetros buscando os dados no Estado da conversa, no perfil do cliente e no histórico de conversa.
+    4.  **DECIDA O CAMINHO:**
+        - Se faltarem dados, retorne um `status: "INSUFFICIENT_DATA"` com o `message_to_user`.
+        - Se faltarem parâmetros internos: Parâmetros internos são os IDs e outras informações internas do nosso sistema e que o cliente nunca terá acesso, se precisar delas, execute outras ações de sistema antes da principal, para obtê-las.
+        - Se os dados estiverem completos, execute as queries via `SystemOperationsTool`.
+    5.  **SystemOperationsTool:** Envie uma lista de queries para o SystemOperationsTool, cada query deve ser um dicionário com `action_type` e `params`.
+    6.  **SINTETIZE OS RESULTADOS:** Após a execução, construa um JSON final. Ele DEVE conter:
+        - `status: "ACTION_COMPLETE"`.
+        - `message_to_user` (condicional): Uma mensagem para o usuário, requisitando dados, como placa do veículo..
+        - `synthesis`: Um parágrafo rico em informações que conecta os dados e gera insights.
+        - `data_payload`: Um dicionário enxuto com as informações estáticas e acionáveis para o CommunicationAgent, como links, dados de cadastro, observações e etc...
+    
+    ---
+    ## EXEMPLO DE EXECUÇÃO CORRETA (CENÁRIO: "verificar o veículo SJS 6D51")
+
+    **1. Pensamento e Planejamento Interno do Agente:**
+    "O usuário quer verificar o veículo SJS 6D51. Eu não tenho o `vehicle_id`, que é necessário para o workflow `WF_GET_VEHICLE_FULL_REPORT`.
+    **Plano:**
+    1.  Executar `SEARCH_VEHICLES` com `search_term: "SJS 6D51"` para obter o `vehicle_id`.
+    2.  Após receber o ID, executar `WF_GET_VEHICLE_FULL_REPORT` com o `vehicle_id` extraído.
+    3.  Sintetizar a resposta final usando os dados do workflow."
+
+    ---
+    
+    SUA SAIDA DEVE SER APENAS UM JSON COM O ESQUEMA ABAIXO:
+  expected_output: |
+    {
+      "status": "ACTION_COMPLETE" | "INSUFFICIENT_DATA"
+      "synthesis": "A consulta para o cliente Juan Bispo (ID: 123) foi concluída. Ele está adimplente, sem boletos em aberto. O diagnóstico do veículo de placa ABC-1234 mostra que ele se comunicou pela última vez hoje às 14:10, com voltagem de bateria normal (12.5V) e bom sinal GSM (85%).",
+      "message_to_user": "" | "..."
+      "data_payload": {
+        "customer_id": "123",
+        "is_payment_due": false,
+        "vehicle_status_summary": "Última comunicação: hoje às 14:10. Bateria: 12.5V. Sinal GSM: OK. Sinal SATELITAL: OK. Diagnóstico: OK.",
+        ... # Crie as chaves que julgar necessárias.
+      },
+      "follow_up_suggestions": []
+    }
+
 
 communication_task:
   description: |
     Você é o CommunicationAgent. Sua missão é traduzir o dossiê estratégico em um diálogo de chat perfeito e executar as atualizações de estado necessárias.
+    o dossiê estratégico deve ser usado por várias vezes, por isso, aproveite partes diferentes dele para criar mensagens que sejam relevantes para o cliente.
 
     **DADOS PARA SUA ANÁLISE E AÇÃO:**
-    - **Dossiê Estratégico (O Que Fazer):** `{develop_strategy_task_output}`
-    - **Sumário da ação no sistema:** `{system_operations_task_output}`
-    - **Estado da Conversa (O Contexto):** `{conversation_state}`
-    - **Perfil do Cliente (O Histórico):** `{profile_customer_task_output}`
-    - **Histórico de Conversa (O Que Já Foi Falado):** "{history}"
-    - **Catálogos Enviados Recentemente:** "{recently_sent_catalogs}"
-    - **Disclosure Checklist:** `{disclosure_checklist}`
+    Timestamp: "{timestamp}"
+    Now Turn: "{turn}"
+
+    - **Dossiê Estratégico  (O Que Fazer):** 
+    
+    `{develop_strategy_task_output}`
+
+    - Sumário da ação no sistema (Ação no sistema orquestrada pelo SystemOperationsAgent, podendo trazer informações valiosas do nosso sistema interno. Pode ser None):
+
+    `{system_operations_task_output}`
+    
+    - **Estado da Conversa (O Contexto):**  # Use para personalizar suas mensagens e entender o que já foi dito.
+      
+    `{conversation_state}`
+
+    - **Perfil do Cliente (O Histórico):** 
+    
+    `{profile_customer_task_output}`
+
+    - **Histórico de Conversa (O Que Já Foi Falado):**
+    
+    "{history}"
+    
+    - **Catálogos Enviados Recentemente:** 
+    
+    "{recently_sent_catalogs}"
+
+    - **Disclosure Checklist** (O Que Já Foi Comunicada - Jurídico, termos e condições):** 
+    
+    `{disclosure_checklist}`
+
+    -----
 
     **SEU FLUXO DE TRABALHO DETALHADO:**
-    1.  **Análise e Foco:** Analise profundamente o dossiê estratégico.
-    2.  **Deconstrução:** Transforme as informações em uma lista de mensagens curtas.
-    3.  **Atualize o Checklist:** Revise as mensagens e atualize o status dos itens no `disclosure_checklist`.
-    4.  **Atualize os Produtos Discutidos:** Registre os planos mencionados.
+    1.  **Análise e Foco:** Analise profundamente o `{{strategic_briefing}}`. **Ele é a sua única fonte da verdade para definir o assunto da conversa.** Use o `{{conversation_state}}` e o `{{history}}` apenas para dar contexto, personalizar e evitar repetições. O histórico NUNCA deve ser o tópico principal.   
+    2.  **Execute sua principal tarefa de DECONSTRUÇÃO:** Transforme as informações do dossiê (benefícios, preços, limitações, termos) em uma lista de mensagens curtas de uma frase em `primary_messages_sequence`.
+    3.  **Nunca mande mensagens ou assuntos repetidos.** Use o `{{conversation_state}}` e o `{{history}}` para evitar redundâncias e manter a fluidez da conversa.
+    4.  **Isso é um Chat!:** Não envie mensagens demais, nem mensagens grandes demais. Mantenha o dialogo fluido e natural, aprofundando a cada etapa.
+    5.  **Aplique a lógica de envio de catálogo** para popular a lista `plan_names`.
+    6.  **Prepare o `state_update`:**
+        a. **Atualize o Checklist:** Revise as mensagens que você criou. Para cada item do `{{disclosure_checklist}}` que foi abordado, mude seu `status` para "communicated". Retorne o checklist COMPLETO com os status atualizados.
+         - Se o item foi comunicado, mude o `status` para "communicated".
+         - Nunca comunique itens que já foram comunicados anteriormente. A menos que o cliente solicite novamente.
+         - Se o item não foi comunicado, mantenha o `status` como "pending".
+        b. **Atualize os Produtos Discutidos:** Adicione os nomes dos planos que você mencionou na lista `products_discussed`.
+        c. **Atualize o Resumo:** Crie um `session_summary` que descreva a ação que você executou.
+    
+    **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
+    - Consulte a lista `{{recently_sent_catalogs}}`.
+    - **INCLUA um plano em `plan_names` SE:**
+        - É a **primeira vez** que este plano é foco na conversa E seu nome não consta em `{{recently_sent_catalogs}}`.
+        - OU o cliente **pede diretamente** pelo catálogo/link.
+        - OU o `StrategicAdvisor` instruiu explicitamente o reenvio.
+    - **NÃO INCLUA um plano em `plan_names` SE:**
+        - O catálogo já foi enviado recentemente E o cliente não pediu novamente.
+    - **LEMBRE-SE:** Se você adicionar um plano à lista `plan_names`, uma de suas mensagens em `primary_messages_sequence` DEVE mencionar sutilmente o envio.
+    Nomes de planos para catálogo: "MOTO GSM/PGS", "GSM Padrão", "GSM FROTA", "SATELITAL FROTA", "HÍBRIDO", "GSM+WiFi", "Scooters/Patinetes".
+
+    Retorne APENAS um objeto JSON no formato de duas chaves (`task_output` e `updated_state`), como no exemplo.
+  expected_output: |
+    {
+      "task_output": {
+        "messages_sequence": [
+          "Juan, entendi sua preocupação com a segurança da sua moto, já que a usa para tudo.",
+          "Com base nisso, nossa recomendação principal é o Plano Proteção Total PGS.",
+          "O grande diferencial dele é a tranquilidade da proteção financeira.",
+          "Se sua moto for roubada e não a recuperarmos, você recebe o valor dela pela tabela FIPE.",
+          "Um ponto importante, para total transparência: nosso serviço é de rastreamento com essa garantia de reembolso, não um seguro tradicional.",
+          "Essa abordagem com foco total na sua segurança faz sentido para você?"
+        ],
+        "plan_names": ["Plano Proteção Total PGS"]
+      },
+     "updated_state": {
+        "session_summary": "Mensagens sobre os planos de moto foram preparadas e ordenadas para envio ao cliente.",
+        "products_discussed": [
+          {
+            "plan_name": "Plano Rastreamento Moto",
+            "details_provided": ["pricing"],
+            "presented_at_turn": 4
+          }
+        ],
+        "disclosure_checklist": [
+          {
+          "item_id": "natureza_servico_pgs",
+          "topic": "Natureza do Serviço (Plano PGS)",
+          "content": "Este contrato NÃO é um seguro, mas em caso de NÃO recuperação da motocicleta, haverá REEMBOLSO do valor da motocicleta de acordo com a tabela FIPE, respeitando o valor máximo do plano contratado.",
+          "status": "pending"
+          },
+          {
+            "item_id": "responsabilidade_recuperacao",
+            "topic": "Responsabilidade de Recuperação",
+            "content": "A recuperação do veículo é atividade única e exclusiva das autoridades policiais.",
+            "status": "communicated"
+          },
+        ],
+      }
+    }
 
 collect_registration_data_task:
   description: |
     Você é o **RegistrationDataCollectorAgent**. Sua missão é continuar o processo de coleta de dados cadastrais.
 
+    Timestamp: "{timestamp}"
+    Now Turn: "{turn}"
+    
     **DADOS PARA SUA ANÁLISE:**
-    - **Estado da Conversa:** `{conversation_state}`
-    - **Última Mensagem do Cliente:** "{message_text_original}"
-    - **Dados Já Coletados:** `{collected_data_so_far}`
+    - **Estado da Conversa (Seu Contexto):** # Use para personalizar a conversa (ex: usar o nome do cliente de `entities_extracted`) e para entender o ponto em que a coleta parou. 
+    
+    `{conversation_state}`
+      
+    - **Última Mensagem do Cliente (Sua Resposta):** 
+    
+    "{message_text_original}"
+    
+    - **Dados Já Coletados (Seu Progresso):** 
+    
+    `{collected_data_so_far}`
+      # Um objeto JSON que você mesmo está construindo turno a turno.
+    
     - **Detalhes do Plano Contratado:** "{plan_details}"
 
     **SEU FLUXO DE TRABALHO:**
-    1.  Analise a mensagem do cliente para extrair as respostas.
-    2.  Atualize o objeto de dados já coletados.
-    3.  Verifique os dados que ainda faltam e formule a próxima pergunta.
+    **SEU PROCESSO DE COLETA DE DADOS (AGRUPADO):**
+    1.  **Analise a `{message_text_original}`** para extrair as respostas do cliente.
+    2.  **Atualize o objeto `{collected_data_so_far}`** com os novos dados.
+    3.  **Verifique os dados que ainda faltam e formule a próxima pergunta em blocos maiores para agilizar.**
+        - **BLOCO 1 (Identificação):** Peça `tipo_cadastro`, `nome_tomador_servico` e `documento_numero` juntos, após saber se é CPF ou CNPJ.
+        - **BLOCO 2 (Localização e Contato):** Peça `endereco_completo`, `cep`, `telefone_principal` com WhatsApp e `email` juntos.
+        - **BLOCO 3 (Veículo e Preferências):** Peça os dados do veículo (`placa`, `marca`, `modelo`) e o `dia_vencimento_mensalidade` juntos.
+    4.  **Valide as Informações:** Ao receber o dia de vencimento, certifique-se de que seja um dos dias permitidos: **1, 5, 10, 15, 20 ou 25**. Se o cliente sugerir outro dia, informe gentilmente as opções disponíveis.
+    5.  **Finalização:** Quando todos os dados obrigatórios forem coletados, sua tarefa principal é definir o `"status": "COLLECTION_COMPLETE"` na sua saída.
+    6.  **Atualize e Retorne:** Prepare o `task_output` com o status e os dados da coleta, e retorne o `{conversation_state}` atualizado.
 
-# ==================================================================================
-# == TASKS PARA O PIPELINE DE ENRIQUECIMENTO ASSÍNCRONO (ENRICHMENT PIPELINE) ==
-# ==================================================================================
+
+    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
+    NÃO adicione comentários no JSON final.
+    o `excpected_output` é um exemplo de saída esperada.
+  expected_output: |
+    {
+      "task_output": {
+        "status": "AWAITING_DOCUMENT_NUMBER",
+        "client_intent": "data_collection",
+        "collected_data": {
+          "tipo_cadastro": "CPF",
+          "documento_numero": null,
+          "nome_tomador_servico": null,
+          "nome_responsavel": null,
+          "endereco_completo": null,
+          "cep": null,
+          "veiculo_placa": null,
+          "veiculo_marca": null,
+          "veiculo_modelo": null,
+          "telefone_principal": null,
+          "email": null,
+          "dia_vencimento_mensalidade": null,
+          "possui_seguro": null,
+          "seguradora_nome": null,
+          "plano_contratado": {
+            "nome_plano": "Plano Proteção Total PGS",
+            "valor_adesao": 120.00,
+            "valor_mensalidade": 85.00
+          }
+        },
+        "next_message_to_send": "Perfeito, Juan! Cadastro em CPF. Agora, por favor, poderia me informar seu nome completo e o número do seu CPF?",
+        "is_data_collection_complete": false
+      },
+      "updated_state": {
+        "metadata": {
+          "contact_id": "{contact_id}",
+          "session_start_time": "2025-06-07T21:50:00.000Z",
+          "last_updated": "{timestamp}",
+          "current_turn_number": 8
+        },
+        "current_context": {
+            "context_type": "REGISTRATION",
+            "last_topic": "coleta_dados_identificacao",
+            "updated_at": "{timestamp}"
+        },
+        "session_summary": "Cliente aceitou o orçamento. Iniciado o processo de coleta de dados cadastrais. Solicitado nome completo e CPF.",
+        "communication_preference": {
+              "prefers_audio": Bool,
+              "reason": ""
+          },
+        "entities_extracted": [
+          { "entity": "customer_name", "value": "Juan", "turn": 1 },
+          { "entity": "decision", "value": "aceite", "turn": 6 },
+          { "entity": "registration_type", "value": "CPF", "turn": 8 }
+        ],
+        "products_discussed": [],
+        "last_agent_action": {
+          "agent_name": "RegistrationDataCollectorAgent",
+          "goal": "Solicitar nome completo e CPF do cliente.",
+          "action_timestamp": "{timestamp}"
+        },
+        "disclosure_checklist": [...],
+        "user_sentiment_history": [
+          { "turn": 8, "sentiment": "colaborativo" }
+        ]
+      }
+    }
 
 summarize_history_task:
   description: |
@@ -112,6 +508,9 @@ summarize_history_task:
     3.  Para cada tópico, forneça uma `quality_score` (0.0 a 1.0) e uma `reason`.
     4.  Para cada tópico, inclua `start_index` e `end_index` do histórico bruto.
 
+  expected_output: "A JSON object containing the hierarchical summary of the conversation."
+  
+
 clean_noisy_data_task:
   description: |
     Você é o DataQualityAgent. Sua missão é limpar um tópico de conversa marcado como ruidoso.
@@ -125,6 +524,7 @@ clean_noisy_data_task:
     **SEU FLUXO DE TRABALHO:**
     1.  Foque no trecho do histórico bruto fornecido, usando o histórico completo para contexto.
     2.  Reescreva e resuma o trecho para extrair a intenção e a informação essencial.
+  expected_output: "A JSON object containing the cleaned summary and details of the topic."
 
 summarize_state_task:
   description: |
@@ -136,6 +536,7 @@ summarize_state_task:
     **SEU FLUXO DE TRABALHO:**
     1.  Analise o estado do último turno.
     2.  Atualize o `session_summary`, refine as `entities_extracted`, e analise o `user_sentiment_history`.
+  expected_output: "A JSON object containing the enriched state."
 
 enhance_profile_task:
   description: |
@@ -152,3 +553,4 @@ enhance_profile_task:
     2.  Sintetize os insights, conectando informações de longo e curto prazo.
     3.  Gere o `executive_summary` e os `strategic_insights`.
     4.  Sua saída deve ser o perfil de cliente mestre completo e o perfil destilado para os agentes.
+  expected_output: "A JSON object containing the master profile and the distilled profile for agents."

@@ -47,15 +47,20 @@ def system_operations_task(contact_id: str):
         }
 
         result = crew.kickoff(inputs=inputs)
-        response_json = parse_json_from_string(result, update=False)
+        response_json = parse_json_from_string(result.raw, update=False)
 
         if response_json:
             redis_client.set(f"{contact_id}:last_system_operation_output", json.dumps(response_json))
             if response_json.get("status") == "INSUFFICIENT_DATA":
-                state.system_operation_status = "INSUFFICIENT_DATA"
+                # Pause the operation and wait for more user input
+                state.pending_system_operation = state.system_action_request
+                state.system_action_request = None
                 send_callbell_message(phone_number=state.metadata.phone_number, messages=[response_json.get("message_to_user", "")])
             else:
+                # The operation is complete, clear all related flags
                 state.system_operation_status = "COMPLETED"
+                state.pending_system_operation = None
+                state.system_action_request = None
                 if state.strategic_plan and "system_action_request" in state.strategic_plan:
                     del state.strategic_plan["system_action_request"]
         

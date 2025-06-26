@@ -1,13 +1,11 @@
 # app/tasks/tasks_declaration.py
 from crewai import Task, Agent
-from app.utils.funcs.funcs import obter_caminho_projeto
 
 from app.tools.knowledge_tools import KnowledgeServiceTool
 
 import yaml
 
-base_path = obter_caminho_projeto()
-config_path = base_path / 'app/config/crew_definitions/tasks.yaml'
+config_path = 'app/config/crew_definitions/tasks.yaml'
 
 tasks_config = yaml.safe_load(open(config_path, 'r').read())
 

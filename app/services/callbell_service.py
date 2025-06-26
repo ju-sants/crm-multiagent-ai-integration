@@ -63,3 +63,19 @@ def send_callbell_message(phone_number: str, messages: str = None, type: str = N
             return {"status": "success"}
         else:
             return {"status": "error"}
+
+def get_contact_messages(contact_uuid: str, limit: int = 50) -> list:
+    """Busca as mensagens de um contato na API da Callbell."""
+    url = f"https://api.callbell.eu/v1/contacts/{contact_uuid}/messages"
+    headers = {
+        "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    params = {"limit": limit}
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        return response.json().get("messages", [])
+    except requests.exceptions.RequestException as e:
+        # Adicione um log de erro aqui
+        return []

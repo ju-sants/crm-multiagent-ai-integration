@@ -28,7 +28,7 @@ apply_litellm_patch()
 redis_client = get_redis()
 state_manager = StateManagerService()
 # redis_client.delete(f'processing:71464be80c504971ae263d710b39dd1f')
-# redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
+redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
 # redis_client.delete(f'state:71464be80c504971ae263d710b39dd1f')
 # redis_client.delete(f"71464be80c504971ae263d710b39dd1f:customer_profile")
 # redis_client.delete(f"contact:71464be80c504971ae263d710b39dd1f")
@@ -75,7 +75,8 @@ def process_audio_attachment_task(contact_uuid, url):
     logger.info(f"[{contact_uuid}] - Transcribing audio from URL: {url}")
     transcription = transcript(url)
     if transcription:
-        redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', f"(Áudio transcrito): {transcription}")
+        message = f"(Áudio transcrito): {transcription}"
+        redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', message)
         static_url_part = url.split('uploads/')[1].split('?')[0]
         redis_client.hset(f'{contact_uuid}:attachments', static_url_part, transcription)
 
@@ -115,15 +116,8 @@ def process_message_task(contact_uuid):
         phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
         contact_name = contact_info.get("name", "")
 
-        headers = get_callbell_headers()
-        history_response = requests.get(f'https://api.callbell.eu/v1/contacts/{contact_uuid}/messages', headers=headers)
-        history_response.raise_for_status()
-        raw_history = history_response.json()
-
         # 2. Get or create the initial state
         state = state_manager.get_state(contact_uuid)
-        # Store raw history temporarily for the enrichment pipeline at the end of the chain
-        redis_client.set(f"raw_history:{contact_uuid}", json.dumps(raw_history), ex=3600) # Expire after 1 hour
         state.metadata.phone_number = phone_number
         state.metadata.contact_name = contact_name
         state_manager.save_state(contact_uuid, state)
