@@ -8,6 +8,7 @@ from app.core.logger import get_logger
 from app.config.settings import settings 
 
 from app.utils.funcs.reset_sending import process_reset_sending
+from app.services.google_maps_service import format_and_calculate_displacement_cost
 
 logger = get_logger(__name__)
 
@@ -286,6 +287,65 @@ class SystemOperationsService:
             logger.info(f"Conteúdo da resposta: {response.text if 'response' in locals() else 'Não disponível'}")
             return []
 
+    # --------------------- Callbell Integration ---------------------
+
+    def _assign_callbell_user(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Associa um usuário do Callbell ao cliente atual.
+        """
+        try:
+            case = params.get("case")
+            if not case: raise ValueError("'case' é obrigatório.")
+
+            explanation = params.get("explanation")
+            if not explanation: raise ValueError("'explanation' é obrigatório.")
+
+            user_uuid = params.get("user_uuid")
+            if not user_uuid: raise ValueError("'user_uuid' é obrigatório.")
+
+            user_to_assign = None
+            if case == "suporte":
+                user_to_assign = "suporte@suporte.com"
+            
+
+            url = f"https://api.callbell.eu/v1/contacts/{user_uuid}"
+
+            headers = {
+                "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {"team_uuid": "37007bf389624d76b51534cc971c9ba3"}
+
+            if user_to_assign:
+                payload["assigned_user"] = user_to_assign
+            
+            
+            response = requests.patch(url, json=payload, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        
+        except requests.exceptions.HTTPError as http_err:
+            logger.error(f"Erro HTTP ao atribuir usuário: {http_err}")
+            logger.error(f"Detalhes: {response.text}")
+            return {}
+
+        except requests.exceptions.RequestException as req_err:
+            logger.error(f"Erro de requisição ao atribuir usuário: {req_err}")
+            return {}
+
+        except ValueError as json_err: # Trata erro de decodificação do JSON
+            logger.error(f"Erro ao decodificar JSON da resposta da API: {json_err}")
+            logger.info(f"Conteúdo da resposta: {response.text if 'response' in locals() else 'Não disponível'}")
+            return {}
+
+        except Exception as e:
+            logger.error(f"Erro desconhecido ao atribuir usuário: {e}")
+            return {}
+    
+
+
+
     # --- Implementação de Workflows de Negócio ---
 
     def _wf_get_vehicle_full_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -371,6 +431,21 @@ class SystemOperationsService:
 
         return payload
     
+    def _wf_calculate_displacement_cost(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        WORKFLOW: Calcula o custo de deslocamento com base em dados fornecidos.
+        """
+        destination_city = params.get("destination_city")
+        destination_state = params.get("destination_state")
 
+        DEFAULT_SOURCE_CITY = "Luís Eduardo Magalhães, BA"
+
+        destination_address = f"{destination_city}, {destination_state}"
+
+        return format_and_calculate_displacement_cost(
+            cidade_origem=DEFAULT_SOURCE_CITY,
+            cidade_destino=destination_address
+        )
+    
 # Instância Singleton do serviço
 system_operations_service = SystemOperationsService()
