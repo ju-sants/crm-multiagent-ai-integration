@@ -64,8 +64,6 @@ def send_callbell_message(phone_number, text):
         logger.error(f"Erro inesperado ao processar envio de mensagem simples para {phone_number}: {e}")
         return False
 
-def get_allowed_chats():
-    return settings.ALLOWED_CHATS
 
 def process_requisitions(payload):
     logger.info(f'[{payload.get("uuid", "N/A")}] - INICIANDO process_requisitions para payload: {payload.get("uuid", "N/A")} de {payload.get("from", "N/A")}')
@@ -80,11 +78,8 @@ def process_requisitions(payload):
     contact_name = contact_info.get("name", "")
     logger.info(f'[{contact_uuid}] - Extraídas informações do contato: UUID={contact_uuid}, Telefone={phone_number}')
 
-    allowed_chats = get_allowed_chats()
-    logger.info(f'[{contact_uuid}] - Chats permitidos carregados.')
-
-    if contact_uuid in allowed_chats:
-        logger.info(f'[{contact_uuid}] - Contato {contact_uuid} ENCONTRADO na lista de chats permitidos.')
+    if contact_info.get("team", {}).get("uuid", "") == "d468731afdba45c3a3a65895e4b08a5a":
+        logger.info(f'[{contact_uuid}] - Contato {contact_uuid} está associado ao usuário Alessandro. Continuando.')
         
         text = str(payload.get('text', ''))
         text = '' if text == 'None' else text
@@ -213,7 +208,7 @@ def process_requisitions(payload):
         else:
             logger.info(f'[{contact_uuid}] - NOVAS mensagens chegaram durante o período de espera. A tarefa atual será ignorada para evitar processamento duplicado/concorrência. As novas mensagens serão processadas por uma nova execução da tarefa.')
     else:
-        logger.info(f'[{contact_uuid}] - Contato {contact_uuid} NÃO ENCONTRADO na lista de chats permitidos. Ignorando processamento.')
+        logger.info(f'[{contact_uuid}] - Contato {contact_uuid} NÃO ESTÀ associado a alessandro. A tarefa será ignorada.')
 
     logger.info(f'[{payload.get("uuid", "N/A")}] - FINALIZANDO process_requisitions para payload: {payload.get("uuid", "N/A")}.')
 
