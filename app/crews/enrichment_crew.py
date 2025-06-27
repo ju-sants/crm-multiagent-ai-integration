@@ -60,7 +60,7 @@ def history_summarizer_task(contact_id: str):
     if output:
         # Save the main summary
         summary_key = f"history:{contact_id}"
-        redis_client.set(summary_key, json.dumps(output['hierarchical_summary']))
+        redis_client.set(summary_key, json.dumps(output))
         
         # Save details for each topic and check for noise
         for topic_detail in output.get('topic_details', []):

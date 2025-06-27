@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
-@celery_app.task(name='fast_path.registration')
+@celery_app.task(name='main_crews.registration')
 def registration_task(contact_id: str):
     """
     Task for handling the customer registration data collection process.
@@ -61,6 +61,10 @@ def registration_task(contact_id: str):
             elif response_json.get("next_message_to_send"):
                 send_callbell_message(phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
                 redis_client.set(f"{contact_id}:getting_data_from_user", "1")
+            
+            # Liberating the lock
+            redis_client.delete(f'processing:{contact_id}')
+            logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
 
         return contact_id
     except Exception as e:

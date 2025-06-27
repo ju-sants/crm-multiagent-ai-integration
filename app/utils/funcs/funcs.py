@@ -114,32 +114,43 @@ def padronizar_telefone(telefone):
 def parse_json_from_string(json_string, update=True):
     """
     Parses a JSON object from a string, attempting to fix common LLM syntax errors.
+    This function is designed to be robust against malformed JSON from language models.
     """
+    if not isinstance(json_string, str):
+        logger.warning("Input is not a string, returning None.")
+        return (None, None) if update else None
+
+    processed_string = re.sub(r'```json\s*|\s*```', '', json_string.strip())
+    
+    match = re.search(r'\{.*\}', processed_string, re.DOTALL)
+    if not match:
+        logger.warning("No JSON object found in the string.")
+        return (None, None) if update else None
+    processed_string = match.group(0)
+
+    processed_string = processed_string.replace(': True', ': true').replace(': False', ': false')
+    processed_string = processed_string.replace(': None', ': null')
+
     try:
-        # Use a regex to find the JSON object within the string
-        match = re.search(r'\{.*\}', json_string, re.DOTALL)
-        if not match:
-            logger.warning("No JSON object found in the string.")
-            return None
-        
-        json_string = match.group(0)
-
-        # Correct common syntax errors made by LLMs
-        json_string = json_string.replace(': True', ': true').replace(': False', ': false')
-        json_string = json_string.replace(': None', ': null')
-    
-        json_response = json.loads(json_string)
-
-        if 'task_output' in json_response and 'updated_state' in json_response and update:
-            task_output = json_response['task_output']
-            updated_state = json_response['updated_state']
-            return task_output, updated_state
-        
-        elif not update:
-            return json_response
-        
-        return json_response, None
-    
+        json_response = json.loads(processed_string)
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to decode JSON string: {e}\nString was: {json_string}")
-        return None, None
+        logger.warning(f"Initial JSON parsing failed: {e}. Attempting to fix common errors...")
+        try:
+            fixed_string = re.sub(r',\s*([\}\]])', r'\1', processed_string)
+            
+            fixed_string = re.sub(r'(?<=")\s+(?=")', ',', fixed_string)
+
+            json_response = json.loads(fixed_string)
+            logger.info("Successfully parsed JSON after applying automated fixes.")
+        except json.JSONDecodeError as e2:
+            logger.error(f"Failed to decode JSON string even after attempting fixes: {e2}")
+            logger.debug(f"Original string provided to function:\n{json_string}")
+            logger.debug(f"String that failed parsing after fixes:\n{fixed_string}")
+            return (None, None) if update else None
+
+    if update:
+        task_output = json_response.get('task_output')
+        updated_state = json_response.get('updated_state')
+        return task_output, updated_state
+    else:
+        return json_response

@@ -9,10 +9,9 @@ from app.services.celery_Service import celery_app
 from app.core.logger import get_logger
 from app.config.settings import settings
 from app.config.patches import apply_litellm_patch
-from app.models.data_models import ConversationState, StateMetadata
 from app.services.state_manager_service import StateManagerService
-from app.tasks.fast_path.context_analysis import context_analysis_task
-from app.tasks.fast_path.routing import routing_task
+from app.crews.main_crews.context_analysis import context_analysis_task
+from app.crews.main_crews.routing import routing_task
 from celery import chain
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
@@ -26,12 +25,8 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 app = Flask(__name__)
 apply_litellm_patch()
 redis_client = get_redis()
+
 state_manager = StateManagerService()
-# redis_client.delete(f'processing:71464be80c504971ae263d710b39dd1f')
-redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
-# redis_client.delete(f'state:71464be80c504971ae263d710b39dd1f')
-# redis_client.delete(f"71464be80c504971ae263d710b39dd1f:customer_profile")
-# redis_client.delete(f"contact:71464be80c504971ae263d710b39dd1f")
 
 client_description = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
 logger:  logging.Logger = get_logger(__name__)
@@ -107,7 +102,6 @@ def process_message_task(contact_uuid):
         return
 
     try:
-        # 1. Fetch initial data
         contact_info_raw = redis_client.get(f"contact_info:{contact_uuid}")
         if not contact_info_raw:
             logger.error(f"[{contact_uuid}] - Could not retrieve contact info from Redis. Aborting task.")
@@ -116,13 +110,11 @@ def process_message_task(contact_uuid):
         phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
         contact_name = contact_info.get("name", "")
 
-        # 2. Get or create the initial state
         state = state_manager.get_state(contact_uuid)
         state.metadata.phone_number = phone_number
         state.metadata.contact_name = contact_name
         state_manager.save_state(contact_uuid, state)
         
-        # 3. Trigger the full state machine chain
         pipeline = chain(
             context_analysis_task.s(contact_id=contact_uuid),
             routing_task.s()
@@ -132,9 +124,7 @@ def process_message_task(contact_uuid):
 
     except Exception as e:
         logger.error(f"[{contact_uuid}] - CRITICAL ERROR at the start of the state machine: {e}", exc_info=True)
-    finally:
-        redis_client.delete(f'processing:{contact_uuid}')
-        logger.info(f'[{contact_uuid}] - Lock "processing:{contact_uuid}" LIBERADO no Redis.')
+    
 
 
                         
@@ -179,10 +169,9 @@ def process_incoming_message(payload):
         celery_app.control.revoke(existing_task_id.decode('utf-8'))
         logger.info(f"[{contact_uuid}] - Revoked previous pending task: {existing_task_id.decode('utf-8')}")
 
-    # Schedule the new task to run in 10 seconds
-    new_task = process_message_task.apply_async(args=[contact_uuid], eta=datetime.utcnow() + timedelta(seconds=10))
-    redis_client.set(pending_task_key, new_task.id, ex=30) # Keep track of the new task ID
-    logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} in 10 seconds.")
+    new_task = process_message_task.apply_async(args=[contact_uuid], eta=datetime.now() + timedelta(seconds=3))
+    redis_client.set(pending_task_key, new_task.id, ex=30)
+    logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} in 3 seconds.")
 
 
 @app.route('/receive_message', methods=['POST'])

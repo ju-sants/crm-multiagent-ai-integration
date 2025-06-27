@@ -1,5 +1,6 @@
 from crewai import LLM
 from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from app.config.settings import settings
 
 
@@ -27,10 +28,30 @@ pro_Google_llm = LLM(
     api_key=settings.GEMINI_API_KEY,
 )
 
-flash_Google_llm = LLM(
+flash_Google_llm_decisive = ChatGoogleGenerativeAI(
     model='gemini/gemini-2.5-flash-preview-05-20',
-    api_key=settings.GEMINI_API_KEY,
+    google_api_key=settings.GEMINI_API_KEY,
+    temperature=0.1,
 )
+flash_Google_llm_decisive_reason = ChatGoogleGenerativeAI(
+    model='gemini/gemini-2.5-flash-preview-05-20',
+    google_api_key=settings.GEMINI_API_KEY,
+    temperature=0.1,
+    thinking_budget=-1,
+)
+
+flash_Google_llm_creative = ChatGoogleGenerativeAI(
+    model='gemini/gemini-2.5-flash-preview-05-20',
+    google_api_key=settings.GEMINI_API_KEY,
+    temperature=0.9,
+)
+flash_Google_llm_creative_reason = ChatGoogleGenerativeAI(
+    model='gemini/gemini-2.5-flash-preview-05-20',
+    google_api_key=settings.GEMINI_API_KEY,
+    temperature=0.9,
+    thinking_budget=-1,
+)
+
 
 flash_Google_llm_reason = LLM(
     model='gemini/gemini-2.5-flash-preview-05-20',

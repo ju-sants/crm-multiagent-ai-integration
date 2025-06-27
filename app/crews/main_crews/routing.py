@@ -2,16 +2,16 @@ from app.services.celery_Service import celery_app
 from app.core.logger import get_logger
 from app.services.state_manager_service import StateManagerService
 from app.services.redis_service import get_redis
-from app.tasks.fast_path.strategy import strategy_task
-from app.tasks.fast_path.communication import communication_task
-from app.tasks.fast_path.system_operations import system_operations_task
-from app.tasks.fast_path.registration import registration_task
+from app.crews.main_crews.strategy import strategy_task
+from app.crews.main_crews.communication import communication_task
+from app.crews.main_crews.system_operations import system_operations_task
+from app.crews.main_crews.registration import registration_task
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
-@celery_app.task(name='fast_path.router')
+@celery_app.task(name='main_crews.router')
 def routing_task(contact_id: str):
     """
     Inspects the state and routes to the next appropriate task in the chain.
@@ -58,6 +58,6 @@ def routing_task(contact_id: str):
         next_task = communication_task.s(contact_id)
 
     if next_task:
-        next_task.apply_async()
+        next_task.apply()
 
     return contact_id

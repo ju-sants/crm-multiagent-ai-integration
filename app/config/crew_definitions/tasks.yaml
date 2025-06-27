@@ -7,31 +7,26 @@ context_analysis_task:
     
     `{conversation_state}`
 
-    - **Perfil do Cliente (Longo Prazo, pode ser nulo):** 
-    
-    `{customer_profile}`
-
     - **Mensagem Atual do Cliente (Gatilho):** `{message_text}`
-    - **Outros Dados:** 
+    - **Histórico Resumido da Conversa:** `{history}`
+    - **Outros Dados:**
 
     Histórico 
     
     (`{history}`), 
 
-    Timestamp (`{timestamp}`)
-    Now Turn (`{turn}`)
-    Contact ID (`{contact_id}`)
+    Now Turn: `{turn}`
 
     **SEU FLUXO DE TRABALHO UNIFICADO E DETALHADO:**
 
     # --- Parte 1: SÍNTESE DO PERFIL ---
-    1.  Primeiro, use os insights do `{{conversation_state}}` (resumo da sessão, entidades extraídas, produtos discutidos) para atualizar o `{{profile}}`. Se o perfil antigo não existir, crie um novo.
+    1.  Primeiro, use os insights do `conversation_state` (resumo da sessão, entidades extraídas, produtos discutidos) para atualizar o `profile`. Se o perfil antigo não existir, crie um novo.
     2.  O `profile_summary` deve ser reescrito para refletir o conhecimento mais recente. O `sales_stage` e o `current_sentiment` devem ser atualizados com base na conclusão da última sessão. As novas `entities_extracted` do estado devem ser adicionadas às `preferences` do perfil.
-    3.  Analise a conversa para identificar possíveis dificuldades de leitura e atualize o campo `communication_preference` no `{{conversation_state}}` se necessário.
+    3.  Analise a conversa para identificar possíveis dificuldades de leitura e atualize o campo `communication_preference` no `conversation_state` se necessário.
 
     # --- Parte 2: DECISÃO DE ROTEAMENTO ---
-    4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `{{message_text}}`.
-    5.  Analise o `{{strategic_plan}}` salvo no `{{conversation_state}}` contra a `{{message_text}}`. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
+    4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `message_text`.
+    5.  Analise o `strategic_plan` salvo no `conversation_state` contra a `message_text`. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
     6.  Se o cliente perguntar por preços, termos, informações ou qualquer coisa que EVIDENTEMENTE não está no plano estratégico, defina `"is_plan_acceptable": false`.
     7.  Com base na avaliação acima, defina o campo `"action"` para `"PROCEED_WITH_EXISTING_PLAN"` ou `"INITIATE_NEW_STRATEGIC_PLAN"`.
     8.  **Plano estratégico:** Decida se o plano estratégico de interação atual (se existir) é válido com o contexto, sessão e mensagem atual do cliente. se sim, envie `"is_plan_acceptable": true` em `task_output`, se não `"is_plan_acceptable": false`.
@@ -41,7 +36,7 @@ context_analysis_task:
           - Caso note que o cliente solicita uma dessas ações e o plano estratégico NÃO for aceitável, apenas defina `is_plan_acceptable: false` em `task_output` e não envie nenhum comando para o agente de ações.
 
     # --- Parte 3: PREPARAÇÃO DA SAÍDA ---
-    11.  Atualize o `{{conversation_state}}` para o próximo agente: modifique o `session_summary`, adicione novas entidades da última mensagem, e incremente os metadados.
+    11.  Atualize o `conversation_state` para o próximo agente: modifique o `session_summary`, adicione novas entidades da última mensagem, e incremente os metadados.
     12. `operational_context` SEMPRE deverá ser um desses: BUDGET, BUDGET_ACCEPTED, CUSTOMER_SERVICE e SUPPORT.
     13.  Construa sua resposta final em JSON, contendo o `task_output` (com o resultado da triagem e o perfil de longo prazo ATUALIZADO) e o `updated_state` (o estado da sessão ATUALIZADO).
         
@@ -55,7 +50,7 @@ context_analysis_task:
         "identified_topic": "continuidade_discussao_preco_moto",
         "operational_context": "BUDGET",
         "profile": {
-          "contact_id": "{contact_id}",
+          "contact_id": "contact_id",
           "customer_identity": {
             "name": "Juan Bispo dos Santos",
             "roles": ["Gestor"]
@@ -63,7 +58,7 @@ context_analysis_task:
           "executive_summary": "Cliente valioso com histórico de compras. Demonstra conhecimento técnico e interesse em soluções para áreas rurais (fazendas). Possui baixa tolerância a explicações textuais, preferindo áudio. Atualmente reengajou a conversa para avaliar em detalhes o plano GSM+WiFi.",
           "relationship_timeline": [
             { "timestamp": "2025-06-09T11:00:00Z", "event_type": "SALES_INQUIRY", "summary": "Iniciou conversa sobre planos para frota." },
-            { "timestamp": "{timestamp}", "event_type": "SALES_INQUIRY", "summary": "Retomou a conversa com foco específico no plano para fazenda com Wi-Fi." }
+            { "timestamp": "timestamp", "event_type": "SALES_INQUIRY", "summary": "Retomou a conversa com foco específico no plano para fazenda com Wi-Fi." }
           ],
           "strategic_insights": {
             "communication_preferences": {
@@ -327,13 +322,13 @@ communication_task:
     -----
 
     **SEU FLUXO DE TRABALHO DETALHADO:**
-    1.  **Análise e Foco:** Analise profundamente o `{{strategic_briefing}}`. **Ele é a sua única fonte da verdade para definir o assunto da conversa.** Use o `{{conversation_state}}` e o `{{history}}` apenas para dar contexto, personalizar e evitar repetições. O histórico NUNCA deve ser o tópico principal.   
+    1.  **Análise e Foco:** Analise profundamente o `strategic_briefing`. **Ele é a sua única fonte da verdade para definir o assunto da conversa.** Use o `conversation_state` e o `history` apenas para dar contexto, personalizar e evitar repetições. O histórico NUNCA deve ser o tópico principal.   
     2.  **Execute sua principal tarefa de DECONSTRUÇÃO:** Transforme as informações do dossiê (benefícios, preços, limitações, termos) em uma lista de mensagens curtas de uma frase em `primary_messages_sequence`.
-    3.  **Nunca mande mensagens ou assuntos repetidos.** Use o `{{conversation_state}}` e o `{{history}}` para evitar redundâncias e manter a fluidez da conversa.
+    3.  **Nunca mande mensagens ou assuntos repetidos.** Use o `conversation_state` e o `history` para evitar redundâncias e manter a fluidez da conversa.
     4.  **Isso é um Chat!:** Não envie mensagens demais, nem mensagens grandes demais. Mantenha o dialogo fluido e natural, aprofundando a cada etapa.
     5.  **Aplique a lógica de envio de catálogo** para popular a lista `plan_names`.
     6.  **Prepare o `state_update`:**
-        a. **Atualize o Checklist:** Revise as mensagens que você criou. Para cada item do `{{disclosure_checklist}}` que foi abordado, mude seu `status` para "communicated". Retorne o checklist COMPLETO com os status atualizados.
+        a. **Atualize o Checklist:** Revise as mensagens que você criou. Para cada item do `disclosure_checklist` que foi abordado, mude seu `status` para "communicated". Retorne o checklist COMPLETO com os status atualizados.
          - Se o item foi comunicado, mude o `status` para "communicated".
          - Nunca comunique itens que já foram comunicados anteriormente. A menos que o cliente solicite novamente.
          - Se o item não foi comunicado, mantenha o `status` como "pending".
@@ -341,9 +336,9 @@ communication_task:
         c. **Atualize o Resumo:** Crie um `session_summary` que descreva a ação que você executou.
     
     **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
-    - Consulte a lista `{{recently_sent_catalogs}}`.
+    - Consulte a lista `recently_sent_catalogs`.
     - **INCLUA um plano em `plan_names` SE:**
-        - É a **primeira vez** que este plano é foco na conversa E seu nome não consta em `{{recently_sent_catalogs}}`.
+        - É a **primeira vez** que este plano é foco na conversa E seu nome não consta em `recently_sent_catalogs`.
         - OU o cliente **pede diretamente** pelo catálogo/link.
         - OU o `StrategicAdvisor` instruiu explicitamente o reenvio.
     - **NÃO INCLUA um plano em `plan_names` SE:**
@@ -508,7 +503,10 @@ summarize_history_task:
     3.  Para cada tópico, forneça uma `quality_score` (0.0 a 1.0) e uma `reason`.
     4.  Para cada tópico, inclua `start_index` e `end_index` do histórico bruto.
 
-  expected_output: "A JSON object containing the hierarchical summary of the conversation."
+  expected_output: |
+    A JSON object containing two keys: `hierarchical_summary` and `topic_details`.
+    - `hierarchical_summary`: An object with `summary_version` and a list of `topics`.
+    - `topic_details`: A list of objects, where each object represents a topic with its `topic_id`, `title`, `summary`, `quality_score`, `reason`, `start_index`, `end_index`, `full_details`, `key_entities`, and `sentiment_trend`.
   
 
 clean_noisy_data_task:
@@ -524,7 +522,10 @@ clean_noisy_data_task:
     **SEU FLUXO DE TRABALHO:**
     1.  Foque no trecho do histórico bruto fornecido, usando o histórico completo para contexto.
     2.  Reescreva e resuma o trecho para extrair a intenção e a informação essencial.
-  expected_output: "A JSON object containing the cleaned summary and details of the topic."
+  expected_output: |
+    A JSON object with two keys: `cleaned_summary` and `cleaned_details`.
+    - `cleaned_summary`: A string with the corrected summary.
+    - `cleaned_details`: A string with the corrected full details.
 
 summarize_state_task:
   description: |
@@ -536,7 +537,7 @@ summarize_state_task:
     **SEU FLUXO DE TRABALHO:**
     1.  Analise o estado do último turno.
     2.  Atualize o `session_summary`, refine as `entities_extracted`, e analise o `user_sentiment_history`.
-  expected_output: "A JSON object containing the enriched state."
+  expected_output: "A JSON object representing the full, enriched ConversationState model."
 
 enhance_profile_task:
   description: |
@@ -553,4 +554,7 @@ enhance_profile_task:
     2.  Sintetize os insights, conectando informações de longo e curto prazo.
     3.  Gere o `executive_summary` e os `strategic_insights`.
     4.  Sua saída deve ser o perfil de cliente mestre completo e o perfil destilado para os agentes.
-  expected_output: "A JSON object containing the master profile and the distilled profile for agents."
+  expected_output: |
+    A JSON object with two keys: `master_profile` and `distilled_profile_for_agents`.
+    - `master_profile`: The complete, updated CustomerProfile object.
+    - `distilled_profile_for_agents`: The lightweight, pre-computed briefing for the fast path agents.

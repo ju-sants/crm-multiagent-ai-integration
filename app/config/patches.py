@@ -23,6 +23,11 @@ def apply_litellm_patch():
             logger.info(f"LITELLM PATCH: Removing 'stop' parameter for model '{model_name}'.")
             kwargs.pop('stop')
 
+        if 'model' in kwargs:
+            kwargs['model'] = kwargs['model'].replace("models/", "")
+        elif args:
+            args[0] = args[0].replace("models/", "")
+
         return original_completion(*args, **kwargs)
 
     litellm.completion = patched_completion

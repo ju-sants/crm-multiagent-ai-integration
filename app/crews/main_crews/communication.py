@@ -5,6 +5,8 @@ from app.services.celery_Service import celery_app
 from app.crews.enrichment_crew import trigger_enrichment_pipeline
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_communication_agent
+from app.config.llm_config import default_openai_llm
+from app.tools.knowledge_tools import drill_down_topic_tool
 from app.tasks.tasks_declaration import create_communication_task
 from app.models.data_models import ConversationState, CustomerProfile
 from app.services.state_manager_service import StateManagerService
@@ -31,7 +33,7 @@ def send_audio_message_task(phone_number: str, messages: list, contact_id: str):
 
 # --- Main Communication Task ---
 
-@celery_app.task(name='fast_path.communication', bind=True)
+@celery_app.task(name='main_crews.communication', bind=True)
 def communication_task(self, contact_id: str):
     """
     Third task in the state machine chain. Loads state, generates the final response,
@@ -41,7 +43,8 @@ def communication_task(self, contact_id: str):
     state = state_manager.get_state(contact_id)
 
     try:
-        agent = get_communication_agent()
+        llm_w_tools = default_openai_llm.bind_tools([drill_down_topic_tool])
+        agent = get_communication_agent(llm_w_tools)
         task = create_communication_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
@@ -89,8 +92,14 @@ def communication_task(self, contact_id: str):
             else:
                 for message in response_json['messages_sequence']:
                     send_text_message_task.delay(phone_number, message)
+            
 
-        # Final step: trigger the enrichment for the next turn
+
+        # Final step: trigger the enrichment for the next turn and liberate de lock
+
+        redis_client.delete(f'processing:{contact_id}')
+        logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
+
         # 1. Get historical messages and new messages
         base_history_json = redis_client.get(f"raw_history:{contact_id}")
         base_history = json.loads(base_history_json) if base_history_json else {"messages": []}

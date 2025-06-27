@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
-@celery_app.task(name='fast_path.context_analysis', bind=True)
+@celery_app.task(name='main_crews.context_analysis', bind=True)
 def context_analysis_task(self, contact_id: str):
     """
     First task in the state machine chain. Loads state, runs analysis,
@@ -31,13 +31,22 @@ def context_analysis_task(self, contact_id: str):
 
         # The inputs are now derived from the state model
         messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+        history_summary_json = redis_client.get(f"history:{contact_id}")
+        history_summary = json.loads(history_summary_json) if history_summary_json else {}
+        history_messages = "\n\n".join([
+            f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
+            for topic in history_summary.get("topics", [])
+        ])
+
         inputs = {
             "message_text": "\n".join(messages),
-            "conversation_state": state.model_dump_json()
+            "conversation_state": state.model_dump_json(),
+            "history": history_messages,
+            "turn": state.metadata.current_turn_number,
         }
 
         result = crew.kickoff(inputs=inputs)
-        json_response, updated_state_dict = parse_json_from_string(result.raw)
+        _, updated_state_dict = parse_json_from_string(result.raw)
 
         if updated_state_dict:
             state = ConversationState(**{**state.model_dump(), **updated_state_dict})

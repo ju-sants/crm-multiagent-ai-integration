@@ -1,8 +1,13 @@
 import json
 from crewai import Crew, Process
+import datetime
+import pytz
+
 from app.services.celery_Service import celery_app
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_strategic_advisor_agent
+from app.config.llm_config import default_openai_llm
+from app.tools.knowledge_tools import knowledge_service_tool, drill_down_topic_tool
 from app.tasks.tasks_declaration import create_develop_strategy_task
 from app.models.data_models import ConversationState, CustomerProfile
 from app.services.state_manager_service import StateManagerService
@@ -13,7 +18,7 @@ logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
-@celery_app.task(name='fast_path.strategy', bind=True)
+@celery_app.task(name='main_crews.strategy', bind=True)
 def strategy_task(self, contact_id: str):
     """
     Second task in the state machine chain. Loads state, runs strategy,
@@ -28,7 +33,8 @@ def strategy_task(self, contact_id: str):
 
     try:
         # A new strategy is needed
-        agent = get_strategic_advisor_agent()
+        llm_w_tools = default_openai_llm.bind_tools([knowledge_service_tool, drill_down_topic_tool])
+        agent = get_strategic_advisor_agent(llm_w_tools)
         task = create_develop_strategy_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
@@ -52,6 +58,8 @@ def strategy_task(self, contact_id: str):
             "message_text_original": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
             "operational_context": state.operational_context or "",
             "identified_topic": state.identified_topic or "",
+            "timestamp": datetime.datetime.now(pytz.timezone("America/Sao_Paulo")).isoformat(),
+            "turn": state.metadata.current_turn_number
         }
 
         result = crew.kickoff(inputs=inputs)

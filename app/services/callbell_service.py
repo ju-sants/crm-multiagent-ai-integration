@@ -1,8 +1,13 @@
 from typing import Any, Dict
 from time import sleep
 import requests
+import json
 
 from app.config.settings import settings
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 
 def send_callbell_message(phone_number: str, messages: str = None, type: str = None, audio_url: str = None) -> Dict[str, Any]:
@@ -71,11 +76,31 @@ def get_contact_messages(contact_uuid: str, limit: int = 50) -> list:
         "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
         "Content-Type": "application/json"
     }
-    params = {"limit": limit}
+    page = 1
+    messages = []
+
     try:
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        return response.json().get("messages", [])
+        while True:
+            params = {"page": page}
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            messages_temp = data.get("messages", [])
+            if messages_temp:
+                messages.extend(messages_temp)
+                page += 1
+                if len(messages) >= limit:
+                    break
+            else:
+                break
     except requests.exceptions.RequestException as e:
-        # Adicione um log de erro aqui
+        logger.error(f"Failed to fetch messages for contact {contact_uuid}: {e}")
         return []
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to decode JSON for contact {contact_uuid}: {e}")
+        return []
+    
+    else:
+        return messages
+    
+    

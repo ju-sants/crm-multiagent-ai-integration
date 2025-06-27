@@ -3,6 +3,8 @@ from crewai import Crew, Process
 from app.services.celery_Service import celery_app
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_system_operations_agent
+from app.config.llm_config import default_openai_llm
+from app.tools.system_operations_tools import system_operations_tool
 from app.tasks.tasks_declaration import create_execute_system_operations_task
 from app.models.data_models import ConversationState, CustomerProfile
 from app.services.state_manager_service import StateManagerService
@@ -14,7 +16,7 @@ logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
-@celery_app.task(name='fast_path.system_operations')
+@celery_app.task(name='main_crews.system_operations')
 def system_operations_task(contact_id: str):
     """
     Task for handling system operations requests.
@@ -23,7 +25,8 @@ def system_operations_task(contact_id: str):
     state = state_manager.get_state(contact_id)
     
     try:
-        agent = get_system_operations_agent()
+        llm_w_tools = default_openai_llm.bind_tools([system_operations_tool])
+        agent = get_system_operations_agent(llm_w_tools)
         task = create_execute_system_operations_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
@@ -56,6 +59,11 @@ def system_operations_task(contact_id: str):
                 state.pending_system_operation = state.system_action_request
                 state.system_action_request = None
                 send_callbell_message(phone_number=state.metadata.phone_number, messages=[response_json.get("message_to_user", "")])
+
+                # Liberating the lock
+                redis_client.delete(f'processing:{contact_id}')
+                logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
+
             else:
                 # The operation is complete, clear all related flags
                 state.system_operation_status = "COMPLETED"
