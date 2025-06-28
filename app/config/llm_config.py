@@ -1,6 +1,7 @@
 from crewai import LLM
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
+from app.utils.wrappers.google_genai_LLM import GoogleGenAIWrapper
 from app.config.settings import settings
 
 
@@ -28,33 +29,33 @@ pro_Google_llm = LLM(
     api_key=settings.GEMINI_API_KEY,
 )
 
-flash_Google_llm_decisive = ChatGoogleGenerativeAI(
-    model='gemini/gemini-2.5-flash-preview-05-20',
+flash_Google_llm_decisive = GoogleGenAIWrapper(ChatGoogleGenerativeAI(
+    model='gemini-2.5-flash',
     google_api_key=settings.GEMINI_API_KEY,
     temperature=0.1,
-)
-flash_Google_llm_decisive_reason = ChatGoogleGenerativeAI(
-    model='gemini/gemini-2.5-flash-preview-05-20',
+))
+flash_Google_llm_decisive_reason = GoogleGenAIWrapper(ChatGoogleGenerativeAI(
+    model='gemini-2.5-flash',
     google_api_key=settings.GEMINI_API_KEY,
     temperature=0.1,
     thinking_budget=-1,
-)
+))
 
-flash_Google_llm_creative = ChatGoogleGenerativeAI(
-    model='gemini/gemini-2.5-flash-preview-05-20',
+flash_Google_llm_creative = GoogleGenAIWrapper(ChatGoogleGenerativeAI(
+    model='gemini-2.5-flash',
     google_api_key=settings.GEMINI_API_KEY,
     temperature=0.9,
-)
-flash_Google_llm_creative_reason = ChatGoogleGenerativeAI(
-    model='gemini/gemini-2.5-flash-preview-05-20',
+))
+flash_Google_llm_creative_reason = GoogleGenAIWrapper(ChatGoogleGenerativeAI(
+    model='gemini-2.5-flash',
     google_api_key=settings.GEMINI_API_KEY,
     temperature=0.9,
     thinking_budget=-1,
-)
+))
 
 
 flash_Google_llm_reason = LLM(
-    model='gemini/gemini-2.5-flash-preview-05-20',
+    model='gemini-2.5-flash-latest',
     thinking={"type": "enabled", "budget": 2048},
 )
 

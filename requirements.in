@@ -1,5 +1,5 @@
 celery
-crewai
+crewai==0.95.0
 python-dotenv
 elevenlabs
 flask

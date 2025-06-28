@@ -25,6 +25,7 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 app = Flask(__name__)
 apply_litellm_patch()
 redis_client = get_redis()
+redis_client.flushdb()
 
 state_manager = StateManagerService()
 

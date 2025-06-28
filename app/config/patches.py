@@ -24,11 +24,14 @@ def apply_litellm_patch():
             kwargs.pop('stop')
 
         if 'model' in kwargs:
-            kwargs['model'] = kwargs['model'].replace("models/", "")
+            kwargs['model'] = kwargs['model'].replace("models/", "").replace("model=", "")
         elif args:
-            args[0] = args[0].replace("models/", "")
+            new_args = list(args)
+            new_args[0] = new_args[0].replace("models/", "")
+            args = tuple(new_args)
 
         return original_completion(*args, **kwargs)
 
     litellm.completion = patched_completion
     logger.info("LiteLLM patch applied successfully.")
+

@@ -58,6 +58,6 @@ def routing_task(contact_id: str):
         next_task = communication_task.s(contact_id)
 
     if next_task:
-        next_task.apply()
+        next_task.apply_async()
 
     return contact_id
