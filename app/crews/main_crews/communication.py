@@ -129,6 +129,9 @@ def communication_task(self, contact_id: str):
 
         system_op_output = redis_client.get(f"{contact_id}:last_system_operation_output")
 
+
+        last_processed_messages = redis_client.lrange(f"{contact_id}:messages", 0, -1)
+
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "turn": state.metadata.current_turn_number,
@@ -139,6 +142,7 @@ def communication_task(self, contact_id: str):
             "history": history_messages,
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
             "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]),
+            "client_message": "\n".join(last_processed_messages),
         }
 
         result = crew.kickoff(inputs=inputs)
@@ -161,8 +165,16 @@ def communication_task(self, contact_id: str):
         # 1. Trigger enrichment pipeline (now self-sufficient)
         trigger_enrichment_pipeline(contact_id, state.model_dump())
 
-        # 2. Clean up Redis keys for the next turn
-        redis_client.delete(f"contacts_messages:waiting:{contact_id}")
+        # 2. Cleaning the messages
+        all_messages = redis_client.lrange(f"contacts_messages:waiting:{contact_id}", 0, -1)
+        messages_left = [m for m in all_messages if m not in last_processed_messages]
+
+        pipe = redis_client.pipeline()
+
+        pipe.delete(f"contacts_messages:waiting:{contact_id}")
+
+        if messages_left:
+            pipe.rpush(f"contacts_messages:waiting:{contact_id}", *messages_left)
 
         return {"status": "communication_dispatched"}
     except Exception as e:

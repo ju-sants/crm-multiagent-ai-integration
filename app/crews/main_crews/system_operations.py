@@ -40,12 +40,14 @@ def system_operations_task(contact_id: str):
             for topic in history_summary.get("topics", [])
         ])
 
+        last_processed_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+
         inputs = {
             "action_requested": state.system_action_request,
             "customer_profile": profile.model_dump_json(),
             "conversation_state": state.model_dump_json(),
             "history": history_messages,
-            "message_text_original": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
+            "client_message": "\n".join(last_processed_messages),
             "customer_name": state.metadata.contact_name,
         }
 
@@ -63,6 +65,16 @@ def system_operations_task(contact_id: str):
                 # Liberating the lock
                 redis_client.delete(f'processing:{contact_id}')
                 logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
+
+                # Cleaning up the messages
+                all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+                messages_left = [m for m in all_messages if m not in last_processed_messages]
+                
+                pipe = redis_client.pipeline()
+
+                pipe.delete(f'contacts_messages:waiting:{contact_id}')
+                if messages_left:
+                    pipe.lpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
 
             else:
                 # The operation is complete, clear all related flags

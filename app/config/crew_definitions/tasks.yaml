@@ -7,7 +7,7 @@ context_analysis_task:
     
     `{conversation_state}`
 
-    - **Mensagem Atual do Cliente (Gatilho):** `{message_text}`
+    - **Mensagem Atual do Cliente (Gatilho):** `{client_message}`
     - **Histórico Resumido da Conversa:** `{history}`
     - **Outros Dados:**
 
@@ -25,8 +25,8 @@ context_analysis_task:
     3.  Analise a conversa para identificar possíveis dificuldades de leitura e atualize o campo `communication_preference` no `conversation_state` se necessário.
 
     # --- Parte 2: DECISÃO DE ROTEAMENTO ---
-    4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a `message_text`.
-    5.  Analise o `strategic_plan` salvo no `conversation_state` contra a `message_text`. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
+    4.  Agora, com o perfil atualizado em mãos e com o conhecimento do estado da conversa, analise a mensagem do cliente.
+    5.  Analise o `strategic_plan` salvo no `conversation_state` contra a mensagem do cliente. Defina a chave `"is_plan_acceptable"` como `true` ou `false` com base nas regras estritas e conservadoras do seu `backstory`.
     6.  Se o cliente perguntar por preços, termos, informações ou qualquer coisa que EVIDENTEMENTE não está no plano estratégico, defina `"is_plan_acceptable": false`.
     7.  Com base na avaliação acima, defina o campo `"action"` para `"PROCEED_WITH_EXISTING_PLAN"` ou `"INITIATE_NEW_STRATEGIC_PLAN"`.
     8.  **Plano estratégico:** Decida se o plano estratégico de interação atual (se existir) é válido com o contexto, sessão e mensagem atual do cliente. se sim, envie `"is_plan_acceptable": true` em `task_output`, se não `"is_plan_acceptable": false`.
@@ -122,7 +122,7 @@ develop_strategy_task:
     
       # Use para entender o histórico completo e as preferências do cliente com a empresa.
     
-    - **Mensagem Original do Cliente (O Gatilho Imediato):** "{message_text_original}"
+    - **Mensagem Original do Cliente (O Gatilho Imediato):** "{client_message}"
     - **Contexto Operacional:** "{operational_context}"
     - **Tópico Identificado:** "{identified_topic}"
 
@@ -236,7 +236,7 @@ execute_system_operations_task:
     `{history}`
 
 
-    - **Mensagem atual do cliente (Contexto para Parâmetros):** `{message_text_original}`
+    - **Mensagem atual do cliente (Contexto para Parâmetros):** `{client_message}`
     - **Nome do cliente no whatsapp (Contexto para Parâmetros, pode estar vazio):** `{customer_name}`
 
     **SEU FLUXO DE TRABALHO:**
@@ -310,6 +310,10 @@ communication_task:
     - **Histórico de Conversa (O Que Já Foi Falado):**
     
     "{history}"
+
+    - **Mensagem(ns) atual(is) do Cliente:**
+
+    "{client_message}"
     
     - **Catálogos Enviados Recentemente:** 
     
@@ -400,7 +404,7 @@ collect_registration_data_task:
       
     - **Última Mensagem do Cliente (Sua Resposta):** 
     
-    "{message_text_original}"
+    "{client_message}"
     
     - **Dados Já Coletados (Seu Progresso):** 
     
@@ -411,7 +415,7 @@ collect_registration_data_task:
 
     **SEU FLUXO DE TRABALHO:**
     **SEU PROCESSO DE COLETA DE DADOS (AGRUPADO):**
-    1.  **Analise a `{message_text_original}`** para extrair as respostas do cliente.
+    1.  **Analise a mensagem do cliente:** para extrair as respostas do cliente.
     2.  **Atualize o objeto `{collected_data_so_far}`** com os novos dados.
     3.  **Verifique os dados que ainda faltam e formule a próxima pergunta em blocos maiores para agilizar.**
         - **BLOCO 1 (Identificação):** Peça `tipo_cadastro`, `nome_tomador_servico` e `documento_numero` juntos, após saber se é CPF ou CNPJ.

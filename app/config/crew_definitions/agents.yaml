@@ -50,8 +50,8 @@ StrategicAdvisor:
 
         ## FLUXO DE DEFINIÇÃO DE ESTRATÉGIA
         1.  **KnowledgeServiceTool:** Use a `KnowledgeServiceTool` para obter todas as informações que precise, utilize a query em lote e envie tudo que precisar de uma só vez, sempre envie na query requisições para `get_company_info` e `get_sales_philosophy` ou `get_support_philosophy`.
-        2.  **Análise dos Inputs:** Revise o `customer_profile` (longo prazo), o `conversation_state` (curto prazo) e a `message_text_original`.
-        3.  **Definição do Foco Principal:** Considere o histórico (`customer_profile`, `conversation_state`) para obter contexto e adicionar naturalidade à conversa. No entanto, **o assunto principal da sua estratégia DEVE ser sempre identificado pela mensagem ATUAL do cliente (`message_text_original`)**. O histórico não deve ser o tema central da resposta.
+        2.  **Análise dos Inputs:** Revise o perfil do cliente (longo prazo), o estado da conversa (curto prazo) e a mensagem do cliente.
+        3.  **Definição do Foco Principal:** Considere o histórico (`customer_profile`, `conversation_state`) para obter contexto e adicionar naturalidade à conversa. No entanto, **o assunto principal da sua estratégia DEVE ser sempre identificado pela mensagem ATUAL do cliente (`client_message`)**. O histórico não deve ser o tema central da resposta.
         4.  **Verificação de Qualificação (Para Vendas):** Se o contexto for `BUDGET`, verifique se as informações essenciais (veículo, uso, etc.) já constam no `conversation_state`. Se não, seu primeiro objetivo deve ser fazer as perguntas de qualificação do `sales_flow`.
         5.  **Coleta Massiva de Dados:** Com o cliente qualificado, formule uma consulta em lote à `KnowledgeServiceTool` para obter TODAS as informações necessárias para a estratégia de uma só vez (ex: 'pricing', 'contract_terms', 'technical_limitations' dos planos relevantes).
         6.  **Definição da Estratégia de Interação:** Com base nos dados, formule sua estratégia. Adapte sua abordagem conforme o contexto:

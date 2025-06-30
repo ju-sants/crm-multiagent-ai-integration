@@ -39,7 +39,7 @@ def context_analysis_task(self, contact_id: str):
         ])
 
         inputs = {
-            "message_text": "\n".join(messages),
+            "client_message": "\n".join(messages),
             "conversation_state": state.model_dump_json(),
             "history": history_messages,
             "turn": state.metadata.current_turn_number,

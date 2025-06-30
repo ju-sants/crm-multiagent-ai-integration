@@ -32,13 +32,14 @@ def registration_task(contact_id: str):
 
         user_data_so_far = redis_client.get(f"{contact_id}:user_data_so_far")
         plan_details = redis_client.get(f"{contact_id}:plan_details")
-        messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+
+        last_processed_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
 
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "turn": state.metadata.current_turn_number,
             "conversation_state": state.model_dump_json(),
-            "message_text_original": "\n".join(messages),
+            "client_message": "\n".join(last_processed_messages),
             "collected_data_so_far": user_data_so_far if user_data_so_far else "{}",
             "plan_details": plan_details if plan_details else "{}",
         }
@@ -65,6 +66,17 @@ def registration_task(contact_id: str):
             # Liberating the lock
             redis_client.delete(f'processing:{contact_id}')
             logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
+
+            # Cleaning up the messages
+            all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+            messages_left = [message for message in all_messages if message not in last_processed_messages]
+
+            pipe = redis_client.pipeline()
+            
+            pipe.delete(f'contacts_messages:waiting:{contact_id}')
+            if messages_left:
+                pipe.rpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+                
 
         return contact_id
     except Exception as e:

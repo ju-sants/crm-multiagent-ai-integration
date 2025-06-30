@@ -55,7 +55,7 @@ def strategy_task(self, contact_id: str):
             "history": history_messages,
             "conversation_state": state.model_dump_json(),
             "profile_customer_task_output": profile.model_dump_json(),
-            "message_text_original": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
+            "client_message": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
             "operational_context": state.operational_context or "",
             "identified_topic": state.identified_topic or "",
             "timestamp": datetime.datetime.now(pytz.timezone("America/Sao_Paulo")).isoformat(),
