@@ -25,7 +25,7 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 app = Flask(__name__)
 apply_litellm_patch()
 redis_client = get_redis()
-redis_client.flushdb()
+# redis_client.flushdb()
 
 state_manager = StateManagerService()
 
@@ -170,9 +170,9 @@ def process_incoming_message(payload):
         celery_app.control.revoke(existing_task_id.decode('utf-8'))
         logger.info(f"[{contact_uuid}] - Revoked previous pending task: {existing_task_id.decode('utf-8')}")
 
-    new_task = process_message_task.apply_async(args=[contact_uuid], eta=datetime.now() + timedelta(seconds=3))
+    new_task = process_message_task.apply_async(args=[contact_uuid], eta=datetime.now() + timedelta(seconds=1))
     redis_client.set(pending_task_key, new_task.id, ex=30)
-    logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} in 3 seconds.")
+    logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} in 1 seconds.")
 
 
 @app.route('/receive_message', methods=['POST'])
