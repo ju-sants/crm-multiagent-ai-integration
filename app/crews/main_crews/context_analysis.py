@@ -35,7 +35,7 @@ def context_analysis_task(self, contact_id: str):
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
         history_messages = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in history_summary.get("topics", [])
+            for topic in history_summary.get("topic_details", [])
         ])
 
         inputs = {
@@ -46,10 +46,10 @@ def context_analysis_task(self, contact_id: str):
         }
 
         result = crew.kickoff(inputs=inputs)
-        _, updated_state_dict = parse_json_from_string(result.raw)
+        json_response = parse_json_from_string(result.raw, update=False)
 
-        if updated_state_dict:
-            state = ConversationState(**{**state.model_dump(), **updated_state_dict})
+        if json_response:
+            state = ConversationState(**{**state.model_dump(), **json_response})
         
         state_manager.save_state(contact_id, state)
         
