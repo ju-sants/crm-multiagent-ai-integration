@@ -3,7 +3,7 @@ from crewai import Crew, Process
 from app.services.celery_Service import celery_app
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_system_operations_agent
-from app.config.llm_config import default_openai_llm
+from app.config.llm_config import decivise_openai_llm
 from app.tools.system_operations_tools import system_operations_tool
 from app.tasks.tasks_declaration import create_execute_system_operations_task
 from app.models.data_models import ConversationState, CustomerProfile
@@ -25,7 +25,7 @@ def system_operations_task(contact_id: str):
     state = state_manager.get_state(contact_id)
     
     try:
-        llm_w_tools = default_openai_llm.bind_tools([system_operations_tool])
+        llm_w_tools = decivise_openai_llm.bind_tools([system_operations_tool])
         agent = get_system_operations_agent(llm_w_tools)
         task = create_execute_system_operations_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
@@ -37,7 +37,7 @@ def system_operations_task(contact_id: str):
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
         history_messages = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in history_summary.get("topics", [])
+            for topic in history_summary.get("topic_details", [])
         ])
 
         last_processed_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
