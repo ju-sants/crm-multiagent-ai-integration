@@ -5,7 +5,7 @@ from app.services.celery_Service import celery_app
 from app.crews.enrichment_crew import trigger_enrichment_pipeline
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_communication_agent
-from app.config.llm_config import default_openai_llm
+from app.config.llm_config import creative_openai_llm
 from app.tools.knowledge_tools import drill_down_topic_tool
 from app.tasks.tasks_declaration import create_communication_task
 from app.models.data_models import ConversationState, CustomerProfile
@@ -32,14 +32,15 @@ def send_audio_message_task(phone_number: str, messages: list, contact_id: str):
     redis_client.hset(f"{contact_id}:attachments", audio_url, ' '.join(messages))
 
 @celery_app.task(name='io.send_message')
-def send_message(state: ConversationState, messages, contact_id, plan_names, phone_number):
+def send_message(phone_number, messages, plan_names, contact_id):
     try:
         from app.config.utils.messages_plans import plans_messages
 
         if plan_names:
             for plan_name in plan_names:
                 messages.extend(plans_messages.get(plan_name, []))
-                
+        
+        state = state_manager.get_state(contact_id)
         if state.communication_preference.prefers_audio:
             logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
             audio_url = eleven_labs_service(messages)
@@ -112,34 +113,47 @@ def communication_task(self, contact_id: str):
     state = state_manager.get_state(contact_id)
 
     try:
-        llm_w_tools = default_openai_llm.bind_tools([drill_down_topic_tool])
+        llm_w_tools = creative_openai_llm.bind_tools([drill_down_topic_tool])
         agent = get_communication_agent(llm_w_tools)
         task = create_communication_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
-        # Load the pre-computed distilled profile for the agent
-        distilled_profile_json = redis_client.get(f"{contact_id}:distilled_profile")
-        
+        history_raw = {}
+
+        try:
+            history_raw = json.loads(redis_client.get(f"history_raw:{contact_id}"))
+        except:
+            pass
+
+
         history_summary_json = redis_client.get(f"history:{contact_id}")
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
         history_messages = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in history_summary.get("topics", [])
+            for topic in history_summary.get("topic_details", [])
         ])
 
         system_op_output = redis_client.get(f"{contact_id}:last_system_operation_output")
 
+        last_processed_messages = redis_client.lrange(f"contacts_messages:waiting:{contact_id}", 0, -1)
 
-        last_processed_messages = redis_client.lrange(f"{contact_id}:messages", 0, -1)
+        redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
+        
+        conversation_state = state.model_dump_json()
+        conversation_state = json.loads(conversation_state)
+        
+        if "strategic_plan" in conversation_state:
+            del conversation_state["strategic_plan"]
 
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "turn": state.metadata.current_turn_number,
             "develop_strategy_task_output": json.dumps(state.strategic_plan),
             "system_operations_task_output": system_op_output if system_op_output else "{}",
-            "profile_customer_task_output": distilled_profile_json if distilled_profile_json else "{}",
-            "conversation_state": state.model_dump_json(),
+            "profile_customer_task_output": redis_client.get(f"{contact_id}:customer_profile"),
+            "conversation_state": str(conversation_state),
             "history": history_messages,
+            "history_raw": redis_client.get(f"{contact_id}:messages_raw"),
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
             "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]),
             "client_message": "\n".join(last_processed_messages),
