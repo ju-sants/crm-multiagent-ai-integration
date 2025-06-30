@@ -31,6 +31,75 @@ def send_audio_message_task(phone_number: str, messages: list, contact_id: str):
     send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
     redis_client.hset(f"{contact_id}:attachments", audio_url, ' '.join(messages))
 
+@celery_app.task(name='io.send_message')
+def send_message(state: ConversationState, messages, contact_id, plan_names, phone_number):
+    try:
+        from app.config.utils.messages_plans import plans_messages
+
+        if plan_names:
+            for plan_name in plan_names:
+                messages.extend(plans_messages.get(plan_name, []))
+                
+        if state.communication_preference.prefers_audio:
+            logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
+            audio_url = eleven_labs_service(messages)
+            send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+            redis_client.hset(f"{contact_id}:attachments", audio_url, ' '.join(messages))
+        
+        else:
+        
+            has_long_message = False
+            for message in messages:
+                if len(message) > 250:
+                    has_long_message = True
+            
+            if has_long_message and not all([len(message) > 250 for message in messages]):
+                logger.info(f"[{contact_id}] - Encontrada mensagem com mais de 250 caracteres. Enviando mensagem de áudio.")
+                            
+                for message in messages:
+                    if len(message) > 250:
+                        audio_url = eleven_labs_service([message])
+                        send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                        redis_client.hset(f"{contact_id}:attachments", audio_url, message)
+
+                    else:
+                        send_callbell_message(phone_number=phone_number, messages=[message])
+            
+            else:
+                logger.info(f"[{contact_id}] - Não encontrada mensagem com mais de 250 caracteres.")
+                
+                messages_all_str = '\n'.join(messages)
+                if len(messages_all_str) > 300:
+                    logger.info(f"[{contact_id}] - Todas as mensagens somam mais de 300 caracteres. Enviando mensagem de áudio.")
+
+                    audios_messages_qnt = len(messages) // 2 + 1
+                    audios_messages = messages[:audios_messages_qnt]
+                    audios_messages_str = '/n'.join(audios_messages)
+
+                    messages_left = messages[audios_messages_qnt:]
+
+                    audio_url = eleven_labs_service(audios_messages)
+                    send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                    redis_client.hset(f"{contact_id}:attachments", audio_url, audios_messages_str)
+
+                    if messages_left:
+                        send_callbell_message(phone_number=phone_number, messages=messages_left)
+                else:
+                    logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
+                    send_callbell_message(phone_number=phone_number, messages=messages)
+
+    except Exception as e:
+        logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
+
+    else:
+        if plan_names:
+            redis_client.rpush(f"{contact_id}:sended_catalogs", *plan_names)
+
+    finally:
+        redis_client.delete(f"processing:{contact_id}")
+        logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
+
+
 # --- Main Communication Task ---
 
 @celery_app.task(name='main_crews.communication', bind=True)
@@ -87,35 +156,12 @@ def communication_task(self, contact_id: str):
                 logger.error(f"[{contact_id}] - Cannot send message, phone number is missing from state.")
                 return {"status": "error", "reason": "Missing phone number"}
 
-            if state.communication_preference.prefers_audio:
-                send_audio_message_task.delay(phone_number, response_json['messages_sequence'], contact_id)
-            else:
-                for message in response_json['messages_sequence']:
-                    send_text_message_task.delay(phone_number, message)
-            
+            send_message.delay(phone_number, response_json['messages_sequence'], response_json.get("plan_names", []), contact_id)
 
-
-        # Final step: trigger the enrichment for the next turn and liberate de lock
-
-        redis_client.delete(f'processing:{contact_id}')
-        logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
-
-        # 1. Get historical messages and new messages
-        base_history_json = redis_client.get(f"raw_history:{contact_id}")
-        base_history = json.loads(base_history_json) if base_history_json else {"messages": []}
-        
-        new_messages_raw = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
-        
-        new_messages_dicts = [
-            {"from": "contact", "text": msg, "timestamp": datetime.now(timezone.utc).isoformat(), "type": "text"}
-            for msg in new_messages_raw
-        ]
-
-        # The API returns newest first. So new messages should be at the start.
-        # 2. Trigger enrichment pipeline (now self-sufficient)
+        # 1. Trigger enrichment pipeline (now self-sufficient)
         trigger_enrichment_pipeline(contact_id, state.model_dump())
 
-        # 3. Clean up Redis keys for the next turn
+        # 2. Clean up Redis keys for the next turn
         redis_client.delete(f"contacts_messages:waiting:{contact_id}")
 
         return {"status": "communication_dispatched"}
