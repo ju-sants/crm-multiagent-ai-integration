@@ -39,6 +39,8 @@ def history_summarizer_task(contact_id: str):
     logger.info(f"[{contact_id}] - Starting history summarization.")
     
     raw_history = get_contact_messages(contact_id, limit=50)
+    redis_client.set(f"history_raw:{contact_id}", json.dumps(raw_history))
+    
     if not raw_history:
         logger.warning(f"[{contact_id}] - No history found. Skipping summarization.")
         return f"No history to summarize for {contact_id}."
@@ -86,7 +88,7 @@ def history_summarizer_task(contact_id: str):
                         logger.warning(f"[{contact_id}] - Could not trigger data quality task for topic {topic_id} due to missing indices.")
 
     logger.info(f"[{contact_id}] - Finished history summarization.")
-    return f"History for {contact_id} summarized."
+    return output
 
 @celery_app.task(name='enrichment.data_quality_agent')
 def data_quality_task(contact_id: str, topic_id: str, raw_history_snippet: str, full_raw_history: str):
@@ -128,19 +130,21 @@ def data_quality_task(contact_id: str, topic_id: str, raw_history_snippet: str, 
 
 
 @celery_app.task(name='enrichment.state_summarizer')
-def state_summarizer_task(contact_id: str, last_turn_state: dict):
+def state_summarizer_task(history_summary: dict, contact_id: str, last_turn_state: dict):
     """
     Asynchronous task to summarize and enrich the conversation state.
     """
     logger.info(f"[{contact_id}] - Starting state summarization.")
-    
+
     agent = get_state_summarizer_agent()
     task = create_summarize_state_task(agent)
-    
+
     crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
-    
+
     inputs = {
-        "last_turn_state": json.dumps(last_turn_state)
+        "history_summary": json.dumps(history_summary),
+        "last_turn_state": json.dumps(last_turn_state),
+        "client_message": redis_client.get(f"{contact_id}:last_processed_messages")
     }
     
     result = crew.kickoff(inputs=inputs)
@@ -152,31 +156,31 @@ def state_summarizer_task(contact_id: str, last_turn_state: dict):
         redis_client.set(state_key, json.dumps(enriched_state))
 
     logger.info(f"[{contact_id}] - Finished state summarization.")
-    return f"State for {contact_id} summarized."
+    return enriched_state
 
 @celery_app.task(name='enrichment.profile_enhancer')
-def profile_enhancer_task(results, contact_id: str):
+def profile_enhancer_task(history_summary: dict, contact_id: str, last_turn_state: dict):
     """
     Asynchronous task to enhance the long-term customer profile.
-    'results' is the ignored output from the preceding parallel tasks.
+    Receives history_summary from the previous task in the chain.
     """
     logger.info(f"[{contact_id}] - Starting profile enhancement.")
-    
+
     agent = get_profile_enhancer_agent()
     task = create_enhance_profile_task(agent)
-    
+
     crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
-    
-    # Fetch the necessary data from Redis
-    history_summary = redis_client.get(f"history:{contact_id}")
-    enriched_state = redis_client.get(f"state:{contact_id}")
-    existing_profile = redis_client.get(f"{contact_id}:customer_profile")
+
+    # Fetch the existing profile from Redis
+    existing_profile_raw = redis_client.get(f"{contact_id}:customer_profile")
+    existing_profile = existing_profile_raw if existing_profile_raw else "{}"
 
     inputs = {
         "contact_id": contact_id,
-        "history_summary": history_summary if history_summary else "{}",
-        "enriched_state": enriched_state if enriched_state else "{}",
-        "existing_profile": existing_profile if existing_profile else "{}"
+        "history_summary": json.dumps(history_summary),
+        "last_turn_state": json.dumps(last_turn_state),
+        "existing_profile": existing_profile,
+        "client_message": redis_client.get(f"{contact_id}:last_processed_messages")
     }
     
     result = crew.kickoff(inputs=inputs)
@@ -185,15 +189,14 @@ def profile_enhancer_task(results, contact_id: str):
 
     if output:
         profile_key = f"{contact_id}:customer_profile"
-        distilled_profile_key = f"{contact_id}:distilled_profile"
 
         master_profile = output.get('master_profile')
-        distilled_profile = output.get('distilled_profile_for_agents')
 
         if master_profile:
             redis_client.set(profile_key, json.dumps(master_profile))
-        if distilled_profile:
-            redis_client.set(distilled_profile_key, json.dumps(distilled_profile))
+
+    # Cleaning up last messages
+    redis_client.delete(f"{contact_id}:last_processed_messages")
 
     logger.info(f"[{contact_id}] - Finished profile enhancement.")
     return f"Profile for {contact_id} enhanced."
@@ -201,17 +204,24 @@ def profile_enhancer_task(results, contact_id: str):
 
 def trigger_enrichment_pipeline(contact_id: str, last_turn_state: dict):
     """
-    Triggers the full asynchronous enrichment pipeline.
-    The history and state are summarized in parallel. Once both are complete,
-    the profile enhancer is triggered.
+    Triggers the full asynchronous enrichment pipeline using an optimized fan-out architecture.
+    1. The history is summarized.
+    2. The history summary is then passed to two parallel tasks:
+       - State Summarizer
+       - Profile Enhancer
     """
-    logger.info(f"[{contact_id}] - Triggering asynchronous enrichment pipeline.")
-    
-    pipeline = group(
+    logger.info(f"[{contact_id}] - Triggering optimized fan-out enrichment pipeline.")
+
+    # The history summary is passed as the first argument to the tasks in the group.
+    # We pass the remaining arguments (contact_id, last_turn_state) to the group tasks.
+    pipeline = chain(
         history_summarizer_task.s(contact_id=contact_id),
-        state_summarizer_task.s(contact_id=contact_id, last_turn_state=last_turn_state)
-    ) | profile_enhancer_task.s(contact_id=contact_id)
-    
+        group(
+            state_summarizer_task.s(contact_id=contact_id, last_turn_state=last_turn_state),
+            profile_enhancer_task.s(contact_id=contact_id, last_turn_state=last_turn_state)
+        )
+    )
+
     pipeline.apply_async()
-    
-    logger.info(f"[{contact_id}] - Enrichment pipeline successfully dispatched.")
+
+    logger.info(f"[{contact_id}] - Optimized fan-out enrichment pipeline successfully dispatched.")
