@@ -118,13 +118,15 @@ def communication_task(self, contact_id: str):
         task = create_communication_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
-        history_raw = {}
+        history_raw = []
 
         try:
             history_raw = json.loads(redis_client.get(f"history_raw:{contact_id}"))
         except:
             pass
-
+        
+        if history_raw:
+            history_raw = history_raw[:10]
 
         history_summary_json = redis_client.get(f"history:{contact_id}")
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
@@ -153,7 +155,7 @@ def communication_task(self, contact_id: str):
             "profile_customer_task_output": redis_client.get(f"{contact_id}:customer_profile"),
             "conversation_state": str(conversation_state),
             "history": history_messages,
-            "history_raw": redis_client.get(f"{contact_id}:messages_raw"),
+            "history_raw": history_raw,
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
             "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]),
             "client_message": "\n".join(last_processed_messages),

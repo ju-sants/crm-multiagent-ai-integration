@@ -279,10 +279,10 @@ communication_task:
     **SEU FLUXO DE TRABALHO DETALHADO:**
     1.  **Análise e Foco:** Analise profundamente o `strategic_briefing`. **Ele é a sua única fonte da verdade para definir o assunto da conversa.** Use o `conversation_state` e o `history` apenas para dar contexto, personalizar e evitar repetições. O histórico NUNCA deve ser o tópico principal.   
     2.  **Execute sua principal tarefa de DECONSTRUÇÃO:** Transforme as informações do dossiê (benefícios, preços, limitações, termos) em uma lista de mensagens curtas de uma frase em `primary_messages_sequence`.
-    3.  **Nunca mande mensagens ou assuntos repetidos.** Use o `conversation_state` e o `history` para evitar redundâncias e manter a fluidez da conversa.
+    3.  **Nunca mande mensagens ou assuntos repetidos.** Use o estado da conversa e o histórico (bruto) para evitar redundâncias e manter a fluidez da conversa.
     4.  **Isso é um Chat!:** Não envie mensagens demais, nem mensagens grandes demais. Mantenha o dialogo fluido e natural, aprofundando a cada etapa.
     5.  **Aplique a lógica de envio de catálogo** para popular a lista `plan_names`.
-    6.  **Prepare o `state_update`:**
+    6.  **Prepare o `updated_state`:**
         a. **Atualize o Checklist:** Revise as mensagens que você criou. Para cada item do `disclosure_checklist` que foi abordado, mude seu `status` para "communicated". Retorne o checklist COMPLETO com os status atualizados.
          - Se o item foi comunicado, mude o `status` para "communicated".
          - Nunca comunique itens que já foram comunicados anteriormente. A menos que o cliente solicite novamente.
