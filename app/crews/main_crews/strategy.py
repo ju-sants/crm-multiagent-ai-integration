@@ -9,7 +9,7 @@ from app.agents.agent_declaration import get_strategic_advisor_agent
 from app.config.llm_config import creative_openai_llm
 from app.tools.knowledge_tools import knowledge_service_tool, drill_down_topic_tool
 from app.tasks.tasks_declaration import create_develop_strategy_task
-from app.models.data_models import ConversationState, CustomerProfile
+from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
@@ -39,8 +39,7 @@ def strategy_task(self, contact_id: str):
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
         # Load the full customer profile for the agent
-        profile_json = redis_client.get(f"{contact_id}:customer_profile")
-        profile = CustomerProfile.model_validate_json(profile_json) if profile_json else CustomerProfile(contact_id=contact_id)
+        profile = redis_client.get(f"{contact_id}:customer_profile")
         
         # Load summarized history
         history_summary_json = redis_client.get(f"history:{contact_id}")
@@ -54,7 +53,7 @@ def strategy_task(self, contact_id: str):
             "contact_id": contact_id,
             "history": history_messages,
             "conversation_state": state.model_dump_json(),
-            "profile_customer_task_output": profile.model_dump_json(),
+            "profile_customer_task_output": profile,
             "client_message": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
             "operational_context": state.operational_context or "",
             "identified_topic": state.identified_topic or "",
