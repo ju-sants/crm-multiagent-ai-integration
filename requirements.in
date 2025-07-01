@@ -5,7 +5,7 @@ elevenlabs
 flask
 googlemaps
 langchain-openai
-langchain-google-genai
+pydantic
 redis
 unidecode
 pydantic-settings

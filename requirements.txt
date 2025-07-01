@@ -22,8 +22,6 @@ appdirs==1.4.4
     # via crewai
 asttokens==3.0.0
     # via stack-data
-async-timeout==5.0.1
-    # via redis
 attrs==25.3.0
     # via
     #   aiohttp
@@ -117,8 +115,6 @@ filelock==3.18.0
     # via
     #   huggingface-hub
     #   virtualenv
-filetype==1.2.0
-    # via langchain-google-genai
 flask==3.1.1
     # via -r requirements.in
 flatbuffers==25.2.10
@@ -131,19 +127,10 @@ fsspec==2025.5.1
     # via huggingface-hub
 ghp-import==2.1.0
     # via mkdocs
-google-ai-generativelanguage==0.6.18
-    # via langchain-google-genai
-google-api-core==2.25.1
-    # via google-ai-generativelanguage
 google-auth==2.40.3
-    # via
-    #   google-ai-generativelanguage
-    #   google-api-core
-    #   kubernetes
+    # via kubernetes
 googleapis-common-protos==1.70.0
     # via
-    #   google-api-core
-    #   grpcio-status
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
 googlemaps==4.10.0
@@ -151,11 +138,7 @@ googlemaps==4.10.0
 grpcio==1.73.1
     # via
     #   chromadb
-    #   google-api-core
-    #   grpcio-status
     #   opentelemetry-exporter-otlp-proto-grpc
-grpcio-status==1.71.2
-    # via google-api-core
 h11==0.16.0
     # via
     #   httpcore
@@ -193,7 +176,7 @@ importlib-resources==6.5.2
     # via chromadb
 instructor==1.9.0
     # via crewai
-ipython==9.3.0
+ipython==9.4.0
     # via pyvis
 ipython-pygments-lexers==1.1.1
     # via ipython
@@ -233,12 +216,8 @@ kombu==5.5.4
     # via celery
 kubernetes==33.1.0
     # via chromadb
-langchain-core==0.3.66
-    # via
-    #   langchain-google-genai
-    #   langchain-openai
-langchain-google-genai==2.1.5
-    # via -r requirements.in
+langchain-core==0.3.67
+    # via langchain-openai
 langchain-openai==0.3.27
     # via -r requirements.in
 langsmith==0.4.4
@@ -272,7 +251,7 @@ mkdocs==1.6.1
     #   mkdocs-material
 mkdocs-get-deps==0.2.0
     # via mkdocs
-mkdocs-material==9.6.14
+mkdocs-material==9.6.15
     # via instructor
 mkdocs-material-extensions==1.3.1
     # via mkdocs-material
@@ -280,7 +259,7 @@ mmh3==5.1.0
     # via chromadb
 mpmath==1.3.0
     # via sympy
-multidict==6.6.2
+multidict==6.6.3
     # via
     #   aiohttp
     #   yarl
@@ -362,7 +341,7 @@ pdfplumber==0.11.7
     # via crewai
 pexpect==4.9.0
     # via ipython
-pillow==11.2.1
+pillow==11.3.0
     # via pdfplumber
 platformdirs==4.3.8
     # via
@@ -380,19 +359,11 @@ propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
-proto-plus==1.26.1
-    # via
-    #   google-ai-generativelanguage
-    #   google-api-core
 protobuf==5.29.5
     # via
-    #   google-ai-generativelanguage
-    #   google-api-core
     #   googleapis-common-protos
-    #   grpcio-status
     #   onnxruntime
     #   opentelemetry-proto
-    #   proto-plus
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
@@ -409,12 +380,12 @@ pycparser==2.22
     # via cffi
 pydantic==2.11.7
     # via
+    #   -r requirements.in
     #   chromadb
     #   crewai
     #   elevenlabs
     #   instructor
     #   langchain-core
-    #   langchain-google-genai
     #   langsmith
     #   litellm
     #   openai
@@ -487,7 +458,6 @@ requests==2.32.4
     # via
     #   auth0-python
     #   elevenlabs
-    #   google-api-core
     #   googlemaps
     #   huggingface-hub
     #   instructor
