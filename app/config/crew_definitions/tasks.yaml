@@ -54,9 +54,13 @@ develop_strategy_task:
 
 
     **DADOS PARA SUA ANÁLISE ESTRATÉGICA:**
-    - **Histórico de Conversa:**
+    - **Histórico de Conversa (Sumarizado):**
 
     `{history}`
+
+    - **Histórico de Conversa (Detalhado):**
+
+    `{history_raw}`
 
     - **Estado da Conversa (Contexto de Curto Prazo):**   # Use para entender o fluxo da sessão atual, entidades já extraídas e produtos discutidos. 
     
