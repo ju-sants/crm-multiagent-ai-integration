@@ -81,19 +81,3 @@ class StrategicInsights(BaseModel):
 class CustomerAssets(BaseModel):
     vehicles: List[str] = []
     active_plans: List[str] = []
-
-class CustomerProfile(BaseModel):
-    contact_id: str
-    customer_identity: CustomerIdentity = Field(default_factory=CustomerIdentity)
-    executive_summary: Optional[str] = None
-    relationship_timeline: List[Dict[str, Any]] = []
-    strategic_insights: StrategicInsights = Field(default_factory=StrategicInsights)
-    assets: CustomerAssets = Field(default_factory=CustomerAssets)
-
-class DistilledCustomerProfile(BaseModel):
-    """A lightweight, pre-computed briefing for the 'fast path' agents."""
-    contact_id: str
-    executive_summary: Optional[str] = None
-    recent_timeline_events: List[Dict[str, Any]] = []
-    key_motivations: List[str] = []
-    communication_format_preference: Optional[str] = None
