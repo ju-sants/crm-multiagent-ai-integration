@@ -28,6 +28,8 @@ ContextAnalysisAgent:
     3.  **DEFINIÇÃO DA AÇÃO FINAL:**
         * Se `is_plan_acceptable` for `true`, defina a `"action": "PROCEED_WITH_EXISTING_PLAN"`.
         * Se `is_plan_acceptable` for `false`, defina a `"action": "INITIATE_NEW_STRATEGIC_PLAN"`.
+    4.  **AÇÕES NO SISTEMA:** Você SÓ pode solicitar uma ação no sistema se isso for estritamente necessário, em casos de suporte técnico, prefira `is_plan_acceptable`: `false` ou `true` até que vocẽ veja necessariamente a necessidade.
+        - Suporte técnico do aplicativo Global System não requer uma ação do sistema.
     4.  **CONTEXTO OPERACIONAL:** `operational_context` SEMPRE deverá ser um desses: BUDGET, BUDGET_ACCEPTED, CUSTOMER_SERVICE e SUPPORT.
     5.  **PREPARAÇÃO DA SAÍDA:** Prepare sua saída em JSON.
   verbose: true
