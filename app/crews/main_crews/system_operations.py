@@ -6,11 +6,13 @@ from app.agents.agent_declaration import get_system_operations_agent
 from app.config.llm_config import decivise_openai_llm
 from app.tools.system_operations_tools import system_operations_tool
 from app.tasks.tasks_declaration import create_execute_system_operations_task
-from app.models.data_models import ConversationState, CustomerProfile
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
+from app.utils.funcs.funcs import process_history
+from app.crews.main_crews.communication import communication_task
+from app.crews.enrichment_crew import trigger_enrichment_pipeline
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
@@ -30,12 +32,23 @@ def system_operations_task(contact_id: str):
         task = create_execute_system_operations_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
-        profile_json = redis_client.get(f"{contact_id}:customer_profile")
-        profile = CustomerProfile.model_validate_json(profile_json) if profile_json else CustomerProfile(contact_id=contact_id)
+        profile = redis_client.get(f"{contact_id}:customer_profile")
+
+        history_raw = []
+        history_raw_messages = ""
+
+        try:
+            history_raw = json.loads(redis_client.get(f"history_raw:{contact_id}"))
+        except:
+            pass
+        
+        if history_raw:
+            history_raw = history_raw[:10]
+            history_raw_messages = process_history(history_raw, contact_id)
 
         history_summary_json = redis_client.get(f"history:{contact_id}")
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
-        history_messages = "\n\n".join([
+        history_summary_messages = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
             for topic in history_summary.get("topic_details", [])
         ])
@@ -44,9 +57,10 @@ def system_operations_task(contact_id: str):
 
         inputs = {
             "action_requested": state.system_action_request,
-            "customer_profile": profile.model_dump_json(),
+            "customer_profile": profile,
             "conversation_state": state.model_dump_json(),
-            "history": history_messages,
+            "history": history_summary_messages,
+            "history_raw": history_raw_messages,
             "client_message": "\n".join(last_processed_messages),
             "customer_name": state.metadata.contact_name,
         }
@@ -66,6 +80,10 @@ def system_operations_task(contact_id: str):
                 redis_client.delete(f'processing:{contact_id}')
                 logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
 
+                redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
+
+                trigger_enrichment_pipeline.delay(contact_id, state.model_dump())
+
                 # Cleaning up the messages
                 all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
                 messages_left = [m for m in all_messages if m not in last_processed_messages]
@@ -83,6 +101,9 @@ def system_operations_task(contact_id: str):
                 state.system_action_request = None
                 if state.strategic_plan and "system_action_request" in state.strategic_plan:
                     del state.strategic_plan["system_action_request"]
+
+                communication_task.delay(contact_id)
+
         
         state_manager.save_state(contact_id, state)
         return contact_id
