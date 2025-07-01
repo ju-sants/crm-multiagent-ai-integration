@@ -178,9 +178,13 @@ execute_system_operations_task:
 
     `{customer_profile}`
 
-    - **Histórico de Conversa (Contexto para Parâmetros):**
+    - **Histórico de Conversa Sumarizado (Contexto para Parâmetros):**
 
     `{history}`
+
+    - **Histórico de Conversa Detalhado (Contexto para Parâmetros):**
+
+    `{history_raw}`
 
 
     - **Mensagem atual do cliente (Contexto para Parâmetros):** `{client_message}`
