@@ -8,28 +8,19 @@ from app.agents.agent_declaration import get_communication_agent
 from app.config.llm_config import creative_openai_llm
 from app.tools.knowledge_tools import drill_down_topic_tool
 from app.tasks.tasks_declaration import create_communication_task
-from app.models.data_models import ConversationState, CustomerProfile
+from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
 from app.services.eleven_labs_service import main as eleven_labs_service
+from app.utils.funcs.funcs import process_history
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
 # --- New, Asynchronous I/O Tasks ---
-
-@celery_app.task(name='io.send_text_message')
-def send_text_message_task(phone_number: str, message: str):
-    send_callbell_message(phone_number=phone_number, messages=[message])
-
-@celery_app.task(name='io.send_audio_message')
-def send_audio_message_task(phone_number: str, messages: list, contact_id: str):
-    audio_url = eleven_labs_service(messages)
-    send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
-    redis_client.hset(f"{contact_id}:attachments", audio_url, ' '.join(messages))
 
 @celery_app.task(name='io.send_message')
 def send_message(phone_number, messages, plan_names, contact_id):
@@ -44,8 +35,13 @@ def send_message(phone_number, messages, plan_names, contact_id):
         if state.communication_preference.prefers_audio:
             logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
             audio_url = eleven_labs_service(messages)
-            send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
-            redis_client.hset(f"{contact_id}:attachments", audio_url, ' '.join(messages))
+            if audio_url:
+                send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                redis_client.hset(f"{contact_id}:attachments", audio_url, ' '.join(messages))
+            
+            else:
+                logger.info(f'[{contact_id}] - Não foi possível gerar áudio para a mensagem. Enviando mensagem de texto.')
+                send_callbell_message(phone_number=phone_number, messages=messages)
         
         else:
         
@@ -60,8 +56,12 @@ def send_message(phone_number, messages, plan_names, contact_id):
                 for message in messages:
                     if len(message) > 250:
                         audio_url = eleven_labs_service([message])
-                        send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
-                        redis_client.hset(f"{contact_id}:attachments", audio_url, message)
+                        if audio_url:
+                            send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                            redis_client.hset(f"{contact_id}:attachments", audio_url, message)
+                        else:
+                            logger.info(f"[{contact_id}] - Não foi possível gerar áudio para a mensagem. Enviando mensagem de texto.")
+                            send_callbell_message(phone_number=phone_number, messages=[message])
 
                     else:
                         send_callbell_message(phone_number=phone_number, messages=[message])
@@ -80,11 +80,17 @@ def send_message(phone_number, messages, plan_names, contact_id):
                     messages_left = messages[audios_messages_qnt:]
 
                     audio_url = eleven_labs_service(audios_messages)
-                    send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
-                    redis_client.hset(f"{contact_id}:attachments", audio_url, audios_messages_str)
+                    if audio_url:
+                        send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                        redis_client.hset(f"{contact_id}:attachments", audio_url, audios_messages_str)
 
-                    if messages_left:
-                        send_callbell_message(phone_number=phone_number, messages=messages_left)
+                        if messages_left:
+                            send_callbell_message(phone_number=phone_number, messages=messages_left)
+
+                    else:
+                        logger.info(f"[{contact_id}] - Não foi possível gerar áudio para a mensagem. Enviando mensagem de texto.")
+                        send_callbell_message(phone_number=phone_number, messages=audios_messages)
+
                 else:
                     logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
                     send_callbell_message(phone_number=phone_number, messages=messages)
@@ -102,7 +108,6 @@ def send_message(phone_number, messages, plan_names, contact_id):
 
 
 # --- Main Communication Task ---
-
 @celery_app.task(name='main_crews.communication', bind=True)
 def communication_task(self, contact_id: str):
     """
@@ -119,6 +124,7 @@ def communication_task(self, contact_id: str):
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
         history_raw = []
+        history_raw_messages = ""
 
         try:
             history_raw = json.loads(redis_client.get(f"history_raw:{contact_id}"))
@@ -127,10 +133,12 @@ def communication_task(self, contact_id: str):
         
         if history_raw:
             history_raw = history_raw[:10]
+            history_raw_messages = process_history(history_raw, contact_id)
+
 
         history_summary_json = redis_client.get(f"history:{contact_id}")
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
-        history_messages = "\n\n".join([
+        history_summary_messages = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
             for topic in history_summary.get("topic_details", [])
         ])
@@ -154,8 +162,8 @@ def communication_task(self, contact_id: str):
             "system_operations_task_output": system_op_output if system_op_output else "{}",
             "profile_customer_task_output": redis_client.get(f"{contact_id}:customer_profile"),
             "conversation_state": str(conversation_state),
-            "history": history_messages,
-            "history_raw": history_raw,
+            "history": history_summary_messages,
+            "history_raw": history_raw_messages,
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
             "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]),
             "client_message": "\n".join(last_processed_messages),
