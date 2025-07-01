@@ -223,6 +223,9 @@ class SystemOperationsService:
         plate = params.get("plate")
         if not plate: raise ValueError("'plate' é obrigatório.")
 
+        plate = plate.replace(" ", "").upper().strip()
+        plate = plate.replace("-", " ")
+        
         search_result = self._search_vehicles({"search_term": plate})
         if not search_result:
             raise ValueError(f"Nenhum veículo encontrado com a placa {plate}.")
