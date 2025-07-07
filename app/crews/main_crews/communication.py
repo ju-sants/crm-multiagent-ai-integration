@@ -26,10 +26,6 @@ redis_client = get_redis()
 def send_message(phone_number, messages, plan_names, contact_id):
     try:
         from app.config.utils.messages_plans import plans_messages
-
-        if plan_names:
-            for plan_name in plan_names:
-                messages.extend(plans_messages.get(plan_name, []))
         
         state = state_manager.get_state(contact_id)
         if state.communication_preference.prefers_audio:
@@ -75,7 +71,7 @@ def send_message(phone_number, messages, plan_names, contact_id):
 
                     audios_messages_qnt = len(messages) // 2 + 1
                     audios_messages = messages[:audios_messages_qnt]
-                    audios_messages_str = '/n'.join(audios_messages)
+                    audios_messages_str = '\n'.join(audios_messages)
 
                     messages_left = messages[audios_messages_qnt:]
 
@@ -94,6 +90,12 @@ def send_message(phone_number, messages, plan_names, contact_id):
                 else:
                     logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
                     send_callbell_message(phone_number=phone_number, messages=messages)
+
+        if plan_names:
+            for plan_name in plan_names:
+                message = plans_messages.get(plan_name, [])
+                if message:
+                    send_callbell_message(phone_number=phone_number, messages=[message])
 
     except Exception as e:
         logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
@@ -160,7 +162,7 @@ def communication_task(self, contact_id: str):
             "turn": state.metadata.current_turn_number,
             "develop_strategy_task_output": json.dumps(state.strategic_plan),
             "system_operations_task_output": system_op_output if system_op_output else "{}",
-            "profile_customer_task_output": redis_client.get(f"{contact_id}:customer_profile"),
+            "profile_customer_task_output": str(redis_client.get(f"{contact_id}:customer_profile")),
             "conversation_state": str(conversation_state),
             "history": history_summary_messages,
             "history_raw": history_raw_messages,
@@ -186,10 +188,7 @@ def communication_task(self, contact_id: str):
 
             send_message.delay(phone_number, response_json['messages_sequence'], response_json.get("plan_names", []), contact_id)
 
-        # 1. Trigger enrichment pipeline (now self-sufficient)
-        trigger_enrichment_pipeline(contact_id, state.model_dump())
-
-        # 2. Cleaning the messages
+        # 1. Cleaning the messages
         all_messages = redis_client.lrange(f"contacts_messages:waiting:{contact_id}", 0, -1)
         messages_left = [m for m in all_messages if m not in last_processed_messages]
 
@@ -200,6 +199,11 @@ def communication_task(self, contact_id: str):
         if messages_left:
             pipe.rpush(f"contacts_messages:waiting:{contact_id}", *messages_left)
 
+        pipe.execute()
+
+        # 2. Trigger enrichment pipeline (now self-sufficient)
+        trigger_enrichment_pipeline(contact_id, state.model_dump())
+        
         return {"status": "communication_dispatched"}
     except Exception as e:
         logger.error(f"[{contact_id}] - Error in communication_task: {e}", exc_info=True)
