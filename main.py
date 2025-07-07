@@ -25,9 +25,18 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 app = Flask(__name__)
 apply_litellm_patch()
 redis_client = get_redis()
+redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
+# redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
+# redis_client.rpush("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 'voltou a funcionar corretamente, queria falar dos orçamentos')
+
+# print(redis_client.lrange("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 0, -1))
+# exit()
 # redis_client.flushdb()
 
 state_manager = StateManagerService()
+# state = state_manager.get_state("71464be80c504971ae263d710b39dd1f")
+# state.strategic_plan = None
+# state_manager.save_state("71464be80c504971ae263d710b39dd1f", state)
 
 client_description = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
 logger:  logging.Logger = get_logger(__name__)
