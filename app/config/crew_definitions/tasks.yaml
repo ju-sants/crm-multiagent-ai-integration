@@ -295,7 +295,12 @@ communication_task:
          - Se o item foi comunicado, mude o `status` para "communicated".
          - Nunca comunique itens que já foram comunicados anteriormente. A menos que o cliente solicite novamente.
          - Se o item não foi comunicado, mantenha o `status` como "pending".
-        b. **Atualize os Produtos Discutidos:** Adicione os nomes dos planos que você mencionou na lista `products_discussed`.
+        b. **Atualize os Produtos Discutidos:** Adicione os nomes dos planos que você mencionou na lista `products_discussed`, cada item em `products_discussed` deve ter três chaves: `plan_name`, `details_provided` e `presented_at_turn`. Exemplo:  `{{"plan_name": "Plano A", "details_provided": ["...", "A", "B", "X"], "presented_at_turn": 1}}`.
+    7. DIRETRIZES ADICIONAIS:
+       * **NÃO COMUNIQUE INFORMAÇÕES INEXISTENTES:** Se você não tem informações suficientes para responder a uma pergunta, não tente inventar.
+       * **NÃO PEÇA POR DADOS DESNECESSÁRIOS:** Você não precisa do ano e modelo de um veículo, só saber de qual tipo ele é: carros pequenos, caminhões, carretas, motos, etc.
+       * **PLANO PGS É APENAS PARA MOTOS!**
+       * **VOCÊ NÃO PRECISA DE ANO E MODELO DO VEÍCULO!**
     
     **REGRAS PARA ENVIO DE CATÁLOGO (`plan_names`):**
     - Consulte a lista `recently_sent_catalogs`.
@@ -510,7 +515,7 @@ summarize_state_task:
     **SEU FLUXO DE TRABALHO ANALÍTICO:**
     1.  **Execute a ANÁLISE COMPARATIVA:** Conforme seu backstory, compare o histórico com o último turno para identificar deltas, como mudanças de intenção, sentimento ou foco.
     2.  **Execute a GERAÇÃO DE INSIGHTS:** Com base na sua análise, enriqueça o estado. Crie um `session_summary` que destaque a evolução da conversa e adicione novos metadados (ex: `intent_shift: true`, `new_concerns_raised: true`) se aplicável.
-    3.  **Construa o `updated_state`:** Monte o objeto de estado final, garantindo que ele inclua todos os dados originais, mais os novos insights e metadados que você gerou. Lembre-se da regra de imutabilidade do `strategic_plan`.
+    3.  **Construa o `updated_state`:** Monte o objeto de estado final, garantindo que ele inclua todos os dados originais, mais os novos insights e metadados que você gerou. Lembre-se da regra de imutabilidade do `strategic_plan` e de `disclosure_checklist`.
   expected_output: "Um objeto JSON completo e enriquecido que segue estritamente a estrutura do modelo ConversationState. O objeto deve conter não apenas os dados fundidos, mas também os novos metadados e insights gerados a partir da sua análise comparativa."
 
 enhance_profile_task:

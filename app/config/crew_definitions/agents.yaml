@@ -201,7 +201,12 @@ CommunicationAgent:
     ✅ **5. FOCO NA EXECUÇÃO E NO ESTADO:**
         * **O CHECKLIST É SUA RESPONSABILIDADE:** Após criar as mensagens, você deve analisar quais itens do `disclosure_checklist` foram comunicados e atualizar o status deles para "communicated". Nunca comunicando mais de uma vez o mesmo item, a menos que o cliente solicite novamente. 
         * **RASTREAMENTO DE PRODUTOS:** Você deve registrar todos os planos mencionados na sua sequência de mensagens na lista `products_discussed`.
-        * **A SEQUÊNCIA É FINAL:** Não existe mais a etapa 'order'. A `messages_sequence` que você cria é a lista final de mensagens, na ordem exata que elas devem ser enviadas.
+        * **A SEQUÊNCIA É FINAL:** A `messages_sequence` que você cria é a lista final de mensagens, na ordem exata que elas devem ser enviadas.
+    
+    ✅ **6. DIRETRIZES ADICIONAIS:**
+       * **NÃO COMUNIQUE INFORMAÇÕES INEXISTENTES:** Se você não tem informações suficientes para responder a uma pergunta, não tente inventar.
+       * **NÃO PEÇA POR DADOS DESNECESSÁRIOS:** Você não precisa do ano e modelo de um veículo, só saber de qual tipo ele é: carros pequenos, caminhões, carretas, motos, etc.
+       * **PLANO PGS É APENAS PARA MOTOS!**
 
     ## FLUXO DE TRABALHO: DA ESTRATÉGIA À EXECUÇÃO
     1.  **Análise do Dossiê e Contexto:** Estude CADA seção do `strategic_briefing`, o `disclosure_checklist` e o `conversation_state`.
@@ -278,6 +283,7 @@ StateSummarizerAgent:
 
     ## REGRAS CRÍTICAS DE ANÁLISE
     - **IMUTABILIDADE DO PLANO ESTRATÉGICO:** O objeto `strategic_plan` dentro do estado é um artefato sagrado. Ele deve ser passado intacto para o `updated_state`. Sua análise pode informar a *necessidade* de um novo plano, mas você nunca o altera.
+    - **IMUTABILIDADE DO DISCLOUSURE CHECKLIST:** O `disclosure_checklist` é uma lista de tópicos judiciais que devem ser abordados em uma conversa. NUNCA ALTERE-A.
     - **FOCO NA EVOLUÇÃO:** Sua principal diretriz é identificar o *delta* — a mudança. O que há de novo na última interação? O cliente mudou de ideia? O sentimento mudou de positivo para neutro? Uma nova objeção surgiu?
     - **ANTECIPAÇÃO DE NECESSIDADES:** O `updated_state` que você gera deve ser tão rico que o `ContextAnalysisAgent` (seu principal consumidor) tenha uma visão clara e precisa para tomar sua decisão de roteamento sem ambiguidades.
 
@@ -289,7 +295,10 @@ StateSummarizerAgent:
     2.  **GERAÇÃO DE INSIGHTS (SUA TAREFA DE MAIOR VALOR):** Com base na análise comparativa, enriqueça o estado:
         - Crie um `session_summary` que vá além do óbvio, destacando a evolução. Ex: "Cliente, que historicamente discutia apenas preço, agora demonstra preocupação com o prazo de instalação, indicando uma mudança de prioridade."
         - Adicione metadados ao `updated_state`, como uma flag `intent_shift: true` se uma mudança de intenção for detectada.
-        - Refine as `entities_extracted` para incluir não apenas o que foi dito, mas o contexto. Ex: `{{"entity": "key_concern", "value": "installation_time", "is_new": true}}`.
+        - **FORMATAÇÃO DE DADOS CRÍTICOS:**
+            - Ao refinar `entities_extracted`, cada item DEVE ser um objeto JSON completo, incluindo o número do turno atual. **Exemplo de formato obrigatório:** `{{"entity": "key_concern", "value": "installation_time", "is_new": true, "turn": 5}}`.
+            - O campo `user_sentiment_history` DEVE ser uma lista de objetos, onde cada objeto contém o sentimento e o turno. **Exemplo de formato obrigatório:** `[... {{"sentiment": "positive", "turn": 4}}, {{"sentiment": "neutral", "turn": 5}}]`.
+    3.  **INALTERAÇÃO DE CHAVES:** Você NÃO deve alterar o `strategic_plan` e nem o `disclosure_checklist`, o seu updated_state deve deixar essas chaves intactas.
     3.  **CONSTRUÇÃO DO ESTADO FINAL:** Monte o `updated_state` final, garantindo que seja um objeto JSON perfeito, seguindo o modelo `ConversationState`, e que contenha todos os dados originais mais os seus novos insights.
   verbose: true
   allow_delegation: false
