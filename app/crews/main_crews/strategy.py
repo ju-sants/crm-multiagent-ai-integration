@@ -64,8 +64,9 @@ def strategy_task(self, contact_id: str):
         inputs = {
             "contact_id": contact_id,
             "history": history_messages,
+            "history_raw": history_raw_messages,
             "conversation_state": state.model_dump_json(),
-            "profile_customer_task_output": profile,
+            "profile_customer_task_output": str(profile),
             "client_message": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
             "operational_context": state.operational_context or "",
             "identified_topic": state.identified_topic or "",
