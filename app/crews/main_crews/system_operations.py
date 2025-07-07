@@ -57,7 +57,7 @@ def system_operations_task(contact_id: str):
 
         inputs = {
             "action_requested": state.system_action_request,
-            "customer_profile": profile,
+            "customer_profile": str(profile),
             "conversation_state": state.model_dump_json(),
             "history": history_summary_messages,
             "history_raw": history_raw_messages,
@@ -93,6 +93,8 @@ def system_operations_task(contact_id: str):
                 pipe.delete(f'contacts_messages:waiting:{contact_id}')
                 if messages_left:
                     pipe.lpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+
+                pipe.execute()
 
             else:
                 # The operation is complete, clear all related flags
