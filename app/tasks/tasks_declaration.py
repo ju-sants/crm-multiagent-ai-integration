@@ -1,8 +1,5 @@
 # app/tasks/tasks_declaration.py
 from crewai import Task, Agent
-
-from app.tools.knowledge_tools import KnowledgeServiceTool
-
 import yaml
 
 config_path = 'app/config/crew_definitions/tasks.yaml'
