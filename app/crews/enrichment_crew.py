@@ -8,6 +8,10 @@ from app.services.redis_service import get_redis
 from app.services.celery_Service import celery_app
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.callbell_service import get_contact_messages
+from app.services.state_manager_service import StateManagerService
+from app.models.data_models import ConversationState
+
+state_manager = StateManagerService()
 
 # Import agent and task creation functions
 from app.agents.agent_declaration import (
@@ -136,6 +140,11 @@ def state_summarizer_task(history_summary: dict, contact_id: str, last_turn_stat
     """
     logger.info(f"[{contact_id}] - Starting state summarization.")
 
+    state = state_manager.get_state(contact_id)
+
+    disclousure_checklist = state.disclosure_checklist
+    strategic_plan = state.strategic_plan
+
     agent = get_state_summarizer_agent()
     task = create_summarize_state_task(agent)
 
@@ -144,7 +153,7 @@ def state_summarizer_task(history_summary: dict, contact_id: str, last_turn_stat
     inputs = {
         "history_summary": json.dumps(history_summary),
         "last_turn_state": json.dumps(last_turn_state),
-        "client_message": redis_client.get(f"{contact_id}:last_processed_messages")
+        "client_message": str(redis_client.get(f"{contact_id}:last_processed_messages"))
     }
     
     result = crew.kickoff(inputs=inputs)
@@ -152,8 +161,13 @@ def state_summarizer_task(history_summary: dict, contact_id: str, last_turn_stat
     enriched_state = parse_json_from_string(result.raw, update=False)
 
     if enriched_state:
-        state_key = f"state:{contact_id}"
-        redis_client.set(state_key, json.dumps(enriched_state))
+
+        new_state = ConversationState(**enriched_state)
+
+        new_state.disclosure_checklist = disclousure_checklist
+        new_state.strategic_plan = strategic_plan
+
+        state_manager.save_state(contact_id, new_state)
 
     logger.info(f"[{contact_id}] - Finished state summarization.")
     return enriched_state
@@ -180,7 +194,7 @@ def profile_enhancer_task(history_summary: dict, contact_id: str, last_turn_stat
         "history_summary": json.dumps(history_summary),
         "last_turn_state": json.dumps(last_turn_state),
         "existing_profile": existing_profile,
-        "client_message": redis_client.get(f"{contact_id}:last_processed_messages")
+        "client_message": str(redis_client.get(f"{contact_id}:last_processed_messages"))
     }
     
     result = crew.kickoff(inputs=inputs)
