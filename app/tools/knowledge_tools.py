@@ -13,10 +13,41 @@ redis_client = get_redis()
 logger = get_logger(__name__)
 
 
-@tool("KnowledgeServiceTool", description="Use esta ferramenta para obter informações da base de conhecimento da Global System. Para máxima eficiência, agrupe múltiplas perguntas em uma única chamada. O input deve ser uma lista de dicionários de query. Ex: [{'topic': 'pricing', 'params': {'plan_name': 'Plano X'}}]")
+@tool("KnowledgeServiceTool")
 def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
+    """
+    Use esta ferramenta para obter informações da base de conhecimento da Global System.
+    Para máxima eficiência, agrupe múltiplas perguntas em uma única chamada.
+    O input deve ser uma lista de dicionários de query.
+
+    **CARDÁPIO DE TÓPICOS VÁLIDOS PARA A `KnowledgeServiceTool`:**
+        # INFORMAÇÕES GERAIS E ESTRATÉGICAS
+        - **'get_company_info'**: Retorna informações básicas da empresa (CNPJ, endereço).
+        - **'get_sales_philosophy'**: Retorna as diretrizes gerais de venda (fluxo, tom, princípios).
+        - **'get_support_philosophy'**: Retorna as diretrizes gerais de suporte.
+
+        # PRODUTOS E PREÇOS
+        - **'list_all_products'**: Retorna uma lista com nome e descrição de todos os planos.
+        - **'pricing'**: Para valores de um plano. `params:  "plan_name": "..." ` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto"
+        - **'faq'**: Para perguntas frequentes de um plano. `params:  "plan_name": "..." ` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto"
+        - **'product_compatibility'**: Para verificar compatibilidade. `params:  "detail": "..." `
+
+        # POLÍTICAS E PROCEDIMENTOS
+        - **'contract_terms'**: Para cláusulas contratuais. `params:  "contract_id": "..." ` # Pode ser um desses: "standard" | "moto_pgs"
+        - **'installation_policy'**: Para regras de instalação. `params:  "vehicle_type": "..." `
+        - **'maintenance_policy'**: Para regras de manutenção.
+        - **'scheduling_rules'**: Para regras de agendamento de serviços.
+        - **'technical_limitations'**: Para obter as limitações técnicas dos rastreadores.
+        - **'blocker_installation_rules'**: Para regras sobre a instalação do bloqueio.
+        - **'regional_availability'**: Para saber onde um serviço/plano está disponível. `params:  "location_info": ... `
+
+        # OUTRAS INFORMAÇÕES
+        - **'application_features'**: Para detalhes e funcionalidades do aplicativo.
+
+    Exemplo de chamada: [{'topic': 'pricing', 'params': {'plan_name': 'Plano Rastreamento Moto'}}]
+    """
     if not isinstance(queries, list):
-             return "Erro de formato: O input deve ser uma lista de dicionários de query."
+        return "Erro de formato: O input deve ser uma lista de dicionários de query."
 
     # Itera sobre a lista de queries e coleta os resultados
     results = [knowledge_service_instance.find_information(query) for query in queries]
