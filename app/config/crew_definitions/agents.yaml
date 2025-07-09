@@ -76,32 +76,6 @@ StrategicAdvisor:
         8. **Criação do Dossiê de Conversa:** Crie o `conversation_blueprint` com base na estratégia definida. Sinta-se livre para criar novas chaves no JSON final, se quiser.
         9.  **POPULAR O CHECKLIST DE ESCLARECIMENTO:** Se a estratégia envolve apresentar um plano, você DEVE popular a chave `disclosure_checklist` no `conversation_state`. Para cada termo importante (Natureza do Serviço, Política de Cancelamento, Limitações Técnicas, etc.), adicione um objeto à lista com `item_id`, `topic`, `content` e o `status` inicial como **"pending"**. Use a `KnowledgeServiceTool` (`topic: 'contract_terms'`, `topic: 'technical_limitations'`) para obter o conteúdo exato para cada item do checklist.
         10.  **CONSTÂNCIA NO CHECKLIST:** Nunca retire itens de `disclosure_checklist` apenas adicione, para termos total controle do que já foi esclarecido e o que ainda falta esclarecer, NUNCA adicione itens iguais.
-        
-        ---
-        
-        **CARDÁPIO DE TÓPICOS VÁLIDOS PARA A `KnowledgeServiceTool`:**
-        # INFORMAÇÕES GERAIS E ESTRATÉGICAS
-        - **'get_company_info'**: Retorna informações básicas da empresa (CNPJ, endereço).
-        - **'get_sales_philosophy'**: Retorna as diretrizes gerais de venda (fluxo, tom, princípios).
-        - **'get_support_philosophy'**: Retorna as diretrizes gerais de suporte.
-
-        # PRODUTOS E PREÇOS
-        - **'list_all_products'**: Retorna uma lista com nome e descrição de todos os planos.
-        - **'pricing'**: Para valores de um plano. `params:  "plan_name": "..." ` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto"
-        - **'faq'**: Para perguntas frequentes de um plano. `params:  "plan_name": "..." ` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto"
-        - **'product_compatibility'**: Para verificar compatibilidade. `params:  "detail": "..." `
-
-        # POLÍTICAS E PROCEDIMENTOS
-        - **'contract_terms'**: Para cláusulas contratuais. `params:  "contract_id": "..." ` # Pode ser um desses: "standard" | "moto_pgs"
-        - **'installation_policy'**: Para regras de instalação. `params:  "vehicle_type": "..." `
-        - **'maintenance_policy'**: Para regras de manutenção.
-        - **'scheduling_rules'**: Para regras de agendamento de serviços.
-        - **'technical_limitations'**: Para obter as limitações técnicas dos rastreadores.
-        - **'blocker_installation_rules'**: Para regras sobre a instalação do bloqueio.
-        - **'regional_availability'**: Para saber onde um serviço/plano está disponível. `params:  "location_info": ... `
-
-        # OUTRAS INFORMAÇÕES
-        - **'application_features'**: Para detalhes e funcionalidades do aplicativo.
   verbose: true
   allow_delegation: false
 
@@ -142,34 +116,6 @@ SystemOperationsAgent:
 
     Observações:
     - Se um rastreador tiver com mais de 24h sem comunicação, ele está em falha de sinal, insira em sua sintese que o procedimento é enviar um reset e esperar até mais 24 horas, depois disso é necessário intervenção humana para marcar manutenção.
-
-    ---
-    ## CATÁLOGO DE OPERAÇÕES DE SISTEMA (SUA DOCUMENTAÇÃO DE API)
-
-    # --- Funções Técnicas (Ações Granulares) ---
-    - action_type: 'SEARCH_CLIENTS', params: 'search_term': '...'
-    - action_type: 'SEARCH_VEHICLES', params: 'search_term': '...'
-    - action_type: 'GET_CLIENT_VEHICLES', params: 'client_id': '...' 
-    - action_type: 'GET_VEHICLE_DETAILS', params: 'vehicle_id': '...' 
-    - action_type: 'GET_VEHICLE_POSITIONS', params: 'vehicle_id': '...', 'initial_date': '...', 'final_date': '...'
-    - action_type: 'GET_VEHICLE_TRIPS_REPORT', params: 'vehicle_id': '...', 'start_date': '...', 'end_date': '...'
-    - action_type: 'GET_VEHICLE_EVENTS_REPORT', params: 'vehicle_id': '...', 'start_date': '...', 'end_date': '...'
-    - action_type: 'GET_VEHICLE_GEOFENCES', params: 'vehicle_id': '...'
-    - action_type: 'GET_VEHICLES_WITH_SIGNAL_FAIL', params: 
-    - action_type: 'GET_PAYMENT_HISTORY', params: 'customer_id': '...'
-
-    # --- Workflows de Negócio (Ações Orquestradas) ---
-    - action_type: 'WF_FIND_CLIENT_AND_GET_FINANCIALS', params: 'search_term': '...'
-    - action_type: 'WF_GET_VEHICLE_FULL_REPORT', params: 'vehicle_id': '...'
-    - action_type: 'WF_SEND_TRACKER_RESET', params: 'plate': '...'
-    - action_type: 'WF_CALCULATE_DISPLACEMENT_COST', params: 'destination_city': '...', 'destination_state': '...'
-
-    
-    Sobre os parâmetros:
-    - Os parâmetros do tipo "search_term" podem ser qualquer informação relatada ao cliente/veículo que o sistema o encontrará, como nome, CPF, placa, etc.
-    - Os parâmetros do tipo ID podem ser obtidos utilizando uma ação de busca "SEARCH_*"
-    - Para relatórios use intervalos de data de até um dia atrás, pois o sistema backend pode falhar em intervalos longos, formato: YYYY-MM-DD HH:MM:SS.
-    ---
   verbose: true
   allow_delegation: false #  
 
