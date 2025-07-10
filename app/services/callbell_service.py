@@ -1,5 +1,6 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from time import sleep
+from datetime import datetime
 import requests
 import json
 
@@ -69,8 +70,16 @@ def send_callbell_message(phone_number: str, messages: str = None, type: str = N
         else:
             return {"status": "error"}
 
-def get_contact_messages(contact_uuid: str, limit: int = 50) -> list:
-    """Busca as mensagens de um contato na API da Callbell."""
+def get_contact_messages(
+    contact_uuid: str,
+    limit: int = 50,
+    since_timestamp: Optional[str] = None
+) -> list:
+    """
+    Busca as mensagens de um contato na API da Callbell.
+    - Se 'since_timestamp' for fornecido, busca mensagens desde esse timestamp.
+    - Caso contrário, busca as últimas 'limit' mensagens.
+    """
     url = f"https://api.callbell.eu/v1/contacts/{contact_uuid}/messages"
     headers = {
         "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
@@ -78,6 +87,18 @@ def get_contact_messages(contact_uuid: str, limit: int = 50) -> list:
     }
     page = 1
     messages = []
+    
+    since_dt = None
+    if since_timestamp:
+        try:
+            # Handle both 'Z' and potential timezone offsets like '+00:00'
+            if since_timestamp.endswith('Z'):
+                since_dt = datetime.fromisoformat(since_timestamp.replace('Z', '+00:00'))
+            else:
+                since_dt = datetime.fromisoformat(since_timestamp)
+        except ValueError:
+            logger.error(f"Invalid timestamp format for {contact_uuid}: {since_timestamp}")
+            return []
 
     try:
         while True:
@@ -86,13 +107,35 @@ def get_contact_messages(contact_uuid: str, limit: int = 50) -> list:
             response.raise_for_status()
             data = response.json()
             messages_temp = data.get("messages", [])
-            if messages_temp:
+
+            if not messages_temp:
+                break
+
+            if since_dt:
+                for msg in messages_temp:
+                    msg_dt_str = msg.get("createdAt")
+                    if msg_dt_str:
+                        if msg_dt_str.endswith('Z'):
+                            msg_dt = datetime.fromisoformat(msg_dt_str.replace('Z', '+00:00'))
+                        else:
+                            msg_dt = datetime.fromisoformat(msg_dt_str)
+                        
+                        if msg_dt > since_dt:
+                            messages.append(msg)
+                        else:
+                            # Stop fetching as we have reached messages older than the timestamp
+                            messages_temp = [] # Break outer loop
+                            break
+            else:
                 messages.extend(messages_temp)
-                page += 1
                 if len(messages) >= limit:
                     break
-            else:
+            
+            if not messages_temp:
                 break
+                
+            page += 1
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to fetch messages for contact {contact_uuid}: {e}")
         return []
@@ -100,7 +143,5 @@ def get_contact_messages(contact_uuid: str, limit: int = 50) -> list:
         logger.error(f"Failed to decode JSON for contact {contact_uuid}: {e}")
         return []
     
-    else:
-        return messages
-    
-    
+    # Return messages in chronological order (oldest to newest)
+    return messages[::-1]
