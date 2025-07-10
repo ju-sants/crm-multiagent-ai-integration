@@ -34,20 +34,40 @@ redis_client = get_redis()
 @celery_app.task(name='enrichment.history_summarizer')
 def history_summarizer_task(contact_id: str):
     """
-    Asynchronous task to summarize conversation history.
-    - Fetches the last 50 messages from Callbell.
-    - Creates a hierarchical summary of the conversation.
+    Asynchronous task to incrementally summarize conversation history.
+    - Fetches only new messages since the last update.
+    - Intelligently merges new messages into the existing summary.
     - Detects noisy data and flags it.
-    - Stores the summary and topic details in Redis.
+    - Stores the updated summary, topic details, and last message timestamp in Redis.
     """
-    logger.info(f"[{contact_id}] - Starting history summarization.")
+    logger.info(f"[{contact_id}] - Starting incremental history summarization.")
+
+    summary_key = f"history:{contact_id}"
+    timestamp_key = f"history:last_timestamp:{contact_id}"
+
+    # Get existing data from Redis
+    existing_summary_json = redis_client.get(summary_key)
+    last_timestamp = redis_client.get(timestamp_key)
     
-    raw_history = get_contact_messages(contact_id, limit=50)
-    redis_client.set(f"history_raw:{contact_id}", json.dumps(raw_history))
-    
-    if not raw_history:
-        logger.warning(f"[{contact_id}] - No history found. Skipping summarization.")
-        return f"No history to summarize for {contact_id}."
+    existing_summary = json.loads(existing_summary_json) if existing_summary_json else None
+
+    # Fetch new messages
+    if last_timestamp:
+        logger.info(f"[{contact_id}] - Fetching new messages since {last_timestamp}.")
+        new_messages = get_contact_messages(contact_id, since_timestamp=last_timestamp)
+    else:
+        logger.info(f"[{contact_id}] - No existing summary found. Fetching full history.")
+        new_messages = get_contact_messages(contact_id, limit=50)
+
+    if not new_messages:
+        logger.info(f"[{contact_id}] - No new messages to process. Skipping summarization.")
+        return f"No new messages to summarize for {contact_id}."
+
+    # The full history for context is the combination of old and new
+    raw_history_json = redis_client.get(f"history_raw:{contact_id}")
+    raw_history = json.loads(raw_history_json) if raw_history_json else []
+    full_history = raw_history + new_messages
+    redis_client.set(f"history_raw:{contact_id}", json.dumps(full_history))
 
     agent = get_history_summarizer_agent()
     task = create_summarize_history_task(agent)
@@ -56,7 +76,9 @@ def history_summarizer_task(contact_id: str):
     
     inputs = {
         "contact_id": contact_id,
-        "raw_history": json.dumps(raw_history)
+        "existing_summary": json.dumps(existing_summary) if existing_summary else "null",
+        "new_messages": json.dumps(new_messages),
+        "full_raw_history": json.dumps(full_history) # For context and cleaning tasks
     }
     
     result = crew.kickoff(inputs=inputs)
@@ -65,7 +87,6 @@ def history_summarizer_task(contact_id: str):
     
     if output:
         # Save the main summary
-        summary_key = f"history:{contact_id}"
         redis_client.set(summary_key, json.dumps(output))
         
         # Save details for each topic and check for noise
@@ -75,7 +96,6 @@ def history_summarizer_task(contact_id: str):
                 details_key = f"history:topic_details:{contact_id}:{topic_id}"
                 redis_client.set(details_key, json.dumps(topic_detail))
                 
-                # If topic is noisy, trigger the data quality agent
                 # Trigger data quality task based on the new quality score
                 quality_score = topic_detail.get('quality_score', 1.0)
                 if quality_score < 0.6:
@@ -85,11 +105,16 @@ def history_summarizer_task(contact_id: str):
 
                     if start_index is not None and end_index is not None:
                         # Slice the raw history to get the relevant snippet for the noisy topic
-                        raw_history_snippet = raw_history[start_index:end_index + 1]
-                        # Pass the full history for context, as per Action Item 2
-                        data_quality_task.delay(contact_id, topic_id, json.dumps(raw_history_snippet), json.dumps(raw_history))
+                        raw_history_snippet = full_history[start_index:end_index + 1]
+                        data_quality_task.delay(contact_id, topic_id, json.dumps(raw_history_snippet), json.dumps(full_history))
                     else:
                         logger.warning(f"[{contact_id}] - Could not trigger data quality task for topic {topic_id} due to missing indices.")
+        
+        # Save the timestamp of the last processed message
+        last_message_timestamp = new_messages[-1].get("createdAt")
+        if last_message_timestamp:
+            redis_client.set(timestamp_key, last_message_timestamp)
+            logger.info(f"[{contact_id}] - Updated last processed timestamp to {last_message_timestamp}.")
 
     logger.info(f"[{contact_id}] - Finished history summarization.")
     return output
