@@ -1,8 +1,9 @@
 import json
 from celery import group, chain
 from crewai import Crew, Process
+from typing import Any
+import copy
 
-from app.config.settings import settings
 from app.core.logger import get_logger
 from app.services.redis_service import get_redis
 from app.services.celery_Service import celery_app
@@ -30,6 +31,44 @@ from app.tasks.tasks_declaration import (
 
 logger = get_logger(__name__)
 redis_client = get_redis()
+
+def process_history(history: Any, contact_id: str) -> str:
+    """Processes the message history and returns a formatted string."""
+    history_normalized = []
+
+    for message in history:
+        if message.get("attachments"):
+
+            attachments = message.get("attachments", [])
+            if not attachments:
+                history_normalized.append(message)
+                continue
+
+            list_of_dicts = isinstance(attachments[0], dict)
+
+            for attachment in attachments:
+                raw_url = attachment.get("payload", {}).get('url', '') if list_of_dicts else attachment
+
+                if "audio_eleven_agent_AI" in raw_url:
+                    url = raw_url
+                else:
+                    url = raw_url.split('uploads/')[1].split('?')[0] if 'uploads/' in raw_url else ''
+
+                if url:
+                    mapped_attachments = redis_client.hgetall(f"{contact_id}:attachments")
+                    if mapped_attachments:
+                        attachment_text = mapped_attachments.get(url, "")
+                        if attachment_text:
+                            message["text"] = attachment_text
+                            del message["attachments"]
+
+                            history_normalized.append(message)
+                            continue
+
+        else:
+            history_normalized.append(message)
+
+    return history_normalized
 
 @celery_app.task(name='enrichment.history_summarizer')
 def history_summarizer_task(contact_id: str):
@@ -63,10 +102,12 @@ def history_summarizer_task(contact_id: str):
         logger.info(f"[{contact_id}] - No new messages to process. Skipping summarization.")
         return f"No new messages to summarize for {contact_id}."
 
+    new_messages_normalized = process_history(new_messages, contact_id)
+
     # The full history for context is the combination of old and new
     raw_history_json = redis_client.get(f"history_raw:{contact_id}")
     raw_history = json.loads(raw_history_json) if raw_history_json else []
-    full_history = raw_history + new_messages
+    full_history = raw_history + new_messages_normalized
     redis_client.set(f"history_raw:{contact_id}", json.dumps(full_history))
 
     agent = get_history_summarizer_agent()
