@@ -8,11 +8,11 @@ logger = get_logger(__name__)
 
 
 @lru_cache(maxsize=1)
-def get_redis(db=None):
+def get_redis(db=None, host=None, port=None, password=None):
     redis_conn = None
     
     try:
-        redis_conn = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD, db=settings.REDIS_DB_MAIN if not db else db, decode_responses=True)
+        redis_conn = redis.Redis(host=settings.REDIS_HOST if not host else host, port=settings.REDIS_PORT if not port else port, password=settings.REDIS_PASSWORD if not password else password, db=settings.REDIS_DB_MAIN if not db else db, decode_responses=True)
         redis_conn.ping()
         logger.info(f"Successfully connected to Redis DB {settings.REDIS_DB_MAIN}")
     except redis.exceptions.ConnectionError as e:
