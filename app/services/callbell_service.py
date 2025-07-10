@@ -145,3 +145,34 @@ def get_contact_messages(
     
     # Return messages in chronological order (oldest to newest)
     return messages[::-1]
+
+def create_conversation_note(uuid: str, note_text: str) -> bool:
+    """
+    Cria uma nota em uma conversa associada a um contato na plataforma Callbell.
+
+    Parâmetros:
+    - uuid (str): UUID do contato.
+    - note_text (str): Texto da nota (pode incluir @ para mencionar usuários).
+    - api_key (str): Chave de autenticação Bearer da API.
+
+    Retorna:
+    - bool: True se a requisição for bem-sucedida, False caso contrário.
+    """
+    url = f'https://api.callbell.eu/v1/contacts/{uuid}/conversation/note'
+    
+    headers = {
+        'Authorization': f'Bearer {settings.CALLBELL_API_KEY}',
+        'Content-Type': 'application/json',
+    }
+    
+    payload = {
+        'text': note_text,
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    
+    if response.status_code == 201 or response.status_code == 200:
+        return response.json().get('success', False)
+    else:
+        print(f"Erro {response.status_code}: {response.text}")
+        return False
