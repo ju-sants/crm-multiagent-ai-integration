@@ -421,37 +421,11 @@ collect_registration_data_task:
         "is_data_collection_complete": false
       },
       "updated_state": {
-        "metadata": {
-          "contact_id": "{contact_id}",
-          "session_start_time": "2025-06-07T21:50:00.000Z",
-          "last_updated": "{timestamp}",
-          "current_turn_number": 8
-        },
-        "current_context": {
-            "context_type": "REGISTRATION",
-            "last_topic": "coleta_dados_identificacao",
-            "updated_at": "{timestamp}"
-        },
-        "communication_preference": {
-              "prefers_audio": Bool,
-              "reason": ""
-          },
         "entities_extracted": [
           { "entity": "customer_name", "value": "Juan", "turn": 1 },
           { "entity": "decision", "value": "aceite", "turn": 6 },
           { "entity": "registration_type", "value": "CPF", "turn": 8 }
         ],
-        "products_discussed": [],
-        "last_agent_action": {
-          "agent_name": "RegistrationDataCollectorAgent",
-          "goal": "Solicitar nome completo e CPF do cliente.",
-          "action_timestamp": "{timestamp}"
-        },
-        "disclosure_checklist": [...],
-        "user_sentiment_history": [
-          { "turn": 8, "sentiment": "colaborativo" }
-        ]
-      }
     }
 
 summarize_history_task:
