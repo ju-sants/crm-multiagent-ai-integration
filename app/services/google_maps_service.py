@@ -2,7 +2,9 @@ import googlemaps
 from datetime import datetime
 
 from app.config.settings import settings
+from app.services.cache_service import cache_result
 
+@cache_result(ttl=86400) # Cache for 24 hours
 def calcular_distancia_cidades(origem, destino):
     """
     Calcula a distância e o tempo de viagem de carro entre duas cidades
