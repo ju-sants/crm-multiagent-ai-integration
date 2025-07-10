@@ -48,7 +48,11 @@ def registration_task(contact_id: str):
         response_json, updated_state_dict = parse_json_from_string(result.raw)
 
         if updated_state_dict:
-            state = ConversationState(**{**state.model_dump(), **updated_state_dict})
+            if "entities_extracted" in updated_state_dict and updated_state_dict["entities_extracted"]:
+                state_json = state.model_dump()
+                state_json["entities_extracted"] += updated_state_dict["entities_extracted"]
+
+                state = ConversationState(**{**state.model_dump(), **state_json})
         
         state_manager.save_state(contact_id, state)
 
