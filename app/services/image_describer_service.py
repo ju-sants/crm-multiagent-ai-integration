@@ -4,7 +4,12 @@ import hashlib
 import time
 import secrets
 import requests
-from typing import Optional
+import json
+from typing import Optional, Tuple
+from app.services.redis_service import get_redis
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
 
 class ImageDescriptionAPI:
     def __init__(self, appid: str, secret: str):
@@ -12,7 +17,7 @@ class ImageDescriptionAPI:
         self.secret = secret
         self.base_url = "https://imagedescriber.online/api/openapi/describe-image"
     
-    def load_image_from_file(self, file_path: str) -> str:
+    def load_image_from_file(self, file_path: str) -> Tuple[str, bytes]:
         """Carrega imagem de arquivo e converte para base64"""
         try:
             with open(file_path, 'rb') as file:
@@ -31,7 +36,7 @@ class ImageDescriptionAPI:
                 else:
                     mime_type = 'image/jpeg'
                 
-                return f"data:{mime_type};base64,{base64_image}"
+                return f"data:{mime_type};base64,{base64_image}", image_data
         except FileNotFoundError:
             raise Exception(f"Arquivo não encontrado: {file_path}")
         except Exception as e:
@@ -51,10 +56,10 @@ class ImageDescriptionAPI:
         
         return base64.b64encode(signature).decode('utf-8')
     
-    def describe_image(self, 
-                      image_path: str = None, 
+    def describe_image(self,
+                      image_path: str = None,
                       image_url: str = None,
-                      prompt: Optional[str] = None, 
+                      prompt: Optional[str] = None,
                       lang: str = 'en') -> dict:
         """
         Descreve uma imagem usando a API
@@ -67,14 +72,32 @@ class ImageDescriptionAPI:
         Returns:
             Resposta da API em formato dict
         """
+        redis_conn = get_redis()
+
         if not image_path and not image_url:
             return ValueError('Envie pelo menos um parâmetro com dados de imagem')
         
         elif not image_path and image_url:
+            try:
+                image_bytes = requests.get(image_url).content
+                content_hash = hashlib.sha256(image_bytes).hexdigest()
+                cache_key = f"imagedescription:{content_hash}"
+
+                cached_result = redis_conn.get(cache_key)
+                if cached_result:
+                    logger.info(f"Cache hit for key: {cache_key}")
+                    return json.loads(cached_result)
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Failed to fetch image from URL: {e}")
+                pass
+            except Exception as e:
+                logger.error(f"An unexpected error occurred during cache check: {e}")
+                pass
+
             extension = image_url.split('?')[0].split('.')[-1]
             image_path = f'app/services/tmp_files/tmp_image.{extension}'
             with open(image_path, 'wb') as f:
-                f.write(requests.get(image_url).content)
+                f.write(image_bytes)
         
         elif not image_url and image_path:
             pass
@@ -84,11 +107,20 @@ class ImageDescriptionAPI:
         
         
         # 1. Carregar e converter imagem para base64
-        image_base64_data = self.load_image_from_file(image_path)
+        image_base64_data, image_bytes = self.load_image_from_file(image_path)
+        content_hash = hashlib.sha256(image_bytes).hexdigest()
+        cache_key = f"imagedescription:{content_hash}"
         
+        cached_result = redis_conn.get(cache_key)
+        if cached_result:
+            logger.info(f"Cache hit for key: {cache_key}")
+            return json.loads(cached_result)
+
+        logger.info(f"Cache miss for key: {cache_key}. Executing image description.")
+
         # 2. Gerar parâmetros de autenticação
-        timestamp = str(int(time.time() * 1000)) 
-        nonce = secrets.token_hex(4) 
+        timestamp = str(int(time.time() * 1000))
+        nonce = secrets.token_hex(4)
         
         # 3. Gerar assinatura
         sign_string = self.build_sign_string(self.appid, timestamp, nonce)
@@ -125,13 +157,19 @@ class ImageDescriptionAPI:
             )
             
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+
+            try:
+                redis_conn.setex(cache_key, 86400, json.dumps(result)) # Cache for 24 hours
+            except Exception as e:
+                logger.error(f"Failed to write to cache: {e}")
+
+            return result
             
         except requests.exceptions.RequestException as e:
             raise Exception(f"Erro na requisição: {str(e)}")
         except ValueError as e:
             raise Exception(f"Erro ao decodificar JSON: {str(e)}")
-        
 
 if __name__ == '__main__':
     client = ImageDescriptionAPI('sum_valid_app', 'sum_valid_key')
