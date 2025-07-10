@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import logging
 import time
 
-from app.services.celery_Service import celery_app
+from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.config.settings import settings
 from app.config.patches import apply_litellm_patch
@@ -35,7 +35,8 @@ redis_client = get_redis()
 # redis_client.flushdb()
 
 state_manager = StateManagerService()
-
+# print(json.dumps(state_manager.get_state("71464be80c504971ae263d710b39dd1f").strategic_plan, indent=4))
+# exit()
 # state.strategic_plan = None
 # state_manager.save_state("71464be80c504971ae263d710b39dd1f", state)
 
@@ -79,23 +80,39 @@ def send_callbell_message(phone_number, text):
 @celery_app.task(name='io.process_audio_attachment')
 def process_audio_attachment_task(contact_uuid, url):
     logger.info(f"[{contact_uuid}] - Transcribing audio from URL: {url}")
-    transcription = transcript(url)
-    if transcription:
-        message = f"(Áudio transcrito): {transcription}"
-        redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', message)
-        static_url_part = url.split('uploads/')[1].split('?')[0]
-        redis_client.hset(f'{contact_uuid}:attachments', static_url_part, transcription)
+    redis_client.set(f"transcribing:audio:{contact_uuid}", "true")
+
+    try:
+        transcription = transcript(url)
+        if transcription:
+            message = f"(Áudio transcrito): {transcription}"
+            redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', message)
+            static_url_part = url.split('uploads/')[1].split('?')[0]
+            redis_client.hset(f'{contact_uuid}:attachments', static_url_part, transcription)
+
+    except Exception as e:
+        logger.error(f"Error processing audio attachment for contact {contact_uuid}: {e}")
+    finally:
+        redis_client.delete(f"transcribing:audio:{contact_uuid}")
 
 @celery_app.task(name='io.process_image_attachment')
 def process_image_attachment_task(contact_uuid, url):
     logger.info(f"[{contact_uuid}] - Describing image from URL: {url}")
-    description_json = client_description.describe_image(image_url=url)
-    description = description_json.get('data', {}).get('content', '')
-    if description:
-        message = f"(Descrição de imagem): {description}"
-        redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', message)
-        static_url_part = url.split('uploads/')[1].split('?')[0]
-        redis_client.hset(f'{contact_uuid}:attachments', static_url_part, message)
+    redis_client.set(f"transcribing:image:{contact_uuid}", "true")
+    
+    try:
+        description_json = client_description.describe_image(image_url=url)
+        description = description_json.get('data', {}).get('content', '')
+        if description:
+            message = f"(Descrição de imagem): {description}"
+            redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', message)
+            static_url_part = url.split('uploads/')[1].split('?')[0]
+            redis_client.hset(f'{contact_uuid}:attachments', static_url_part, message)
+    
+    except Exception as e:
+        logger.error(f"Error processing image attachment for contact {contact_uuid}: {e}")
+    finally:
+        redis_client.delete(f"transcribing:image:{contact_uuid}")
 
 @celery_app.task(name='main.process_message_task')
 def process_message_task(contact_uuid):
