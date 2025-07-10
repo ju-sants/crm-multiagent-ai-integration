@@ -1,6 +1,6 @@
 import json
 from crewai import Crew, Process
-from app.services.celery_Service import celery_app
+from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_system_operations_agent
 from app.config.llm_config import decivise_openai_llm

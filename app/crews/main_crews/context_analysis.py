@@ -1,6 +1,8 @@
 import json
 from crewai import Crew, Process
-from app.services.celery_Service import celery_app
+import time
+
+from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_context_analysis_agent
 from app.tasks.tasks_declaration import create_context_analysis_task
@@ -38,6 +40,16 @@ def context_analysis_task(self, contact_id: str):
             for topic in history_summary.get("topic_details", [])
         ])
 
+
+        while True:
+            if redis_client.keys(f"transcribing:*:{contact_id}"):
+                logger.info(f"[{contact_id}] - Waiting for transcription to complete.")
+                time.sleep(1)
+                continue
+            break
+
+        
+        # Extract the conversation state from the state object
         conversation_state_dict = state.model_dump()
         
         #State Distillation

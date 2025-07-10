@@ -1,6 +1,6 @@
 import json
 from crewai import Crew, Process
-from app.services.celery_Service import celery_app
+from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_registration_agent
 from app.tasks.tasks_declaration import create_collect_registration_data_task

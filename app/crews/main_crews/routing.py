@@ -1,4 +1,4 @@
-from app.services.celery_Service import celery_app
+from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.services.state_manager_service import StateManagerService
 from app.services.redis_service import get_redis

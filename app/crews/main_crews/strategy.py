@@ -3,7 +3,7 @@ from crewai import Crew, Process
 import datetime
 import pytz
 
-from app.services.celery_Service import celery_app
+from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_strategic_advisor_agent
 from app.config.llm_config import creative_openai_llm
@@ -36,7 +36,7 @@ def strategy_task(self, contact_id: str):
         llm_w_tools = creative_openai_llm.bind_tools([knowledge_service_tool, drill_down_topic_tool])
         agent = get_strategic_advisor_agent(llm_w_tools)
         task = create_develop_strategy_task(agent)
-        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
         # Load the full customer profile for the agent
         profile = redis_client.get(f"{contact_id}:customer_profile")

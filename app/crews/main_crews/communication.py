@@ -1,7 +1,7 @@
 import json
 from crewai import Crew, Process
 from datetime import datetime, timezone
-from app.services.celery_Service import celery_app
+from app.services.celery_service import celery_app
 from app.crews.enrichment_crew import trigger_enrichment_pipeline
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_communication_agent
@@ -155,6 +155,7 @@ def communication_task(self, contact_id: str):
         conversation_state: dict = json.loads(conversation_state)
         
         strategic_plan = conversation_state.pop("strategic_plan", None)
+        disclosure_checklist = conversation_state.pop("disclosure_checklist", None)
 
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -166,7 +167,7 @@ def communication_task(self, contact_id: str):
             "history": history_summary_messages,
             "history_raw": history_raw_messages,
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
-            "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]),
+            "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]) if not disclosure_checklist else disclosure_checklist,
             "client_message": "\n".join(last_processed_messages),
         }
 

@@ -2,11 +2,11 @@ import json
 from celery import group, chain
 from crewai import Crew, Process
 from typing import Any
-import copy
+from datetime import datetime
 
 from app.core.logger import get_logger
 from app.services.redis_service import get_redis
-from app.services.celery_Service import celery_app
+from app.services.celery_service import celery_app
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.callbell_service import get_contact_messages
 from app.services.state_manager_service import StateManagerService
@@ -101,7 +101,9 @@ def history_summarizer_task(contact_id: str):
     if not new_messages:
         logger.info(f"[{contact_id}] - No new messages to process. Skipping summarization.")
         return f"No new messages to summarize for {contact_id}."
-
+    
+    new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("10/07/2025 14:56:00", "%d/%m/%Y %H:%M:%S")]
+    
     new_messages_normalized = process_history(new_messages, contact_id)
 
     # The full history for context is the combination of old and new
