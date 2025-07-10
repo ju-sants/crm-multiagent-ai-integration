@@ -180,6 +180,7 @@ communication_task:
   expected_output: |
     {
       "task_output": {
+        "request_human_intervention": false,
         "messages_sequence": [
           "Juan, entendi sua preocupação com a segurança da sua moto, já que a usa para tudo.",
           "Com base nisso, nossa recomendação principal é o Plano Proteção Total PGS.",
