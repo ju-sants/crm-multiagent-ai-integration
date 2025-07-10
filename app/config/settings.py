@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str = '...'
     REDIS_PORT: str = '...'
     REDIS_PASSWORD: str = '...'
-    REDIS_DB_MAIN: int = 7
+    REDIS_DB_MAIN: int = 0
     
     
 settings = Settings()
