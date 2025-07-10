@@ -78,8 +78,8 @@ develop_strategy_task:
     - **Tópico Identificado:** "{identified_topic}"
 
     **SEU FLUXO DE TRABALHO:**
-    Execute o **"FLUXO DE DEFINIÇÃO DE ESTRATÉGIA"** detalhado em seu `backstory`. Analise os inputs, qualifique o cliente (se necessário), colete dados com a `KnowledgeServiceTool`, defina a estratégia, gere a `structured_message` e, crucialmente, popule o `disclosure_checklist` antes de atualizar o estado da conversa.
-    Use a `KnowledgeServiceTool` para obter todas as informações que precise, utilize a query em lote e envie tudo que precisar de uma só vez, sempre envie na query requisições para `get_company_info` e `get_sales_philosophy` ou `get_support_philosophy`.
+    Execute o **"FLUXO DE DEFINIÇÃO DE ESTRATÉGIA"** detalhado em seu `backstory`. Analise os inputs, qualifique o cliente (se necessário), colete dados com a `knowledge_service_tool`, defina a estratégia, gere a `structured_message` e, crucialmente, popule o `disclosure_checklist` antes de atualizar o estado da conversa.
+    Use a `knowledge_service_tool` para obter todas as informações que precise, utilize a query em lote e envie tudo que precisar de uma só vez, sempre envie na query requisições para `get_company_info` e `get_sales_philosophy` ou `get_support_philosophy`.
     Popule de forma rica e estratégica o plano de conversação, incluindo insights poderosos, tópicos de apresentação, perguntas-chave, possíveis objeções e respostas, e a estratégia de apresentação do produto.
     Certifique-se de que o `disclosure_checklist` esteja completo e que a `communication_guidance` seja clara e específica.
     Nunca retire itens de `disclosure_checklist` apenas adicione, para termos total controle do que já foi esclarecido e o que ainda falta esclarecer, NUNCA adicione itens iguais.
@@ -456,21 +456,23 @@ collect_registration_data_task:
 
 summarize_history_task:
   description: |
-    Você é o HistorySummarizerAgent. Sua missão é processar o histórico bruto da conversa e criar uma estrutura de tópicos hierárquicos.
+    Você é o HistorySummarizerAgent. Sua missão é ATUALIZAR um resumo de histórico com novas mensagens.
 
-    **DADOS PARA SUA ANÁLISE:**
-    - **Histórico Bruto da Conversa:** `{raw_history}`
+    **DADOS PARA SUA ANÁLISE INCREMENTAL:**
     - **ID do Contato:** `{contact_id}`
+    - **Resumo Existente (pode ser nulo):** `{existing_summary}`
+    - **Novas Mensagens para Processar:** `{new_messages}`
+    - **Histórico Bruto Completo (APENAS PARA CONTEXTO DE ÍNDICES):** `{full_raw_history}`
 
     **SEU FLUXO DE TRABALHO:**
-    1.  Leia o histórico bruto e identifique os principais pontos de virada na conversa para definir os tópicos.
-    2.  Para cada tópico, crie um resumo conciso e extraia detalhes, entidades e sentimentos.
-    3.  Para cada tópico, forneça uma `quality_score` (0.0 a 1.0) e uma `reason`.
-    4.  Para cada tópico, inclua `start_index` e `end_index` do histórico bruto.
+    1.  Siga o "PROCESSO DE ATUALIZAÇÃO INCREMENTAL" detalhado em seu backstory.
+    2.  Se `existing_summary` for nulo, crie o resumo inicial a partir do zero, usando `new_messages`.
+    3.  Se houver um `existing_summary`, analise as `new_messages` para atualizar, estender ou criar novos tópicos.
+    4.  Lembre-se de que `start_index` e `end_index` em sua saída DEVEM corresponder aos índices do `full_raw_history`.
 
   expected_output: |
-    A JSON object containing just one key: `topic_details`.
-    - `topic_details`: A list of objects, where each object represents a topic with its `topic_id`, `title`, `summary`, `quality_score`, `reason`, `start_index`, `end_index`, `full_details`, `key_entities`, and `sentiment_trend`.
+    Um objeto JSON contendo a chave `topic_details`.
+    - `topic_details`: A lista COMPLETA e ATUALIZADA de objetos de tópico, incluindo os tópicos antigos, os que foram modificados e quaisquer novos tópicos criados. A estrutura de cada objeto de tópico permanece a mesma.
   
 
 clean_noisy_data_task:
