@@ -34,6 +34,9 @@ def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
     - Os parâmetros do tipo "search_term" podem ser qualquer informação relatada ao cliente/veículo que o sistema o encontrará, como nome, CPF, placa, etc.
     - Os parâmetros do tipo ID podem ser obtidos utilizando uma ação de busca "SEARCH_*"
     - Para relatórios use intervalos de data de até um dia atrás, pois o sistema backend pode falhar em intervalos longos, formato: YYYY-MM-DD HH:MM:SS.
+
+    Args:
+        queries (List[Dict[str, Any]]): Uma lista de dicionários contendo as queries.
     """
 
     # pre check

@@ -1,9 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import Literal, Type
-from crewai.tools import BaseTool
 from langchain_core.tools import tool
 import json
-from typing import Type, Any, Dict, List, Union
+from typing import Any, Dict, List
 
 from app.services.knowledge_service import knowledge_service_instance
 from app.services.redis_service import get_redis
@@ -13,14 +11,14 @@ redis_client = get_redis()
 logger = get_logger(__name__)
 
 
-@tool("KnowledgeServiceTool")
+@tool("knowledge_service_tool")
 def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
     """
     Use esta ferramenta para obter informações da base de conhecimento da Global System.
     Para máxima eficiência, agrupe múltiplas perguntas em uma única chamada.
     O input deve ser uma lista de dicionários de query.
 
-    **CARDÁPIO DE TÓPICOS VÁLIDOS PARA A `KnowledgeServiceTool`:**
+    **CARDÁPIO DE TÓPICOS VÁLIDOS PARA A `knowledge_service_tool`:**
         # INFORMAÇÕES GERAIS E ESTRATÉGICAS
         - **'get_company_info'**: Retorna informações básicas da empresa (CNPJ, endereço).
         - **'get_sales_philosophy'**: Retorna as diretrizes gerais de venda (fluxo, tom, princípios).
@@ -45,6 +43,9 @@ def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
         - **'application_features'**: Para detalhes e funcionalidades do aplicativo.
 
     Exemplo de chamada: [{'topic': 'pricing', 'params': {'plan_name': 'Plano Rastreamento Moto'}}]
+
+    Args:
+        queries (List[Dict[str, Any]]): Uma lista de dicionários contendo as queries.
     """
     if not isinstance(queries, list):
         return "Erro de formato: O input deve ser uma lista de dicionários de query."
