@@ -20,10 +20,10 @@ TRACKER_LINE_PROVIDER_NUMBER = os.getenv('TRACKER_LINE_PROVIDER_NUMBER', '551199
 TRACKER_LINE_PROVIDER_NUMBER2 = os.getenv('TRACKER_LINE_PROVIDER_NUMBER2', '558382334462')
 
 # Configurações do Redis
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
-REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
-REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
-REDIS_DB = int(os.getenv('REDIS_DB', 5))
+REDIS_HOST = os.getenv('REDIS_HOST_2', 'localhost')
+REDIS_PORT = int(os.getenv('REDIS_PORT_2', 6379))
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD_2')
+REDIS_DB = int(os.getenv('REDIS_DB_2', 5))
 
 
 # Nomes das chaves no Redis (usando o que você definiu)
@@ -32,7 +32,7 @@ REDIS_NUMBERS_TIME_HASH_KEY = 'numbers:time'
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-redis_client = get_redis(3)
+redis_client = get_redis(REDIS_DB, REDIS_HOST, REDIS_PORT, REDIS_PASSWORD)
 
 def get_callbell_headers():
     """Retorna os headers padrão para as requisições Callbell."""
