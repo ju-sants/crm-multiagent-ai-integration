@@ -35,10 +35,16 @@ def registration_task(contact_id: str):
 
         last_processed_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
 
+        conversation_state_dict = state.model_dump()
+
+        # State Distillation
+        conversation_state_dict.pop("strategic_plan", None)
+        conversation_state_dict.pop("disclosure_checklist", None)
+
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "turn": state.metadata.current_turn_number,
-            "conversation_state": state.model_dump_json(),
+            "conversation_state": json.dumps(conversation_state_dict),
             "client_message": "\n".join(last_processed_messages),
             "collected_data_so_far": user_data_so_far if user_data_so_far else "{}",
             "plan_details": plan_details if plan_details else "{}",

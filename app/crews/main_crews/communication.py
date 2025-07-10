@@ -152,15 +152,14 @@ def communication_task(self, contact_id: str):
         redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
         
         conversation_state = state.model_dump_json()
-        conversation_state = json.loads(conversation_state)
+        conversation_state: dict = json.loads(conversation_state)
         
-        if "strategic_plan" in conversation_state:
-            del conversation_state["strategic_plan"]
+        strategic_plan = conversation_state.pop("strategic_plan", None)
 
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "turn": state.metadata.current_turn_number,
-            "develop_strategy_task_output": json.dumps(state.strategic_plan),
+            "develop_strategy_task_output": json.dumps(strategic_plan),
             "system_operations_task_output": system_op_output if system_op_output else "{}",
             "profile_customer_task_output": str(redis_client.get(f"{contact_id}:customer_profile")),
             "conversation_state": str(conversation_state),

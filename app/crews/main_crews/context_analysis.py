@@ -38,9 +38,14 @@ def context_analysis_task(self, contact_id: str):
             for topic in history_summary.get("topic_details", [])
         ])
 
+        conversation_state_dict = state.model_dump()
+        
+        #State Distillation
+        conversation_state_dict.pop("disclosure_checklist", {})
+
         inputs = {
             "client_message": "\n".join(messages),
-            "conversation_state": state.model_dump_json(),
+            "conversation_state": json.dumps(conversation_state_dict),
             "history": history_messages,
             "turn": state.metadata.current_turn_number,
         }
