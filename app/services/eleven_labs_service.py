@@ -6,6 +6,7 @@ import re
 
 from app.config.settings import settings
 from app.utils.funcs.normalize_text_tts import apply_normalizations
+from app.services.cache_service import cache_result
 
 def host_audio(audio_bytes: bytes):
     audio_name = f'audio_eleven_agent_AI_{datetime.now().strftime("%Y%m%d%H%M%S")}.mp3'
@@ -16,9 +17,10 @@ def host_audio(audio_bytes: bytes):
         return f'https://api-data-automa-system-production.up.railway.app/download_doc/{audio_name}?path=docs&mimetype=mp3'
     else:
         return None
-
-
-def main(messages: List[str]):
+    
+    
+@cache_result(ttl=86400)  # Cache for 24 hours
+def get_audio_bytes(messages: List[str]):
     messages_str = '\n'.join(messages)
 
     messages_normalized = apply_normalizations(messages_str)
@@ -41,6 +43,12 @@ def main(messages: List[str]):
                 )
 
     audio_bytes = b''.join(audio)
+
+    return audio_bytes
+
+def main(messages: List[str]):
+    
+    audio_bytes = get_audio_bytes(messages)
 
     hosted_url = host_audio(audio_bytes)
     
