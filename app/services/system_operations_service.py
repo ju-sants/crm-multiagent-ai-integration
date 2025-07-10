@@ -10,6 +10,8 @@ from app.config.settings import settings
 from app.utils.funcs.reset_sending import process_reset_sending
 from app.services.google_maps_service import format_and_calculate_displacement_cost
 
+from app.services.callbell_service import create_conversation_note
+
 logger = get_logger(__name__)
 
 class SystemOperationsService:
@@ -296,55 +298,73 @@ class SystemOperationsService:
         """
         Associa um usuário do Callbell ao cliente atual.
         """
+        # --- Parameter Validation First ---
+        case = params.get("case")
+        if not case: raise ValueError("'case' é obrigatório.")
+
+        explanation = params.get("explanation")
+        if not explanation: raise ValueError("'explanation' é obrigatório.")
+
+        user_uuid = params.get("user_uuid")
+        if not user_uuid: raise ValueError("'user_uuid' é obrigatório.")
+
+        # --- Logic and API Call ---
+        user_to_assign = None
+        if case == "suporte":
+            user_to_assign = "suporte@suporte.com"
+        
+        url = f"https://api.callbell.eu/v1/contacts/{user_uuid}"
+        headers = {
+            "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        
+        payload = {"team_uuid": "37007bf389624d76b51534cc971c9ba3"}
+        if user_to_assign:
+            payload["assigned_user"] = user_to_assign
+            
         try:
-            case = params.get("case")
-            if not case: raise ValueError("'case' é obrigatório.")
-
-            explanation = params.get("explanation")
-            if not explanation: raise ValueError("'explanation' é obrigatório.")
-
-            user_uuid = params.get("user_uuid")
-            if not user_uuid: raise ValueError("'user_uuid' é obrigatório.")
-
-            user_to_assign = None
-            if case == "suporte":
-                user_to_assign = "suporte@suporte.com"
-            
-
-            url = f"https://api.callbell.eu/v1/contacts/{user_uuid}"
-
-            headers = {
-                "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            
-            payload = {"team_uuid": "37007bf389624d76b51534cc971c9ba3"}
-
-            if user_to_assign:
-                payload["assigned_user"] = user_to_assign
-            
-            
             response = requests.patch(url, json=payload, headers=headers)
             response.raise_for_status()
-            return response.json()
+
+            response_json = response.json()
+
+            if create_conversation_note(user_uuid, explanation):
+                logger.info(f"Nota de conversa criada com sucesso para o usuário {user_uuid}.")
+                response_json["added_note"] = True
+                response_json["note_content"] = explanation
+
+                return response_json
+            else:
+                logger.error(f"Erro ao criar nota de conversa para o usuário {user_uuid}.")
+                response_json["added_note"] = False
+                
+                return response_json
+
         
         except requests.exceptions.HTTPError as http_err:
             logger.error(f"Erro HTTP ao atribuir usuário: {http_err}")
             logger.error(f"Detalhes: {response.text}")
-            return {}
+            return {"fatal_error": "Erro desconhecido ao atribuir usuário.", "error_details": str(e)}
 
         except requests.exceptions.RequestException as req_err:
             logger.error(f"Erro de requisição ao atribuir usuário: {req_err}")
-            return {}
+            return {"fatal_error": "Erro desconhecido ao atribuir usuário.", "error_details": str(e)}
 
-        except ValueError as json_err: # Trata erro de decodificação do JSON
+        except ValueError as json_err: # Catches JSON decoding errors specifically
             logger.error(f"Erro ao decodificar JSON da resposta da API: {json_err}")
             logger.info(f"Conteúdo da resposta: {response.text if 'response' in locals() else 'Não disponível'}")
-            return {}
+            return {"fatal_error": "Erro desconhecido ao atribuir usuário.", "error_details": str(e)}
 
         except Exception as e:
             logger.error(f"Erro desconhecido ao atribuir usuário: {e}")
-            return {}
+            return {"fatal_error": "Erro desconhecido ao atribuir usuário.", "error_details": str(e)}
+        
+        except json.JSONDecodeError as json_err:
+            logger.error(f"Erro ao decodificar JSON da resposta da API: {json_err}")
+            logger.info(f"Conteúdo da resposta: {response.text if 'response' in locals() else 'Não disponível'}")
+            return {"fatal_error": "Erro desconhecido ao atribuir usuário.", "error_details": str(e), "response_text": response.text}
     
 
 
