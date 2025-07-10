@@ -2,8 +2,8 @@ from flask import Flask, jsonify, request
 import json
 import requests
 from datetime import datetime, timedelta
-
 import logging
+import time
 
 from app.services.celery_Service import celery_app
 from app.core.logger import get_logger
@@ -25,16 +25,17 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 app = Flask(__name__)
 apply_litellm_patch()
 redis_client = get_redis()
-redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
+# redis_client.flushdb()
+# exit()
+# redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
 # redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
 # redis_client.rpush("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 'voltou a funcionar corretamente, queria falar dos orçamentos')
 
 # print(redis_client.lrange("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 0, -1))
-# exit()
 # redis_client.flushdb()
 
 state_manager = StateManagerService()
-# state = state_manager.get_state("71464be80c504971ae263d710b39dd1f")
+
 # state.strategic_plan = None
 # state_manager.save_state("71464be80c504971ae263d710b39dd1f", state)
 
@@ -89,7 +90,7 @@ def process_audio_attachment_task(contact_uuid, url):
 def process_image_attachment_task(contact_uuid, url):
     logger.info(f"[{contact_uuid}] - Describing image from URL: {url}")
     description_json = client_description.describe_image(image_url=url)
-    description = description_json.get('data', {}).get('content')
+    description = description_json.get('data', {}).get('content', '')
     if description:
         message = f"(Descrição de imagem): {description}"
         redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', message)
@@ -112,10 +113,24 @@ def process_message_task(contact_uuid):
         return
 
     try:
-        contact_info_raw = redis_client.get(f"contact_info:{contact_uuid}")
+        for _ in range(5):
+            try:
+                contact_info_raw = redis_client.get(f"contact_info:{contact_uuid}")
+                if not contact_info_raw:
+                    logger.error(f"[{contact_uuid}] - Could not retrieve contact info from Redis. Retrying in 2 seconds...")
+                    time.sleep(2)
+                
+                else:
+                    break
+
+            except Exception as e:
+                logger.error(f"[{contact_uuid}] - Error retrieving contact info from Redis: {e}. Retrying in 2 seconds...")
+                time.sleep(2)
+                
         if not contact_info_raw:
             logger.error(f"[{contact_uuid}] - Could not retrieve contact info from Redis. Aborting task.")
             return
+        
         contact_info = json.loads(contact_info_raw)
         phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
         contact_name = contact_info.get("name", "")
