@@ -70,6 +70,39 @@ def process_history(history: Any, contact_id: str) -> str:
 
     return history_normalized
 
+def raw_history_to_messages(history: list, contact_id: str) -> str:
+    """Converts raw history to a string of messages."""
+    messages = []
+    for message in history:
+        if message.get("attachments"):
+            attachments = message.get("attachments", [])
+            if not attachments:
+                messages.append(f'{"Agente IA - " if message.get("status", "") == "sent" else "customer - "}' + f"'{message.get('text', '')}'")
+                continue
+
+            list_of_dicts = isinstance(attachments[0], dict)
+            for attachment in attachments:
+                raw_url = attachment.get("payload", {}).get('url', '') if list_of_dicts else attachment
+                if "audio_eleven_agent_AI" in raw_url:
+                    url = raw_url
+                else:
+                    url = raw_url.split('uploads/')[1].split('?')[0] if 'uploads/' in raw_url else ''
+
+                if url:
+                        mapped_attachments = redis_client.hgetall(f"{contact_id}:attachments")
+                        if mapped_attachments:
+                            attachment_text = mapped_attachments.get(url, "")
+                            if attachment_text:
+                                message["text"] = attachment_text
+                                del message["attachments"]
+
+                                messages.append(f'{"Agente IA - " if message.get("status", "") == "sent" else "customer - "}' + f"'{message.get('text', '')}'")
+        else:
+            if message.get("text"):
+                messages.append(f'{"Agente IA - " if message.get("status", "") == "sent" else "customer - "}' + f"'{message.get('text', '')}'")
+
+    return "\n".join([str(msg) for msg in messages])
+
 @celery_app.task(name='enrichment.history_summarizer')
 def history_summarizer_task(contact_id: str):
     """
@@ -103,14 +136,18 @@ def history_summarizer_task(contact_id: str):
         return f"No new messages to summarize for {contact_id}."
     
     new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("10/07/2025 14:56:00", "%d/%m/%Y %H:%M:%S")]
-    
-    new_messages_normalized = process_history(new_messages, contact_id)
-
+    messages_to_redis_upload = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("2025-07-10T18:41:41Z", "%Y-%m-%dT%H:%M:%SZ")]
+   
     # The full history for context is the combination of old and new
     raw_history_json = redis_client.get(f"history_raw:{contact_id}")
     raw_history = json.loads(raw_history_json) if raw_history_json else []
-    full_history = raw_history + new_messages_normalized
+    full_history = raw_history + messages_to_redis_upload
+    full_history = full_history[-15:]
     redis_client.set(f"history_raw:{contact_id}", json.dumps(full_history))
+
+    # Normalize the history
+    normalized_history = raw_history_to_messages(full_history, contact_id)
+    redis_client.set(f"history_raw_text:{contact_id}", normalized_history)
 
     agent = get_history_summarizer_agent()
     task = create_summarize_history_task(agent)
@@ -121,7 +158,7 @@ def history_summarizer_task(contact_id: str):
         "contact_id": contact_id,
         "existing_summary": json.dumps(existing_summary) if existing_summary else "null",
         "new_messages": json.dumps(new_messages),
-        "full_raw_history": json.dumps(full_history) # For context and cleaning tasks
+        "full_raw_history": json.dumps(full_history)
     }
     
     result = crew.kickoff(inputs=inputs)
