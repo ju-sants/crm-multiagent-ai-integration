@@ -10,7 +10,6 @@ from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
-from app.utils.funcs.funcs import process_history
 from app.crews.main_crews.communication import communication_task
 from app.crews.enrichment_crew import trigger_enrichment_pipeline
 
@@ -30,21 +29,11 @@ def system_operations_task(contact_id: str):
         llm_w_tools = decivise_openai_llm.bind_tools([system_operations_tool])
         agent = get_system_operations_agent(llm_w_tools)
         task = create_execute_system_operations_task(agent)
-        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
         profile = redis_client.get(f"{contact_id}:customer_profile")
 
-        history_raw = []
-        history_raw_messages = ""
-
-        try:
-            history_raw = json.loads(redis_client.get(f"history_raw:{contact_id}"))
-        except:
-            pass
-        
-        if history_raw:
-            history_raw = history_raw[:10]
-            history_raw_messages = process_history(history_raw, contact_id)
+        history_raw = redis_client.get(f"history_raw_text:{contact_id}")
 
         history_summary_json = redis_client.get(f"history:{contact_id}")
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
@@ -60,7 +49,7 @@ def system_operations_task(contact_id: str):
             "customer_profile": str(profile),
             "conversation_state": state.model_dump_json(),
             "history": history_summary_messages,
-            "history_raw": history_raw_messages,
+            "history_raw": str(history_raw),
             "client_message": "\n".join(last_processed_messages),
             "customer_name": state.metadata.contact_name,
         }
