@@ -11,7 +11,7 @@ from app.tools.knowledge_tools import knowledge_service_tool, drill_down_topic_t
 from app.tasks.tasks_declaration import create_develop_strategy_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
-from app.utils.funcs.funcs import parse_json_from_string, process_history
+from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
 
 logger = get_logger(__name__)
@@ -41,17 +41,7 @@ def strategy_task(self, contact_id: str):
         # Load the full customer profile for the agent
         profile = redis_client.get(f"{contact_id}:customer_profile")
         
-        history_raw = []
-        history_raw_messages = ""
-
-        try:
-            history_raw = json.loads(redis_client.get(f"history_raw:{contact_id}"))
-        except:
-            pass
-        
-        if history_raw:
-            history_raw = history_raw[:10]
-            history_raw_messages = process_history(history_raw, contact_id)
+        history_raw = redis_client.get(f"history_raw_text:{contact_id}")
 
         # Load summarized history
         history_summary_json = redis_client.get(f"history:{contact_id}")
@@ -64,7 +54,7 @@ def strategy_task(self, contact_id: str):
         inputs = {
             "contact_id": contact_id,
             "history": history_messages,
-            "history_raw": history_raw_messages,
+            "history_raw": str(history_raw),
             "conversation_state": state.model_dump_json(),
             "profile_customer_task_output": str(profile),
             "client_message": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
