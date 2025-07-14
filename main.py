@@ -16,6 +16,7 @@ from celery import chain
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
+from app.crews.enrichment_crew import raw_history_to_messages
 
 CALLBELL_API_KEY = settings.CALLBELL_API_KEY
 CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
@@ -27,7 +28,9 @@ apply_litellm_patch()
 redis_client = get_redis()
 # redis_client.flushdb()
 # exit()
-# redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
+redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
+
+# redis_client.rpop("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
 # redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
 # redis_client.rpush("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 'voltou a funcionar corretamente, queria falar dos orçamentos')
 
