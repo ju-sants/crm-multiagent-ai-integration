@@ -28,7 +28,7 @@ def registration_task(contact_id: str):
     try:
         agent = get_registration_agent()
         task = create_collect_registration_data_task(agent)
-        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
         user_data_so_far = redis_client.get(f"{contact_id}:user_data_so_far")
         plan_details = redis_client.get(f"{contact_id}:plan_details")
@@ -43,7 +43,6 @@ def registration_task(contact_id: str):
 
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "turn": state.metadata.current_turn_number,
             "conversation_state": json.dumps(conversation_state_dict),
             "client_message": "\n".join(last_processed_messages),
             "collected_data_so_far": user_data_so_far if user_data_so_far else "{}",
