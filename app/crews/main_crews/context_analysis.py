@@ -29,7 +29,7 @@ def context_analysis_task(self, contact_id: str):
         task = create_context_analysis_task(agent)
 
         # This crew is now very lightweight
-        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
         # The inputs are now derived from the state model
         messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
@@ -59,7 +59,6 @@ def context_analysis_task(self, contact_id: str):
             "client_message": "\n".join(messages),
             "conversation_state": json.dumps(conversation_state_dict),
             "history": history_messages,
-            "turn": state.metadata.current_turn_number,
         }
 
         result = crew.kickoff(inputs=inputs)
