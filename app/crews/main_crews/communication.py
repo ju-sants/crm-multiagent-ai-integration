@@ -14,7 +14,6 @@ from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
 from app.services.eleven_labs_service import main as eleven_labs_service
-from app.utils.funcs.funcs import process_history
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
@@ -123,20 +122,10 @@ def communication_task(self, contact_id: str):
         llm_w_tools = creative_openai_llm.bind_tools([drill_down_topic_tool])
         agent = get_communication_agent(llm_w_tools)
         task = create_communication_task(agent)
-        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
-        history_raw = []
-        history_raw_messages = ""
-
-        try:
-            history_raw = json.loads(redis_client.get(f"history_raw:{contact_id}"))
-        except:
-            pass
-        
-        if history_raw:
-            history_raw = history_raw[:10]
-            history_raw_messages = process_history(history_raw, contact_id)
-
+        # Process inputs
+        history_raw = redis_client.get(f"history_raw_text:{contact_id}")
 
         history_summary_json = redis_client.get(f"history:{contact_id}")
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
@@ -159,15 +148,14 @@ def communication_task(self, contact_id: str):
 
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "turn": state.metadata.current_turn_number,
-            "develop_strategy_task_output": json.dumps(strategic_plan),
+            "strategic_plan": json.dumps(strategic_plan),
             "system_operations_task_output": system_op_output if system_op_output else "{}",
-            "profile_customer_task_output": str(redis_client.get(f"{contact_id}:customer_profile")),
+            "customer_profile": str(redis_client.get(f"{contact_id}:customer_profile")),
             "conversation_state": str(conversation_state),
             "history": history_summary_messages,
-            "history_raw": history_raw_messages,
+            "history_raw": str(history_raw),
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
-            "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]) if not disclosure_checklist else disclosure_checklist,
+            "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]) if not disclosure_checklist else str(disclosure_checklist),
             "client_message": "\n".join(last_processed_messages),
         }
 
