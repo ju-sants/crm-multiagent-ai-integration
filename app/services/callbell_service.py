@@ -55,7 +55,7 @@ def send_callbell_message(phone_number: str, messages: str = None, type: str = N
                     "type": "text",
                     "channel_uuid": "b3501c231325487086646e19fc647b0d",
                     "content": {
-                        "text": message
+                        "text": f"Alessandro Assistente Global:\n{message}"
                     },
                     "fields": "conversation,contact",
                     "assigned_user": "alessandro-ia@alessandro-ia.com"
