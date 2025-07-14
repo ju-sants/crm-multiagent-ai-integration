@@ -65,6 +65,7 @@ class ConversationState(BaseModel):
     is_plan_acceptable: bool = False
     budget_accepted: bool = False
     pending_system_operation: Optional[str] = None
+    topics_at_this_turn: List[str] = []
 
 # --- Models for Customer Profile ---
 
