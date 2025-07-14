@@ -24,7 +24,6 @@ context_analysis_task:
           {client_message}
       - `history`: 
           {history}
-      - `turn`: {turn}
     </INPUT_DATA>
   expected_output: |
     {
@@ -119,7 +118,7 @@ develop_strategy_task:
 execute_system_operations_task:
   description: |
     <INSTRUCOES>
-      1.  **Executar Lógica Principal:** Siga rigorosamente o `<LOGIC_FLOW>` e as `<RULES>` definidos em seu `backstory` para processar a `{action_requested}`.
+      1.  **Executar Lógica Principal:** Siga rigorosamente o `<LOGIC_FLOW>` e as `<RULES>` definidos em seu `backstory` para processar a `{{action_requested}}`.
       2.  **Analisar Inputs:** Utilize os dados fornecidos na seção `<DADOS>` para obter os parâmetros necessários para suas `queries`.
       3.  **Gerar Saída:** Formate sua resposta final como um único objeto JSON, seguindo ESTRITAMENTE a estrutura definida em `expected_output`. A `synthesis` e `message_to_user` devem ser em Português do Brasil.
     </INSTRUCOES>
@@ -158,17 +157,24 @@ communication_task:
   description: |
     <INSTRUCOES>
       1.  **Executar Lógica Principal:** Siga rigorosamente o `<LOGIC_FLOW>` e as `<RULES>` definidos em seu `backstory`. Lembre-se, seu objetivo é uma conversa natural, criativa e concisa.
-      2.  **Analisar Inputs:** Utilize os dados da seção `<DADOS>`, com foco principal no `develop_strategy_task_output` (o dossiê).
+      2.  **Analisar Inputs:** Utilize os dados da seção `<DADOS>`, com foco principal no `strategic_plan` (o dossiê).
       3.  **Gerar Saída:** Construa o JSON de saída, seguindo ESTRITAMENTE a estrutura e a qualidade do exemplo em `expected_output`. A `messages_sequence` deve ser uma conversa natural, fluida e em Português do Brasil.
     </INSTRUCOES>
 
     <DADOS>
-      - `develop_strategy_task_output`: 
-          {develop_strategy_task_output}
-      - `system_operations_task_output`: 
+      - `timestamp`: {timestamp}
+      - `strategic_plan`: 
+          {strategic_plan}
+      - `Operações de Sistema`: 
           {system_operations_task_output}
       - `conversation_state`: 
           {conversation_state}
+      - `customer_profile`:
+          {customer_profile}
+      - `history`:
+          {history}
+      - `history_raw`:
+          {history_raw}
       - `disclosure_checklist`: 
           {disclosure_checklist}
       - `recently_sent_catalogs`: 
@@ -218,43 +224,24 @@ communication_task:
 
 collect_registration_data_task:
   description: |
-    Você é o **RegistrationDataCollectorAgent**. Sua missão é continuar o processo de coleta de dados cadastrais.
+    <INSTRUCOES>
+      1.  **Executar Lógica Principal:** Siga o `<LOGIC_FLOW>` e as `<RULES>` definidos em seu `backstory`.
+      2.  **Analisar Inputs:** Utilize os dados da seção `<DADOS>` para conduzir a coleta.
+      3.  **Gerar Saída:** Construa o JSON de saída, seguindo ESTRITAMENTE a estrutura de `expected_output`. A `next_message_to_send` deve ser uma pergunta clara e empática em Português do Brasil.
+    </INSTRUCOES>
 
-    Timestamp: "{timestamp}"
-    Now Turn: "{turn}"
-    
-    **DADOS PARA SUA ANÁLISE:**
-    - **Estado da Conversa (Seu Contexto):** # Use para personalizar a conversa (ex: usar o nome do cliente de `entities_extracted`) e para entender o ponto em que a coleta parou. 
-    
-    `{conversation_state}`
-      
-    - **Última Mensagem do Cliente (Sua Resposta):** 
-    
-    "{client_message}"
-    
-    - **Dados Já Coletados (Seu Progresso):** 
-    
-    `{collected_data_so_far}`
-      # Um objeto JSON que você mesmo está construindo turno a turno.
-    
-    - **Detalhes do Plano Contratado:** "{plan_details}"
+    <DADOS>
+      - `timestamp`: {timestamp}
+      - `conversation_state`: 
+            {conversation_state}
+      - `client_message`: 
+            {client_message}
+      - `collected_data_so_far`: 
+            {collected_data_so_far}
+      - `plan_details`: 
+            {plan_details}
+    </DADOS>
 
-    **SEU FLUXO DE TRABALHO:**
-    **SEU PROCESSO DE COLETA DE DADOS (AGRUPADO):**
-    1.  **Analise a mensagem do cliente:** para extrair as respostas do cliente.
-    2.  **Atualize o objeto `{collected_data_so_far}`** com os novos dados.
-    3.  **Verifique os dados que ainda faltam e formule a próxima pergunta em blocos maiores para agilizar.**
-        - **BLOCO 1 (Identificação):** Peça `tipo_cadastro`, `nome_tomador_servico` e `documento_numero` juntos, após saber se é CPF ou CNPJ.
-        - **BLOCO 2 (Localização e Contato):** Peça `endereco_completo`, `cep`, `telefone_principal` com WhatsApp e `email` juntos.
-        - **BLOCO 3 (Veículo e Preferências):** Peça os dados do veículo (`placa`, `marca`, `modelo`) e o `dia_vencimento_mensalidade` juntos.
-    4.  **Valide as Informações:** Ao receber o dia de vencimento, certifique-se de que seja um dos dias permitidos: **1, 5, 10, 15, 20 ou 25**. Se o cliente sugerir outro dia, informe gentilmente as opções disponíveis.
-    5.  **Finalização:** Quando todos os dados obrigatórios forem coletados, sua tarefa principal é definir o `"status": "COLLECTION_COMPLETE"` na sua saída.
-    6.  **Atualize e Retorne:** Prepare o `task_output` com o status e os dados da coleta, e retorne o `{conversation_state}` atualizado.
-
-
-    Retorne APENAS um objeto JSON, seguindo EXATAMENTE a estrutura do exemplo em `expected_output`.
-    NÃO adicione comentários no JSON final.
-    o `excpected_output` é um exemplo de saída esperada.
   expected_output: |
     {
       "task_output": {
@@ -291,153 +278,177 @@ collect_registration_data_task:
 
 summarize_history_task:
   description: |
-    Você é o HistorySummarizerAgent. Sua missão é ATUALIZAR um resumo de histórico com novas mensagens.
+    <INSTRUCTIONS>
+      1.  **Execute Logic:** Follow the `<LOGIC_FLOW>` and `<RULES>` from your backstory.
+      2.  **Analyze Inputs:** Use the data from the `<DATA>` section.
+      3.  **Generate Output:** Format your response as a single JSON object containing the `topic_details` key, as defined in the `expected_output`.
+    </INSTRUCTIONS>
 
-    **DADOS PARA SUA ANÁLISE INCREMENTAL:**
-    - **ID do Contato:** `{contact_id}`
-    - **Resumo Existente (pode ser nulo):** `{existing_summary}`
-    - **Novas Mensagens para Processar:** `{new_messages}`
-    - **Histórico Bruto Completo (APENAS PARA CONTEXTO DE ÍNDICES):** `{full_raw_history}`
-
-    **SEU FLUXO DE TRABALHO:**
-    1.  Siga o "PROCESSO DE ATUALIZAÇÃO INCREMENTAL" detalhado em seu backstory.
-    2.  Se `existing_summary` for nulo, crie o resumo inicial a partir do zero, usando `new_messages`.
-    3.  Se houver um `existing_summary`, analise as `new_messages` para atualizar, estender ou criar novos tópicos.
-    4.  Lembre-se de que `start_index` e `end_index` em sua saída DEVEM corresponder aos índices do `full_raw_history`.
-
+    <DATA>
+      - `contact_id`: 
+          {contact_id}
+      - `existing_summary`: 
+          {existing_summary}
+      - `new_messages`: 
+          {new_messages}
+      - `full_raw_history`: 
+          {full_raw_history}
+    </DATA>
   expected_output: |
-    Um objeto JSON contendo a chave `topic_details`.
-    - `topic_details`: A lista COMPLETA e ATUALIZADA de objetos de tópico, incluindo os tópicos antigos, os que foram modificados e quaisquer novos tópicos criados. A estrutura de cada objeto de tópico permanece a mesma.
-  
+    {
+      "topic_details": [
+        {
+          "title": "<Concise topic title>",
+          "summary": "<A brief summary of the topic>",
+          "full_details": "<A more detailed, narrative version of the topic>",
+          "start_index": "<Integer mapping to full_raw_history>",
+          "end_index": "<Integer mapping to full_raw_history>",
+          "quality_score": "<A score from 0.0 to 1.0>",
+          "is_noisy": "<boolean>"
+        }
+      ],
+      "sentiment_trend": "<A explanation of the sentiment trend>"
+    }
 
 clean_noisy_data_task:
   description: |
-    Você é o DataQualityAgent. Sua missão é limpar um tópico de conversa marcado como ruidoso.
+    <INSTRUCTIONS>
+      1.  **Execute Logic:** Follow the `<LOGIC_FLOW>` and `<RULES>` from your backstory.
+      2.  **Analyze Inputs:** Use the data from the `<DATA>` section, focusing on the `{{raw_history_snippet}}`.
+      3.  **Generate Output:** Format your response as a single JSON object with the keys `cleaned_summary` and `cleaned_details`.
+    </INSTRUCTIONS>
 
-    **DADOS PARA SUA ANÁLISE:**
-    - **ID do Contato:** `{contact_id}`
-    - **ID do Tópico:** `{topic_id}`
-    - **Trecho do Histórico Bruto Relevante (Seu Foco):** `{raw_history_snippet}`
-    - **Histórico Bruto Completo (Seu Contexto):** `{full_raw_history}`
-
-    **SEU FLUXO DE TRABALHO:**
-    1.  Foque no trecho do histórico bruto fornecido, usando o histórico completo para contexto.
-    2.  Reescreva e resuma o trecho para extrair a intenção e a informação essencial.
+    <DATA>
+      - `contact_id`: 
+          {contact_id}
+      - `topic_id`: 
+          {topic_id}
+      - `raw_history_snippet`: 
+          {raw_history_snippet}
+      - `full_raw_history`: 
+          {full_raw_history}
+    </DATA>
   expected_output: |
-    A JSON object with two keys: `cleaned_summary` and `cleaned_details`.
-    - `cleaned_summary`: A string with the corrected summary.
-    - `cleaned_details`: A string with the corrected full details.
+    {
+      "cleaned_summary": "<The rewritten, concise summary of the noisy topic>",
+      "cleaned_details": "<The rewritten, clear, and detailed narrative of the noisy topic>"
+    }
 
 summarize_state_task:
   description: |
-    Você é o **Analista de Evolução de Conversa**. Sua tarefa é executar o processo analítico definido em seu backstory para produzir um `updated_state` rico em insights.
+    <INSTRUCOES>
+      1.  **Executar Lógica de Qualidade:** Siga rigorosamente o `<LOGIC_FLOW>` e as `<RULES>` de seu `backstory` para atuar como o "Curador de Qualidade do Estado".
+      2.  **Analisar Inputs:** Utilize os dados da seção `<DADOS>` para sua análise comparativa.
+      3.  **Gerar Saída:** Construa um único objeto JSON (`updated_state`) que siga PERFEITAMENTE o schema `ConversationState` definido em `expected_output`.
+    </INSTRUCOES>
 
-    ---
+    <DADOS>
+      - `last_turn_state`: 
+          {last_turn_state}
+      - `history_summary`: 
+          {history_summary}
+      - `client_message`: 
+          {client_message}
+    </DADOS>
+  expected_output: |
+      {
+        "metadata": {
+          "contact_id": "<string>",
+          "current_turn_number": "<integer>",
+          "last_updated": "<string: ISO 8601 format>",
+          "phone_number": "<string>",
+          "contact_name": "<string>"
+        },
+        "communication_preference": {
+          "prefers_audio": "<boolean>",
+          "reason": "<string>"
+        },
+        "session_summary": "<Seu novo resumo da sessão que destaca a evolução da conversa>",
+        "entities_extracted": [
+          {
+            "entity": "<string>",
+            "value": "<any>",
+            "turn": "<integer>"
+          }
+        ],
+        "products_discussed": [
+          {
+            "plan_name": "<string>",
+            "details_provided": ["<array de strings>"],
+            "presented_at_turn": "<integer>"
+          }
+        ],
+        "disclosure_checklist": [
+          {
+            "item_id": "<string>",
+            "topic": "<string>",
+            "content": "<string>",
+            "status": "<'pending' ou 'communicated'>"
+          }
+        ],
+        "strategic_plan": "<Objeto JSON ou null - DEVE SER PASSADO INTACTO>",
+        "system_operation_status": "<string ou null>",
+        "system_action_request": "<string ou null>",
+        "identified_topic": "<string ou null>",
+        "operational_context": "<string ou null>",
+        "user_sentiment_history": [
+          {
+            "sentiment": "<string>",
+            "turn": "<integer>"
+          }
+        ],
+        "is_plan_acceptable": "<boolean>",
+        "budget_accepted": "<boolean>",
+        "pending_system_operation": "<string ou null>",
+        "topics_at_this_turn": ["<array de strings>"]
+      }
 
-    **DADOS PARA SUA ANÁLISE COMPARATIVA:**
-    - **Estado do Último Turno (O Presente):** 
-    
-    `{last_turn_state}`
-
-    - **Resumo do Histórico (O Passado):** 
-    
-    `{history_summary}`
-
-    - **Mensagem do Último Turno:**
-
-    `{client_message}`
-
-    ---
-
-    **SEU FLUXO DE TRABALHO ANALÍTICO:**
-    1.  **Execute a ANÁLISE COMPARATIVA:** Conforme seu backstory, compare o histórico com o último turno para identificar deltas, como mudanças de intenção, sentimento ou foco.
-    2.  **Execute a GERAÇÃO DE INSIGHTS:** Com base na sua análise, enriqueça o estado. Crie um `session_summary` que destaque a evolução da conversa e adicione novos metadados (ex: `intent_shift: true`, `new_concerns_raised: true`) se aplicável.
-    3.  **Construa o `updated_state`:** Monte o objeto de estado final, garantindo que ele inclua todos os dados originais, mais os novos insights e metadados que você gerou. Lembre-se da regra de imutabilidade do `strategic_plan` e de `disclosure_checklist`.
-  expected_output: "Um objeto JSON completo e enriquecido que segue estritamente a estrutura do modelo ConversationState. O objeto deve conter não apenas os dados fundidos, mas também os novos metadados e insights gerados a partir da sua análise comparativa."
 
 enhance_profile_task:
   description: |
-    Você é o **Arquiteto de Inteligência do Cliente**. Sua missão é executar o processo criativo detalhado em seu backstory para forjar o "Client 360° Blueprint".
+    <INSTRUCOES>
+      1.  **Executar Lógica Criativa:** Siga o `<LOGIC_FLOW>` e as `<RULES>` de seu `backstory` para atuar como o "Biógrafo Estrategista".
+      2.  **Analisar Inputs:** Utilize os dados da seção `<DADOS>` para sua análise profunda.
+      3.  **Gerar Saída:** Construa um único objeto JSON chamado `client_360_blueprint`, seguindo ESTRITAMENTE a estrutura e a qualidade do exemplo em `expected_output`. O conteúdo deve ser em Português do Brasil.
+    </INSTRUCOES>
 
-    ---
-    **DADOS PARA SUA ANÁLISE PROFUNDA:**
-    - **Resumo do Histórico (A Jornada Passada):** `{history_summary}`
-    - **Estado do Último Turno (O Momento Presente):** `{last_turn_state}`
-    - **Perfil Existente (A Memória de Longo Prazo):** `{existing_profile}`
-    - **Mensagem do Cliente (O Gatilho Atual):** `{client_message}`
-    ---
-
-    **SEU FLUXO DE TRABALHO CRIATIVO:**
-    1.  **Construa a Identidade do Cliente:** Capture os dados básicos e, mais importante, o estilo de comunicação observado.
-    2.  **Escreva a História Até Agora:** Crie um `executive_summary` narrativo e uma `interaction_timeline` com os momentos cruciais.
-    3.  **Mergulhe na Mente do Cliente:** Vá além do óbvio. Infira as `primary_motivations`, `known_frustrations` e `key_interests` que definem o perfil psicológico do cliente.
-    4.  **Defina a Missão Atual:** Qual é o `immediate_goal`? Quais `pending_quests` existem? E quais `information_gaps` precisamos preencher?
-    5.  **Desenhe o Playbook Estratégico:** Forneça um `recommended_next_move` claro, um `conversation_path` sugerido, `potential_pitfalls` a serem evitados e `golden_opportunities` para encantar ou avançar na negociação.
-    6.  **Sua saída final DEVE SER um único objeto JSON chamado `client_360_blueprint`**, seguindo o exemplo espetacular abaixo.
+    <DADOS>
+      - `history_summary`: {history_summary}
+      - `last_turn_state`: {last_turn_state}
+      - `existing_profile`: {existing_profile}
+      - `client_message`: {client_message}
+    </DADOS>
 
   expected_output: |
-    {
-      "client_360_blueprint": {
-        "client_identity": {
-          "contact_id": "71464be80c504971ae263d710b39dd1f",
-          "contact_name": "Juan - Desenvolvimento",
-          "phone_number": "555198906538",
-          "communication_style": "Prefere texto, direto ao ponto, usa mensagens curtas e pode ser impaciente se a solução demorar."
-        },
-        "the_story_so_far": {
-          "executive_summary": "Juan é um cliente tecnicamente inclinado que gerencia múltiplos veículos e está avaliando a Global System para uma possível parceria de frota. Ele demonstrou forte interesse em funcionalidades avançadas e no 'Plano Proteção Total PGS'. O ponto de bloqueio atual é um problema não especificado em nosso aplicativo, que interrompeu uma negociação de orçamento em andamento. A resolução deste problema técnico é a chave para reconquistar sua confiança e reabrir a oportunidade de negócio.",
-          "interaction_timeline": [
-            { "date": "2025-06-26", "event": "Primeiro contato, interesse no Plano PGS e verificação do status do seu dispositivo atual." },
-            { "date": "2025-06-27", "event": "Solicitou um orçamento para múltiplos veículos, indicando um potencial de frota." },
-            { "date": "2025-06-28", "event": "Listou funcionalidades de aplicativo que considera essenciais, como relatórios e geofencing." },
-            { "date": "2025-06-30", "event": "Relatou, de forma sucinta ('?'), um problema no aplicativo, pausando todas as outras discussões." }
-          ]
-        },
-        "clients_mindset": {
-          "primary_motivations": [
-            "Eficiência operacional através de tecnologia (app e relatórios).",
-            "Segurança dos ativos (interesse em bloqueio, monitoramento e reembolso FIPE).",
-            "Custo-benefício para uma frota de veículos."
-          ],
-          "known_frustrations": [
-            "Aplicativos que não funcionam como esperado.",
-            "Respostas lentas ou genéricas para problemas técnicos."
-          ],
-          "key_interests": [
-            "Plano Proteção Total PGS",
-            "Funcionalidades avançadas do aplicativo (geofencing, relatórios, etc.)",
-            "Orçamento para múltiplos veículos."
-          ]
-        },
-        "current_mission": {
-          "immediate_goal": "Resolver o problema que está enfrentando no aplicativo.",
-          "pending_quests": [
-            "Receber um orçamento competitivo para sua frota de veículos.",
-            "Entender a fundo os benefícios e custos dos planos oferecidos."
-          ],
-          "information_gaps": [
-            "Qual é o problema exato no aplicativo (mensagem de erro, ação que falha)?",
-            "Detalhes dos veículos da frota (tipo, modelo, ano) para o orçamento."
-          ]
-        },
-        "strategic_playbook": {
-          "recommended_next_move": "Focar 100% em diagnosticar o problema do aplicativo. Fazer perguntas diretas e claras para obter os detalhes necessários.",
-          "conversation_path": [
-            "1. Mostre empatia e urgência em resolver o problema do app.",
-            "2. Faça as perguntas de diagnóstico (erro, versão do app, SO).",
-            "3. Ofereça uma solução ou escale para o suporte técnico.",
-            "4. APENAS APÓS a resolução (ou encaminhamento claro), retome suavemente o tópico do orçamento pendente."
-          ],
-          "potential_pitfalls": [
-            "Ignorar o problema do app e tentar vender.",
-            "Dar respostas genéricas de 'reinstale o app' sem diagnóstico.",
-            "Demorar para responder, aumentando sua frustração."
-          ],
-          "golden_opportunities": [
-            "Resolver o problema rapidamente para demonstrar eficiência e ganhar confiança.",
-            "Usar o gancho do orçamento da frota para reengajar após a solução do problema.",
-            "Oferecer uma demonstração das funcionalidades do app que ele valoriza assim que o problema for resolvido."
-          ]
+      {
+        "client_360_blueprint": {
+          "client_identity": {
+            "contact_id": "<string>",
+            "contact_name": "<string>",
+            "phone_number": "<string>",
+            "communication_style": "Ex: Prefere texto, direto ao ponto, usa mensagens curtas."
+          },
+          "the_story_so_far": {
+            "executive_summary": "Resumo narrativo da jornada do cliente com a empresa, destacando pontos de virada e estado atual.",
+            "interaction_timeline": [
+              { "date": "<string: YYYY-MM-DD>", "event": "Evento crucial da interação." }
+            ]
+          },
+          "clients_mindset": {
+            "primary_motivations": ["<Array de motivações inferidas, ex: 'Eficiência operacional', 'Segurança dos ativos'>"],
+            "known_frustrations": ["<Array de frustrações conhecidas, ex: 'Aplicativos que não funcionam'>"],
+            "key_interests": ["<Array de interesses chave, ex: 'Plano Proteção Total PGS'>"]
+          },
+          "current_mission": {
+            "immediate_goal": "O objetivo claro e imediato da conversa atual.",
+            "pending_quests": ["<Array de objetivos maiores e não resolvidos, ex: 'Receber um orçamento de frota'>"],
+            "information_gaps": ["<Array de informações que precisam ser coletadas, ex: 'Qual o problema exato no app?'>"]
+          },
+          "strategic_playbook": {
+            "recommended_next_move": "A próxima ação mais inteligente e recomendada.",
+            "conversation_path": ["<Array de passos para guiar a conversa>"],
+            "potential_pitfalls": ["<Array de armadilhas a serem evitadas>"],
+            "golden_opportunities": ["<Array de oportunidades para encantar o cliente ou avançar na negociação>"]
+          }
         }
       }
-    }
