@@ -155,34 +155,3 @@ def parse_json_from_string(json_string, update=True):
         return task_output, updated_state
     else:
         return json_response
-
-
-def process_history(history: list, contact_id: str) -> str:
-    """Processes the message history and returns a formatted string."""
-    history_messages = ''
-    if history:
-        for message in reversed(history):
-            if message.get("text"):
-                history_messages += f'{"AI" if "Alessandro" in str(message.get("text", "")) else "collaborator" if not message.get("status", "") == "received" else "customer"} - {message.get("text")}\n'
-            elif message.get("attachments"):
-                attachments = message.get("attachments", [])
-                if not attachments:
-                    continue
-
-                list_of_dicts = isinstance(attachments[0], dict)
-
-                for attachment in attachments:
-                    raw_url = attachment.get("payload", {}).get('url', '') if list_of_dicts else attachment
-
-                    if "audio_eleven_agent_AI" in raw_url:
-                        url = raw_url
-                    else:
-                        url = raw_url.split('uploads/')[1].split('?')[0] if 'uploads/' in raw_url else ''
-
-                    if url:
-                        mapped_attachments = redis_client.hgetall(f"{contact_id}:attachments")
-                        if mapped_attachments:
-                            attachment_text = mapped_attachments.get(url, "")
-                            if attachment_text:
-                                history_messages += f'{"AI" if message.get("status", "") == "sent" and "audio_eleven_agent_AI" in url else "collaborator" if not message.get("status", "") == "received" else "customer"} - {attachment_text}\n'
-    return history_messages

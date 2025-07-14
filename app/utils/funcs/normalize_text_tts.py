@@ -528,16 +528,10 @@ def normalize_symbols_for_tts(text: str) -> str:
     return text
 
 def normalize_words_for_tts(text: str) -> str:
-    words_to_replace = {
-        'WI-FI': 'wifi',
-        'wi-fi': 'wifi',
-        'wi fi': 'wifi',
-    }
+    return re.sub(r'wi\s*[-\s]\s*fi', 'wifi', text, flags=re.IGNORECASE)
 
-    for word, replacement in words_to_replace.items():
-        text = text.replace(word, replacement)
-    
-    return text
+def normalize_bar_for_tts(text: str) -> str:
+    return re.sub(r'\b\w+\/\w+\b', lambda m: m.group().replace('/', ' e '), text)
 
 def apply_normalizations(text: str) -> str:
     """
@@ -552,6 +546,6 @@ def apply_normalizations(text: str) -> str:
     # 2. Símbolos e palavras
     text = normalize_symbols_for_tts(text)
     text = normalize_words_for_tts(text)
+    text = normalize_bar_for_tts(text)
 
-    # 3. Adicionar novas normalizações aqui, considerando a ordem
     return text
