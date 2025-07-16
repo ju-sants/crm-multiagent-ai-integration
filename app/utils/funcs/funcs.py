@@ -112,15 +112,11 @@ def padronizar_telefone(telefone):
         return None
 
 
-def parse_json_from_string(json_string, update=True):
+def parse_json_from_string(json_string: str, update=True) -> tuple[None, None] | tuple[dict, dict] | dict | None:
     """
     Parses a JSON object from a string, attempting to fix common LLM syntax errors.
     This function is designed to be robust against malformed JSON from language models.
     """
-    if not isinstance(json_string, str):
-        logger.warning("Input is not a string, returning None.")
-        return (None, None) if update else None
-
     processed_string = re.sub(r'```json\s*|\s*```', '', json_string.strip())
     
     match = re.search(r'\{.*\}', processed_string, re.DOTALL)
