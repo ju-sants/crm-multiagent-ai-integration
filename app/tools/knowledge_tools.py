@@ -47,6 +47,8 @@ def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
     Args:
         queries (List[Dict[str, Any]]): Uma lista de dicionários contendo as queries.
     """
+    logger.info(f"--- KNOWLEDGE SERVICE TOOL CALLED with queries: {queries} ---")
+
     if not isinstance(queries, list):
         return "Erro de formato: O input deve ser uma lista de dicionários de query."
 
@@ -64,16 +66,16 @@ def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
 
 
 class DrillDownTopicToolInput(BaseModel):
-    """Input schema for DrillDownTopicTool."""
+    """Input schema for drill_down_topic_tool."""
     contact_id: str = Field(..., description="The unique ID of the contact, essential for locating the correct history.")
     topic_id: str = Field(..., description="The specific ID of the topic you need to drill down into for more details.")
 
-@tool("DrillDownTopicTool", args_schema=DrillDownTopicToolInput, description="Use this tool to get the full, detailed context for a specific topic of conversation that has already been summarized. This provides deeper insights than the high-level summary.")
+@tool("drill_down_topic_tool", args_schema=DrillDownTopicToolInput, description="Use this tool to get the full, detailed context for a specific topic of conversation that has already been summarized. This provides deeper insights than the high-level summary.")
 def drill_down_topic_tool(contact_id: str, topic_id: str) -> str:
     """
     Fetches detailed information for a specific conversation topic from Redis.
     """
-    logger.info(f"[{contact_id}] - Executing DrillDownTopicTool for topic: {topic_id}")
+    logger.info(f"[{contact_id}] - Executing drill_down_topic_tool for topic: {topic_id}")
     try:
         details_key = f"history:topic_details:{contact_id}:{topic_id}"
         topic_details_json = redis_client.get(details_key)
@@ -88,5 +90,5 @@ def drill_down_topic_tool(contact_id: str, topic_id: str) -> str:
         return topic_details_json
 
     except Exception as e:
-        logger.error(f"[{contact_id}] - Error in DrillDownTopicTool for topic {topic_id}: {e}", exc_info=True)
+        logger.error(f"[{contact_id}] - Error in drill_down_topic_tool for topic {topic_id}: {e}", exc_info=True)
         return json.dumps({"error": "An unexpected error occurred while fetching topic details."})

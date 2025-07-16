@@ -3,6 +3,9 @@ from typing import List, Dict, Any
 
 
 from app.services.system_operations_service import system_operations_service
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
 
 @tool("system_operations_tool")
 def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
@@ -38,6 +41,7 @@ def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
     Args:
         queries (List[Dict[str, Any]]): Uma lista de dicionários contendo as queries.
     """
+    logger.info(f"Received queries: {queries}")
 
     # pre check
     if not isinstance(queries, list):
@@ -51,7 +55,7 @@ def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
     
     results = {}
     for query in queries:
-        action_type = query.get("action_type")
+        action_type = query.get("action_type", "")
         params = query.get("params", {})
         result = system_operations_service.execute(action_type, params)
         
