@@ -103,7 +103,6 @@ develop_strategy_task:
       "updated_state": {
         "disclosure_checklist": [
           {
-            "item_id": "<id_unico_do_item>",
             "topic": "<Tópico do termo a ser esclarecido>",
             "content": "<Conteúdo exato do termo obtido da base de conhecimento>",
             "status": "pending"
