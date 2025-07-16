@@ -1,22 +1,38 @@
 from flask import Flask, jsonify, request
 import json
 import requests
+
 from datetime import datetime, timedelta
-import logging
+from structlog.stdlib import BoundLogger
 import time
 
-from app.services.celery_service import celery_app
+from celery import chain
+from celery import signals
+
+# Importações locais
 from app.core.logger import get_logger
+
 from app.config.settings import settings
 from app.config.patches import apply_litellm_patch
+
+from app.services.celery_service import celery_app
 from app.services.state_manager_service import StateManagerService
-from app.crews.main_crews.context_analysis import context_analysis_task
-from app.crews.main_crews.routing import routing_task
-from celery import chain
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
-from app.crews.enrichment_crew import raw_history_to_messages
+
+from app.crews.main_crews.context_analysis import context_analysis_task
+from app.crews.main_crews.routing import routing_task
+
+
+
+@signals.worker_ready.connect
+def on_worker_ready(sender, **kwargs):
+    get_logger(__name__).info(f"Celery worker ready: {sender.hostname}")
+
+@signals.worker_shutdown.connect
+def on_worker_shutdown(sender, **kwargs):
+    get_logger(__name__).warning(f"Celery: Worker {getattr(sender, 'hostname', 'unknown')} is shutting down.")
 
 CALLBELL_API_KEY = settings.CALLBELL_API_KEY
 CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
@@ -44,7 +60,7 @@ state_manager = StateManagerService()
 # state_manager.save_state("71464be80c504971ae263d710b39dd1f", state)
 
 client_description = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
-logger:  logging.Logger = get_logger(__name__)
+logger: BoundLogger = get_logger(__name__)
 
 def get_callbell_headers():
     """Retorna os headers padrão para as requisições Callbell."""
@@ -72,7 +88,7 @@ def send_callbell_message(phone_number, text):
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao enviar mensagem simples para {phone_number}: {e}")
         logger.error(f"Payload enviado: {json.dumps(payload)}")
-        logger.error(f"Resposta recebida (se houver): {e.response.status_code} - {e.response.text if e.response else 'N/A'}")
+        logger.error(f"Resposta recebida (se houver): {e.response.status_code if e.response else 'N/A'} - {e.response.text if e.response else 'N/A'}")
         return False
     
     except Exception as e:
@@ -151,7 +167,7 @@ def process_message_task(contact_uuid):
             logger.error(f"[{contact_uuid}] - Could not retrieve contact info from Redis. Aborting task.")
             return
         
-        contact_info = json.loads(contact_info_raw)
+        contact_info = json.loads(str(contact_info_raw))
         phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
         contact_name = contact_info.get("name", "")
 
@@ -211,12 +227,12 @@ def process_incoming_message(payload):
     existing_task_id = redis_client.get(pending_task_key)
     
     if existing_task_id:
-        celery_app.control.revoke(existing_task_id.decode('utf-8'))
-        logger.info(f"[{contact_uuid}] - Revoked previous pending task: {existing_task_id.decode('utf-8')}")
+        celery_app.control.revoke(existing_task_id)
+        logger.info(f"[{contact_uuid}] - Revoked previous pending task: {existing_task_id}")
 
-    new_task = process_message_task.apply_async(args=[contact_uuid], eta=datetime.now() + timedelta(seconds=1))
+    new_task = process_message_task.apply_async(args=[contact_uuid], eta=datetime.now() + timedelta(seconds=4))
     redis_client.set(pending_task_key, new_task.id, ex=30)
-    logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} in 1 seconds.")
+    logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} in 4 seconds.")
 
 
 @app.route('/receive_message', methods=['POST'])
