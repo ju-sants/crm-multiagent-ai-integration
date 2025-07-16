@@ -8,7 +8,7 @@ from app.core.logger import get_logger
 from app.services.redis_service import get_redis
 from app.services.celery_service import celery_app
 from app.utils.funcs.funcs import parse_json_from_string
-from app.services.callbell_service import get_contact_messages
+from app.services.callbell_service import get_contact_messages, send_message
 from app.services.state_manager_service import StateManagerService
 from app.models.data_models import ConversationState
 
@@ -104,7 +104,7 @@ def raw_history_to_messages(history: list, contact_id: str) -> str:
     return "\n".join([str(msg) for msg in messages])
 
 @celery_app.task(name='enrichment.history_summarizer')
-def history_summarizer_task(contact_id: str):
+def history_summarizer_task(previous_task_result=None, *, contact_id: str):
     """
     Asynchronous task to incrementally summarize conversation history.
     - Fetches only new messages since the last update.
@@ -135,13 +135,12 @@ def history_summarizer_task(contact_id: str):
         logger.info(f"[{contact_id}] - No new messages to process. Skipping summarization.")
         return f"No new messages to summarize for {contact_id}."
     
-    new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("10/07/2025 14:56:00", "%d/%m/%Y %H:%M:%S")]
-    messages_to_redis_upload = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("2025-07-10T18:41:41Z", "%Y-%m-%dT%H:%M:%SZ")]
-   
+    new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("14/07/2025 15:00:00", "%d/%m/%Y %H:%M:%S")]
+
     # The full history for context is the combination of old and new
     raw_history_json = redis_client.get(f"history_raw:{contact_id}")
     raw_history = json.loads(raw_history_json) if raw_history_json else []
-    full_history = raw_history + messages_to_redis_upload
+    full_history = raw_history + new_messages
     full_history = full_history[-15:]
     redis_client.set(f"history_raw:{contact_id}", json.dumps(full_history))
 
@@ -321,7 +320,7 @@ def profile_enhancer_task(history_summary: dict, contact_id: str, last_turn_stat
     return f"Profile for {contact_id} enhanced."
 
 
-def trigger_enrichment_pipeline(contact_id: str, last_turn_state: dict):
+def trigger_post_processing(contact_id: str, last_turn_state: dict, send_message_task: bool = False, response_json: dict | None = None, phone_number: str | None = None):
     """
     Triggers the full asynchronous enrichment pipeline using an optimized fan-out architecture.
     1. The history is summarized.
@@ -333,14 +332,32 @@ def trigger_enrichment_pipeline(contact_id: str, last_turn_state: dict):
 
     # The history summary is passed as the first argument to the tasks in the group.
     # We pass the remaining arguments (contact_id, last_turn_state) to the group tasks.
-    pipeline = chain(
-        history_summarizer_task.s(contact_id=contact_id),
-        group(
-            state_summarizer_task.s(contact_id=contact_id, last_turn_state=last_turn_state),
-            profile_enhancer_task.s(contact_id=contact_id, last_turn_state=last_turn_state)
+
+    pipeline = None
+    if send_message_task and phone_number and response_json:
+        logger.info(f"[{contact_id}] - Preparing to send message to {phone_number} with response: {response_json['messages_sequence']}")
+        pipeline = chain(
+            send_message.s(phone_number=phone_number, messages=response_json['messages_sequence'], plan_names=response_json.get("plan_names", []), contact_id=contact_id),
+            history_summarizer_task.s(contact_id=contact_id),
+            group(
+                state_summarizer_task.s(contact_id=contact_id, last_turn_state=last_turn_state),
+                profile_enhancer_task.s(contact_id=contact_id, last_turn_state=last_turn_state),
+            )
         )
-    )
 
-    pipeline.apply_async()
+    else:
+        pipeline = chain(
+            history_summarizer_task.s(contact_id=contact_id),
+            group(
+                state_summarizer_task.s(contact_id=contact_id, last_turn_state=last_turn_state),
+                profile_enhancer_task.s(contact_id=contact_id, last_turn_state=last_turn_state)
+            )
+        )
 
-    logger.info(f"[{contact_id}] - Optimized fan-out enrichment pipeline successfully dispatched.")
+    if pipeline:
+        pipeline.apply_async()
+        logger.info(f"[{contact_id}] - Optimized fan-out enrichment pipeline successfully dispatched.")
+    
+    else:
+        logger.error(f"[{contact_id}] - Failed to trigger enrichment pipeline due to missing parameters.")
+        return {"status": "error", "reason": "Missing parameters for enrichment pipeline."}
