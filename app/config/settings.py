@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     
     MAX_RETRIES_MODEL: int = 500
     
-    REDIS_HOST: str = '...'
-    REDIS_PORT: str = '...'
+    REDIS_HOST: str = 'localhost'
+    REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = '...'
     REDIS_DB_MAIN: int = 0
     
