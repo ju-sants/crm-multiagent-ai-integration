@@ -2,7 +2,7 @@ import json
 from crewai import Crew, Process
 from datetime import datetime, timezone
 from app.services.celery_service import celery_app
-from app.crews.enrichment_crew import trigger_enrichment_pipeline
+from app.crews.enrichment_crew import trigger_post_processing
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_communication_agent
 from app.config.llm_config import creative_openai_llm
@@ -12,100 +12,10 @@ from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
-from app.services.callbell_service import send_callbell_message
-from app.services.eleven_labs_service import main as eleven_labs_service
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
-
-# --- New, Asynchronous I/O Tasks ---
-
-@celery_app.task(name='io.send_message')
-def send_message(phone_number, messages, plan_names, contact_id):
-    try:
-        from app.config.utils.messages_plans import plans_messages
-        
-        state = state_manager.get_state(contact_id)
-        if state.communication_preference.prefers_audio:
-            logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
-            audio_url = eleven_labs_service(messages)
-            if audio_url:
-                send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
-                redis_client.hset(f"{contact_id}:attachments", audio_url, ' '.join(messages))
-            
-            else:
-                logger.info(f'[{contact_id}] - Não foi possível gerar áudio para a mensagem. Enviando mensagem de texto.')
-                send_callbell_message(phone_number=phone_number, messages=messages)
-        
-        else:
-        
-            has_long_message = False
-            for message in messages:
-                if len(message) > 250:
-                    has_long_message = True
-            
-            if has_long_message and not all([len(message) > 250 for message in messages]):
-                logger.info(f"[{contact_id}] - Encontrada mensagem com mais de 250 caracteres. Enviando mensagem de áudio.")
-                            
-                for message in messages:
-                    if len(message) > 250:
-                        audio_url = eleven_labs_service([message])
-                        if audio_url:
-                            send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
-                            redis_client.hset(f"{contact_id}:attachments", audio_url, message)
-                        else:
-                            logger.info(f"[{contact_id}] - Não foi possível gerar áudio para a mensagem. Enviando mensagem de texto.")
-                            send_callbell_message(phone_number=phone_number, messages=[message])
-
-                    else:
-                        send_callbell_message(phone_number=phone_number, messages=[message])
-            
-            else:
-                logger.info(f"[{contact_id}] - Não encontrada mensagem com mais de 250 caracteres.")
-                
-                messages_all_str = '\n'.join(messages)
-                if len(messages_all_str) > 300:
-                    logger.info(f"[{contact_id}] - Todas as mensagens somam mais de 300 caracteres. Enviando mensagem de áudio.")
-
-                    audios_messages_qnt = len(messages) // 2 + 1
-                    audios_messages = messages[:audios_messages_qnt]
-                    audios_messages_str = '\n'.join(audios_messages)
-
-                    messages_left = messages[audios_messages_qnt:]
-
-                    audio_url = eleven_labs_service(audios_messages)
-                    if audio_url:
-                        send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
-                        redis_client.hset(f"{contact_id}:attachments", audio_url, audios_messages_str)
-
-                        if messages_left:
-                            send_callbell_message(phone_number=phone_number, messages=messages_left)
-
-                    else:
-                        logger.info(f"[{contact_id}] - Não foi possível gerar áudio para a mensagem. Enviando mensagem de texto.")
-                        send_callbell_message(phone_number=phone_number, messages=audios_messages)
-
-                else:
-                    logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
-                    send_callbell_message(phone_number=phone_number, messages=messages)
-
-        if plan_names:
-            for plan_name in plan_names:
-                message = plans_messages.get(plan_name, [])
-                if message:
-                    send_callbell_message(phone_number=phone_number, messages=[message])
-
-    except Exception as e:
-        logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
-
-    else:
-        if plan_names:
-            redis_client.rpush(f"{contact_id}:sended_catalogs", *plan_names)
-
-    finally:
-        redis_client.delete(f"processing:{contact_id}")
-        logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
 
 
 # --- Main Communication Task ---
@@ -127,7 +37,7 @@ def communication_task(self, contact_id: str):
         # Process inputs
         history_raw = redis_client.get(f"history_raw_text:{contact_id}")
 
-        history_summary_json = redis_client.get(f"history:{contact_id}")
+        history_summary_json = str(redis_client.get(f"history:{contact_id}"))
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
         history_summary_messages = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
@@ -140,8 +50,8 @@ def communication_task(self, contact_id: str):
 
         redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
         
-        conversation_state = state.model_dump_json()
-        conversation_state: dict = json.loads(conversation_state)
+        conversation_state_str = state.model_dump_json()
+        conversation_state: dict = json.loads(conversation_state_str)
         
         strategic_plan = conversation_state.pop("strategic_plan", None)
         disclosure_checklist = conversation_state.pop("disclosure_checklist", None)
@@ -160,13 +70,15 @@ def communication_task(self, contact_id: str):
         }
 
         result = crew.kickoff(inputs=inputs)
-        response_json, updated_state_dict = parse_json_from_string(result.raw)
+        result_str: str = result.raw
+        response_json, updated_state_dict = parse_json_from_string(result_str)
 
         if updated_state_dict:
             state = ConversationState(**{**state.model_dump(), **updated_state_dict})
         
         state_manager.save_state(contact_id, state)
 
+        send_message = False
         # --- Asynchronous Message Sending ---
         if response_json and response_json.get('messages_sequence'):
             phone_number = state.metadata.phone_number
@@ -174,7 +86,7 @@ def communication_task(self, contact_id: str):
                 logger.error(f"[{contact_id}] - Cannot send message, phone number is missing from state.")
                 return {"status": "error", "reason": "Missing phone number"}
 
-            send_message.delay(phone_number, response_json['messages_sequence'], response_json.get("plan_names", []), contact_id)
+            send_message = True
 
         # 1. Cleaning the messages
         all_messages = redis_client.lrange(f"contacts_messages:waiting:{contact_id}", 0, -1)
@@ -189,8 +101,8 @@ def communication_task(self, contact_id: str):
 
         pipe.execute()
 
-        # 2. Trigger enrichment pipeline (now self-sufficient)
-        trigger_enrichment_pipeline(contact_id, state.model_dump())
+        # 2. Trigger enrichment pipeline (now self-sufficient) and send_message if needed
+        trigger_post_processing(contact_id, state.model_dump(), send_message, response_json, phone_number)
         
         return {"status": "communication_dispatched"}
     except Exception as e:
