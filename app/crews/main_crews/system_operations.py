@@ -11,7 +11,7 @@ from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
 from app.crews.main_crews.communication import communication_task
-from app.crews.enrichment_crew import trigger_enrichment_pipeline
+from app.crews.enrichment_crew import trigger_post_processing
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
@@ -71,7 +71,7 @@ def system_operations_task(contact_id: str):
 
                 redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
 
-                trigger_enrichment_pipeline.delay(contact_id, state.model_dump())
+                trigger_post_processing.delay(contact_id, state.model_dump())
 
                 # Cleaning up the messages
                 all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
