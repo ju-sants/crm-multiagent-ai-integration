@@ -6,6 +6,14 @@ import json
 
 from app.config.settings import settings
 from app.core.logger import get_logger
+from app.services.celery_service import celery_app
+from app.services.state_manager_service import StateManagerService
+from app.services.redis_service import get_redis
+from app.services.eleven_labs_service import main as eleven_labs_service
+
+
+state_manager = StateManagerService()
+redis_client = get_redis()
 
 logger = get_logger(__name__)
 
@@ -55,7 +63,7 @@ def send_callbell_message(phone_number: str, messages: str = None, type: str = N
                     "type": "text",
                     "channel_uuid": "b3501c231325487086646e19fc647b0d",
                     "content": {
-                        "text": f"Alessandro Assistente Global:\n{message}"
+                        "text": f"*Alessandro Assistente Global:*\n{message}"
                     },
                     "fields": "conversation,contact",
                     "assigned_user": "alessandro-ia@alessandro-ia.com"
@@ -176,3 +184,89 @@ def create_conversation_note(uuid: str, note_text: str) -> bool:
     else:
         print(f"Erro {response.status_code}: {response.text}")
         return False
+    
+@celery_app.task(name='io.send_message')
+def send_message(phone_number, messages, plan_names, contact_id):
+    try:
+        from app.config.utils.messages_plans import plans_messages
+        
+        state = state_manager.get_state(contact_id)
+        if state.communication_preference.prefers_audio:
+            logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
+            audio_url = eleven_labs_service(messages)
+            if audio_url:
+                send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                redis_client.hset(f"{contact_id}:attachments", audio_url, ' '.join(messages))
+            
+            else:
+                logger.info(f'[{contact_id}] - Não foi possível gerar áudio para a mensagem. Enviando mensagem de texto.')
+                send_callbell_message(phone_number=phone_number, messages=messages)
+        
+        else:
+        
+            has_long_message = False
+            for message in messages:
+                if len(message) > 250:
+                    has_long_message = True
+            
+            if has_long_message and not all([len(message) > 250 for message in messages]):
+                logger.info(f"[{contact_id}] - Encontrada mensagem com mais de 250 caracteres. Enviando mensagem de áudio.")
+                            
+                for message in messages:
+                    if len(message) > 250:
+                        audio_url = eleven_labs_service([message])
+                        if audio_url:
+                            send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                            redis_client.hset(f"{contact_id}:attachments", audio_url, message)
+                        else:
+                            logger.info(f"[{contact_id}] - Não foi possível gerar áudio para a mensagem. Enviando mensagem de texto.")
+                            send_callbell_message(phone_number=phone_number, messages=[message])
+
+                    else:
+                        send_callbell_message(phone_number=phone_number, messages=[message])
+            
+            else:
+                logger.info(f"[{contact_id}] - Não encontrada mensagem com mais de 250 caracteres.")
+                
+                messages_all_str = '\n'.join(messages)
+                if len(messages_all_str) > 300:
+                    logger.info(f"[{contact_id}] - Todas as mensagens somam mais de 300 caracteres. Enviando mensagem de áudio.")
+
+                    audios_messages_qnt = len(messages) // 2 + 1
+                    audios_messages = messages[:audios_messages_qnt]
+                    audios_messages_str = '\n'.join(audios_messages)
+
+                    messages_left = messages[audios_messages_qnt:]
+
+                    audio_url = eleven_labs_service(audios_messages)
+                    if audio_url:
+                        send_callbell_message(phone_number=phone_number, type="audio", audio_url=audio_url)
+                        redis_client.hset(f"{contact_id}:attachments", audio_url, audios_messages_str)
+
+                        if messages_left:
+                            send_callbell_message(phone_number=phone_number, messages=messages_left)
+
+                    else:
+                        logger.info(f"[{contact_id}] - Não foi possível gerar áudio para a mensagem. Enviando mensagem de texto.")
+                        send_callbell_message(phone_number=phone_number, messages=audios_messages)
+
+                else:
+                    logger.info(f"[{contact_id}] - Todas as mensagens somam menos de 300 caracteres. Enviando mensagens de texto.")
+                    send_callbell_message(phone_number=phone_number, messages=messages)
+
+        if plan_names:
+            for plan_name in plan_names:
+                message = plans_messages.get(plan_name, [])
+                if message:
+                    send_callbell_message(phone_number=phone_number, messages=[message])
+
+    except Exception as e:
+        logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
+
+    else:
+        if plan_names:
+            redis_client.rpush(f"{contact_id}:sended_catalogs", *plan_names)
+
+    finally:
+        redis_client.delete(f"processing:{contact_id}")
+        logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
