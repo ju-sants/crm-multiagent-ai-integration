@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import json
 import re
 import requests
@@ -152,14 +151,3 @@ def parse_json_from_string(json_string: str, update=True) -> tuple[None, None] |
         return task_output, updated_state
     else:
         return json_response
-=======
-from pathlib import Path
-
-def obter_caminho_projeto():
-    """Encontra a raiz do projeto"""
-    current_file = Path(__file__).resolve()
-    for parent in [current_file] + list(current_file.parents):
-        if (parent / 'main.py').exists():
-            return parent
-    return Path.cwd()
->>>>>>> 1452778c3d5f4d9345c24b847961ab71baba43e1

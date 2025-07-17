@@ -10,3 +10,4 @@ redis
 unidecode
 pydantic-settings
 pytz
+gunicorn
