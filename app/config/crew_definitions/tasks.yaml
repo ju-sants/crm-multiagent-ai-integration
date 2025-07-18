@@ -1,4 +1,4 @@
-context_analysis_task:
+routing_task:
   description: |
     <INSTRUCTIONS>
       1.  **Analyze Inputs:** Review the provided `{{conversation_state}}` and `{{client_message}}`.
@@ -112,7 +112,81 @@ develop_strategy_task:
       }
     }
 
+refine_strategy_task:
+  description: |
+    <INSTRUCOES>
+      1.  **Executar Lógica de Curadoria:** Siga rigorosamente o `<LOGIC_FLOW>` e as `<RULES>` definidos em seu `backstory` para atuar como um "Curador de Estratégia".
+      2.  **Analisar Inputs:** Utilize os dados fornecidos na seção `<DADOS>` para sua análise incremental. O `strategic_plan` existente é seu ponto de partida.
+      3.  **Refinar Dossiê:** Aprimore o `conversation_blueprint` (o plano estratégico) com os novos insights e informações que você coletar.
+      4.  **Atualizar Estado:** Se necessário, adicione novos itens ao `disclosure_checklist`.
+      5.  **Gerar Saída:** Formate sua resposta final como um único objeto JSON, contendo o plano ESTRATÉGICO COMPLETO E ATUALIZADO, seguindo o `expected_output`. A saída deve ser em Português do Brasil.
+      7.  **JSON Format:** Certifique-se de que a saída esteja no formato JSON válido, se atente ao `disclosure_checklist`, cada item deve ter três chaves: "topic", "content" e "status".
+    </INSTRUCOES>
 
+    <DADOS>
+      - `conversation_state`:
+          {conversation_state}
+      - `profile_customer_task_output`:
+          {profile_customer_task_output}
+      - `operational_context`: {operational_context}
+      - `history`:
+          {history}
+      - `history_raw`:
+          {history_raw}
+
+      - `turn`: {turn}
+      - `timestamp`: {timestamp}
+      - `identified_topic`: {identified_topic}
+
+      - `client_message`: {client_message}
+
+    </DADOS>
+  expected_output: |
+    {
+      "task_output": {
+        "system_action_request": "<String em linguagem natural para ação de sistema ou null>",
+        "conversation_blueprint": {
+          "customer_context_summary": {
+            "relevant_profile_insights": "<Análise concisa do perfil de longo prazo do cliente>",
+            "insights_from_current_session": "<Análise da sessão atual e da última mensagem do cliente>"
+          },
+          "product_presentation_strategy": {
+            "presentation_order": ["<Array ordenado de nomes de planos a apresentar>"],
+            "primary_offer": {
+              "plan_name": "<Nome do plano principal>",
+              "sales_angle": "<Estratégia de venda e argumentos para a oferta principal>"
+            },
+            "secondary_offer": {
+              "plan_name": "<Nome do plano secundário>",
+              "sales_angle": "<Estratégia de venda para a oferta secundária>"
+            }
+          },
+          "communication_guidance": {
+            "tone_and_style": "<Tom e estilo recomendados para a comunicação>",
+            "key_talking_points": ["<Array de pontos chave a serem mencionados>"],
+            "key_questions_to_ask": ["<Array de perguntas chave a serem feitas>"],
+            "next_step_preview": "<Breve descrição do próximo passo esperado na conversa>"
+          },
+          "information_payload": {
+            "<plan_name_data>": {
+              "pricing": "<Estrutura de preços do plano>",
+              "contract_terms": "<Termos contratuais relevantes>",
+              "technical_limitations": "<Limitações técnicas a serem informadas>"
+            }
+          }
+        }
+      },
+      "updated_state": {
+        "disclosure_checklist": [
+          {
+            "topic": "<Tópico do termo a ser esclarecido>",
+            "content": "<Conteúdo exato do termo obtido da base de conhecimento>",
+            "status": "pending"
+          },
+          ... (outros itens de checklist)
+        ]
+      }
+    }
 
 execute_system_operations_task:
   description: |
