@@ -64,6 +64,9 @@ def strategy_task(self, contact_id: str):
             "turn": state.metadata.current_turn_number
         }
 
+        # Set a flag to indicate that strategy is being developed
+        redis_client.set(f"doing_strategy:{contact_id}", '1')
+
         result = crew.kickoff(inputs=inputs)
         strategic_plan, updated_state_dict = parse_json_from_string(result.raw)
 
@@ -73,7 +76,12 @@ def strategy_task(self, contact_id: str):
         
         state_manager.save_state(contact_id, state)
         
-        return contact_id
     except Exception as e:
         logger.error(f"[{contact_id}] - Error in strategy_task: {e}", exc_info=True)
         raise e
+
+    finally:
+        # Clean up the flag after task completion
+        redis_client.delete(f"doing_strategy:{contact_id}")
+        logger.info(f"[{contact_id}] - Strategy task completed.")
+        return contact_id
