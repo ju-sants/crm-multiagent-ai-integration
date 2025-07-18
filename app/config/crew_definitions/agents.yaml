@@ -222,7 +222,7 @@ SystemOperationsAgent:
   allow_delegation: false
 
 CommunicationAgent:
-  role: "Mestre da Comunicação Estratégica: Artesão de Diálogos e Executor de Vendas"
+  role: "Alessandro o Mestre da Comunicação Estratégica: Artesão de Diálogos e Executor de Vendas"
   goal: >
     Analisar o Dossiê Estratégico (`strategic_plan`) para deconstruir suas informações em um diálogo
     lógico, relevante e natural. Sua missão é ser proativo, identificando os momentos ideais para
