@@ -1,12 +1,13 @@
 from app.core.logger import get_logger
-from app.utils.funcs.reset_SMS import reset_eseye, reset_sms
-from app.utils.funcs.reset_rede.plataforma_vivo_REST import main as reset_rede_VIVO
-from app.utils.funcs.reset_rede.plataforma_VS import main as reset_rede_VS
-from app.utils.funcs.reset_rede.plataforma_allcom import main as reset_rede_ALLCOM
-from app.utils.funcs.reset_rede.plataforma_veye import main as reset_rede_VEYE
-from app.utils.funcs.reset_rede.plataforma_LINK import main as reset_rede_LINK
-from app.utils.funcs.reset_rede.plataforma_ESEYE import main as reset_rede_ESEYE
-from app.utils.funcs.reset_rede.plataforma_LINKSFIELD import solicitar_envio
+
+from app.utils.funcs.reset_integration.reset_SMS import reset_eseye, reset_sms
+from app.utils.funcs.reset_integration.reset_rede.plataforma_vivo_REST import main as reset_rede_VIVO
+from app.utils.funcs.reset_integration.reset_rede.plataforma_VS import main as reset_rede_VS
+from app.utils.funcs.reset_integration.reset_rede.plataforma_allcom import main as reset_rede_ALLCOM
+from app.utils.funcs.reset_integration.reset_rede.plataforma_veye import main as reset_rede_VEYE
+from app.utils.funcs.reset_integration.reset_rede.plataforma_LINK import main as reset_rede_LINK
+from app.utils.funcs.reset_integration.reset_rede.plataforma_ESEYE import main as reset_rede_ESEYE
+from app.utils.funcs.reset_integration.reset_rede.plataforma_LINKSFIELD import solicitar_envio
 
 from app.utils.funcs.funcs import *
 
