@@ -6,10 +6,10 @@ import time
 from app.services.celery_service import celery_app
 from app.crews.src.enrichment_crew import trigger_post_processing
 from app.core.logger import get_logger
-from app.agents.agent_declaration import get_communication_agent
+from app.crews.agents_definitions.obj_declarations.agent_declaration import get_communication_agent
 from app.config.llm_config import creative_openai_llm
 from app.tools.knowledge_tools import drill_down_topic_tool
-from app.tasks.tasks_declaration import create_communication_task
+from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_communication_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string

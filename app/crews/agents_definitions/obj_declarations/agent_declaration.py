@@ -7,7 +7,7 @@ from app.tools.knowledge_tools import knowledge_service_tool, drill_down_topic_t
 from app.tools.system_operations_tools import system_operations_tool
 
 
-config_path = 'app/config/crew_definitions/agents.yaml'
+config_path = 'app/crews/agents_definitions/prompts/agents.yaml'
 
 agents_config = yaml.safe_load(open(config_path, 'r').read())
 

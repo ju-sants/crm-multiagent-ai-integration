@@ -2,10 +2,10 @@ import json
 from crewai import Crew, Process
 from app.services.celery_service import celery_app
 from app.core.logger import get_logger
-from app.agents.agent_declaration import get_system_operations_agent
+from app.crews.agents_definitions.obj_declarations.agent_declaration import get_system_operations_agent
 from app.config.llm_config import decivise_openai_llm
 from app.tools.system_operations_tools import system_operations_tool
-from app.tasks.tasks_declaration import create_execute_system_operations_task
+from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_execute_system_operations_task
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis

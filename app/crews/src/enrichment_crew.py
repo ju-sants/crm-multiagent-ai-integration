@@ -15,13 +15,13 @@ from app.models.data_models import ConversationState
 state_manager = StateManagerService()
 
 # Import agent and task creation functions
-from app.agents.agent_declaration import (
+from app.crews.agents_definitions.obj_declarations.agent_declaration import (
     get_history_summarizer_agent,
     get_data_quality_agent,
     get_state_summarizer_agent,
     get_profile_enhancer_agent
 )
-from app.tasks.tasks_declaration import (
+from app.crews.agents_definitions.obj_declarations.tasks_declaration import (
     create_summarize_history_task,
     create_clean_noisy_data_task,
     create_summarize_state_task,

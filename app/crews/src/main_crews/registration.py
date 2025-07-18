@@ -2,8 +2,8 @@ import json
 from crewai import Crew, Process
 from app.services.celery_service import celery_app
 from app.core.logger import get_logger
-from app.agents.agent_declaration import get_registration_agent
-from app.tasks.tasks_declaration import create_collect_registration_data_task
+from app.crews.agents_definitions.obj_declarations.agent_declaration import get_registration_agent
+from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_collect_registration_data_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string

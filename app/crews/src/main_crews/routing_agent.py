@@ -5,15 +5,15 @@ from celery import group, chain
 
 from app.services.celery_service import celery_app
 from app.core.logger import get_logger
-from app.agents.agent_declaration import get_routing_agent
-from app.tasks.tasks_declaration import create_strategy_agent_task
+from app.crews.agents_definitions.obj_declarations.agent_declaration import get_routing_agent
+from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_strategy_agent_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
-from app.crews.main_crews.refine_strategy import refine_strategy_task
-from app.crews.main_crews.strategy import strategy_task
-from app.crews.main_crews.backend_routing import backend_routing_task
+from app.crews.src.main_crews.refine_strategy import refine_strategy_task
+from app.crews.src.main_crews.strategy import strategy_task
+from app.crews.src.main_crews.backend_routing import backend_routing_task
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()

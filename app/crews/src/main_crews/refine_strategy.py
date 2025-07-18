@@ -5,10 +5,10 @@ import pytz
 
 from app.services.celery_service import celery_app
 from app.core.logger import get_logger
-from app.agents.agent_declaration import get_incremental_strategic_planner_agent
+from app.crews.agents_definitions.obj_declarations.agent_declaration import get_incremental_strategic_planner_agent
 from app.config.llm_config import creative_openai_llm
 from app.tools.knowledge_tools import knowledge_service_tool, drill_down_topic_tool
-from app.tasks.tasks_declaration import create_refine_strategy_task
+from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_refine_strategy_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
