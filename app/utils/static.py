@@ -114,4 +114,4 @@ Scooters/Patinetes
 
     Plano exclusivo para Scooters e Patinetes: https://wa.me/p/8478546275590970/558006068000
 """
-            }
+}
