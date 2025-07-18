@@ -2,10 +2,9 @@ from elevenlabs import ElevenLabs, VoiceSettings
 from typing import List
 import requests
 from datetime import datetime
-import re
 
 from app.config.settings import settings
-from app.utils.funcs.normalize_text_tts import apply_normalizations
+from app.utils.funcs.text_normalization.normalize_text_tts import apply_normalizations
 from app.services.cache_service import cache_result
 
 def host_audio(audio_bytes: bytes):
