@@ -1,13 +1,12 @@
 import requests
 import json
-import os
 from typing import Dict, Any, List
 import datetime
 
 from app.core.logger import get_logger
 from app.config.settings import settings 
 
-from app.utils.funcs.reset_sending import process_reset_sending
+from app.utils.funcs.reset_integration.reset_sending import process_reset_sending
 from app.services.google_maps_service import format_and_calculate_displacement_cost
 
 from app.services.callbell_service import create_conversation_note
