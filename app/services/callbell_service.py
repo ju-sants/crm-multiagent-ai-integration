@@ -190,7 +190,7 @@ def send_message(phone_number, messages, plan_names, contact_id):
     try:
         from app.config.utils.messages_plans import plans_messages
         
-        state = state_manager.get_state(contact_id)
+        state, _ = state_manager.get_state(contact_id)
         if state.communication_preference.prefers_audio:
             logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
             audio_url = eleven_labs_service(messages)
