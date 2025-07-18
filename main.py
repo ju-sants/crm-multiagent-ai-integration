@@ -21,7 +21,9 @@ from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
 
 from app.crews.main_crews.routing_agent import pre_routing_orchestrator
+from app.crews.main_crews.communication import communication_task
 
+from app.utils.static import default_strategic_plan
 
 @signals.worker_ready.connect
 def on_worker_ready(sender, **kwargs):
@@ -184,12 +186,18 @@ def process_message_task(self, contact_uuid):
         phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
         contact_name = contact_info.get("name", "")
 
-        state = state_manager.get_state(contact_uuid)
+        state, is_new = state_manager.get_state(contact_uuid)
         state.metadata.phone_number = phone_number
         state.metadata.contact_name = contact_name
         state_manager.save_state(contact_uuid, state)
+
+        if not is_new:
+            pre_routing_orchestrator.apply_async(args=[contact_uuid])
         
-        pre_routing_orchestrator.apply_async(args=[contact_uuid]),
+        else:
+            state.strategic_plan = default_strategic_plan
+            communication_task.apply_async(args=[contact_uuid])
+
 
         logger.info(f"[{contact_uuid}] - Celery state machine triggered.")
 
