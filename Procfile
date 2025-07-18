@@ -1,2 +1,1 @@
-worker: celery -A main.celery worker --loglevel=info
-web: gunicorn -b 0.0.0.0:2828 main:app
+web: celery -A app.services.celery_service.celery_app worker --loglevel=INFO && gunicorn -b 0.0.0.0:2828 main:app
