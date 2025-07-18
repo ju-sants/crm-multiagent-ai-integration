@@ -1,27 +1,29 @@
 from crewai import LLM
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_xai import ChatXAI
 from app.utils.wrappers.google_genai_LLM import GoogleGenAIWrapper
 from app.config.settings import settings
 
 
 default_X_llm = LLM(
-    model='xai/grok-3',
+    model='xai/grok-3-mini',
     api_key=settings.XAI_API_KEY,
-    stop=None
     )
+
+X_llm = ChatXAI(
+    model='xai/grok-3-mini-fast',
+    api_key=settings.XAI_API_KEY,
+)
 
 reasoning_X_llm = LLM(
     model='xai/grok-3-mini',
     api_key=settings.XAI_API_KEY,
-    stop=None,
-    stream=True
     )
 
 fast_reasoning_X_llm = LLM(
     model='xai/grok-3-mini-fast',
     api_key=settings.XAI_API_KEY,
-    stop=None
     )
 
 pro_Google_llm = LLM(
