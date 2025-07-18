@@ -5,10 +5,10 @@ from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.services.state_manager_service import StateManagerService
 from app.services.redis_service import get_redis
-from app.crews.main_crews.strategy import strategy_task
-from app.crews.main_crews.communication import communication_task
-from app.crews.main_crews.system_operations import system_operations_task
-from app.crews.main_crews.registration import registration_task
+from app.crews.src.main_crews.strategy import strategy_task
+from app.crews.src.main_crews.communication import communication_task
+from app.crews.src.main_crews.system_operations import system_operations_task
+from app.crews.src.main_crews.registration import registration_task
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()

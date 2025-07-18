@@ -12,7 +12,7 @@ from celery import signals
 from app.core.logger import get_logger
 
 from app.config.settings import settings
-from app.config.patches import apply_litellm_patch
+from app.patches.litellm_patch import apply_litellm_patch
 
 from app.services.celery_service import celery_app
 from app.services.state_manager_service import StateManagerService
@@ -20,8 +20,8 @@ from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
 
-from app.crews.main_crews.routing_agent import pre_routing_orchestrator
-from app.crews.main_crews.communication import communication_task
+from app.crews.src.main_crews.routing_agent import pre_routing_orchestrator
+from app.crews.src.main_crews.communication import communication_task
 
 from app.utils.static import default_strategic_plan
 

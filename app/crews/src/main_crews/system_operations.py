@@ -10,8 +10,8 @@ from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
-from app.crews.main_crews.communication import communication_task
-from app.crews.enrichment_crew import trigger_post_processing
+from app.crews.src.main_crews.communication import communication_task
+from app.crews.src.enrichment_crew import trigger_post_processing
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import time
 
 from app.services.celery_service import celery_app
-from app.crews.enrichment_crew import trigger_post_processing
+from app.crews.src.enrichment_crew import trigger_post_processing
 from app.core.logger import get_logger
 from app.agents.agent_declaration import get_communication_agent
 from app.config.llm_config import creative_openai_llm
