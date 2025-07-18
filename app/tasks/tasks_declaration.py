@@ -1,27 +1,15 @@
-# app/tasks/tasks_declaration.py
 from crewai import Task, Agent
-<<<<<<< HEAD
 import yaml
 
 config_path = 'app/config/crew_definitions/tasks.yaml'
-=======
-from app.utils.funcs.funcs import obter_caminho_projeto
-
-from app.tools.knowledge_tools import KnowledgeServiceTool
-
-import yaml
-
-base_path = obter_caminho_projeto()
-config_path = base_path / 'app/config/crew_definitions/tasks.yaml'
->>>>>>> 1452778c3d5f4d9345c24b847961ab71baba43e1
 
 tasks_config = yaml.safe_load(open(config_path, 'r').read())
 
 
 
-def create_context_analysis_task(agent: Agent) -> Task:
+def create_strategy_agent_task(agent: Agent) -> Task:
     return Task(
-        config=tasks_config['context_analysis_task'],
+        config=tasks_config['routing_task'],
         agent=agent,
     )
 
@@ -31,7 +19,6 @@ def create_execute_system_operations_task(agent: Agent) -> Task:
         agent=agent,
     )
 
-<<<<<<< HEAD
 def create_summarize_history_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['summarize_history_task'],
@@ -56,8 +43,6 @@ def create_enhance_profile_task(agent: Agent) -> Task:
         agent=agent,
     )
 
-=======
->>>>>>> 1452778c3d5f4d9345c24b847961ab71baba43e1
 def create_develop_strategy_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['develop_strategy_task'],
@@ -67,6 +52,12 @@ def create_develop_strategy_task(agent: Agent) -> Task:
 def create_communication_task(agent: Agent) -> Task:
     return Task(
         config=tasks_config['communication_task'],
+        agent=agent,
+    )
+
+def create_refine_strategy_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['refine_strategy_task'],
         agent=agent,
     )
 
