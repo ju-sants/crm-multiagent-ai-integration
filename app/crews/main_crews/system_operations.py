@@ -44,10 +44,14 @@ def system_operations_task(contact_id: str):
 
         last_processed_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
 
+        conversation_state = state.model_dump()
+        conversation_state.pop("strategic_plan", None)  # Remove strategic plan to avoid conflicts
+        conversation_state.pop("disclosure_checklist", None)  # Remove disclosure checklist to avoid
+
         inputs = {
             "action_requested": state.system_action_request,
             "customer_profile": str(profile),
-            "conversation_state": state.model_dump_json(),
+            "conversation_state": str(conversation_state),
             "history": history_summary_messages,
             "history_raw": str(history_raw),
             "client_message": "\n".join(last_processed_messages),
@@ -71,7 +75,7 @@ def system_operations_task(contact_id: str):
 
                 redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
 
-                trigger_post_processing.delay(contact_id, state.model_dump())
+                trigger_post_processing.delay(contact_id)
 
                 # Cleaning up the messages
                 all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
