@@ -44,7 +44,6 @@ class ProductItem(BaseModel):
     presented_at_turn: int
 
 class ChecklistItem(BaseModel):
-    item_id: str
     topic: str
     content: str
     status: str # "pending" or "communicated"
