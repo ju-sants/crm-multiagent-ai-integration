@@ -37,7 +37,7 @@ def communication_task(self, contact_id: str):
         # Process inputs
         history_raw = redis_client.get(f"history_raw_text:{contact_id}")
 
-        history_summary_json = str(redis_client.get(f"history:{contact_id}"))
+        history_summary_json = redis_client.get(f"history:{contact_id}")
         history_summary = json.loads(history_summary_json) if history_summary_json else {}
         history_summary_messages = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
@@ -102,7 +102,7 @@ def communication_task(self, contact_id: str):
         pipe.execute()
 
         # 2. Trigger enrichment pipeline (now self-sufficient) and send_message if needed
-        trigger_post_processing(contact_id, state.model_dump(), send_message, response_json, phone_number)
+        trigger_post_processing(contact_id, send_message, response_json, phone_number)
         
         return {"status": "communication_dispatched"}
     except Exception as e:
