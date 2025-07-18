@@ -135,7 +135,7 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
         logger.info(f"[{contact_id}] - No new messages to process. Skipping summarization.")
         return f"No new messages to summarize for {contact_id}."
     
-    new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("14/07/2025 15:00:00", "%d/%m/%Y %H:%M:%S")]
+    new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("17/07/2025 18:28:00", "%d/%m/%Y %H:%M:%S")]
 
     # The full history for context is the combination of old and new
     raw_history_json = redis_client.get(f"history_raw:{contact_id}")
@@ -238,7 +238,7 @@ def data_quality_task(contact_id: str, topic_id: str, raw_history_snippet: str, 
 
 
 @celery_app.task(name='enrichment.state_summarizer')
-def state_summarizer_task(history_summary: dict, contact_id: str, last_turn_state: dict):
+def state_summarizer_task(history_summary: dict, contact_id: str):
     """
     Asynchronous task to summarize and enrich the conversation state.
     """
@@ -253,6 +253,11 @@ def state_summarizer_task(history_summary: dict, contact_id: str, last_turn_stat
     task = create_summarize_state_task(agent)
 
     crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
+
+    last_turn_state = state.model_dump()
+
+    last_turn_state.pop('strategic_plan', None)  # Remove strategic plan from last turn state to avoid conflicts
+    last_turn_state.pop('disclosure_checklist', None)  # Remove disclosure checklist from last turn state to avoid conflicts
 
     inputs = {
         "history_summary": json.dumps(history_summary),
@@ -277,12 +282,14 @@ def state_summarizer_task(history_summary: dict, contact_id: str, last_turn_stat
     return enriched_state
 
 @celery_app.task(name='enrichment.profile_enhancer')
-def profile_enhancer_task(history_summary: dict, contact_id: str, last_turn_state: dict):
+def profile_enhancer_task(history_summary: dict, contact_id: str):
     """
     Asynchronous task to enhance the long-term customer profile.
     Receives history_summary from the previous task in the chain.
     """
     logger.info(f"[{contact_id}] - Starting profile enhancement.")
+    state = state_manager.get_state(contact_id)
+    last_turn_state = state.model_dump()
 
     agent = get_profile_enhancer_agent()
     task = create_enhance_profile_task(agent)
@@ -292,6 +299,9 @@ def profile_enhancer_task(history_summary: dict, contact_id: str, last_turn_stat
     # Fetch the existing profile from Redis
     existing_profile_raw = redis_client.get(f"{contact_id}:customer_profile")
     existing_profile = existing_profile_raw if existing_profile_raw else "{}"
+
+    last_turn_state.pop('strategic_plan', None)  # Remove strategic plan from last turn state to avoid conflicts
+    last_turn_state.pop('disclosure_checklist', None)  # Remove disclosure checklist from
 
     inputs = {
         "contact_id": contact_id,
@@ -320,7 +330,7 @@ def profile_enhancer_task(history_summary: dict, contact_id: str, last_turn_stat
     return f"Profile for {contact_id} enhanced."
 
 
-def trigger_post_processing(contact_id: str, last_turn_state: dict, send_message_task: bool = False, response_json: dict | None = None, phone_number: str | None = None):
+def trigger_post_processing(contact_id: str, send_message_task: bool = False, response_json: dict | None = None, phone_number: str | None = None):
     """
     Triggers the full asynchronous enrichment pipeline using an optimized fan-out architecture.
     1. The history is summarized.
@@ -331,7 +341,6 @@ def trigger_post_processing(contact_id: str, last_turn_state: dict, send_message
     logger.info(f"[{contact_id}] - Triggering optimized fan-out enrichment pipeline.")
 
     # The history summary is passed as the first argument to the tasks in the group.
-    # We pass the remaining arguments (contact_id, last_turn_state) to the group tasks.
 
     pipeline = None
     if send_message_task and phone_number and response_json:
@@ -340,8 +349,8 @@ def trigger_post_processing(contact_id: str, last_turn_state: dict, send_message
             send_message.s(phone_number=phone_number, messages=response_json['messages_sequence'], plan_names=response_json.get("plan_names", []), contact_id=contact_id),
             history_summarizer_task.s(contact_id=contact_id),
             group(
-                state_summarizer_task.s(contact_id=contact_id, last_turn_state=last_turn_state),
-                profile_enhancer_task.s(contact_id=contact_id, last_turn_state=last_turn_state),
+                state_summarizer_task.s(contact_id=contact_id),
+                profile_enhancer_task.s(contact_id=contact_id),
             )
         )
 
@@ -349,8 +358,8 @@ def trigger_post_processing(contact_id: str, last_turn_state: dict, send_message
         pipeline = chain(
             history_summarizer_task.s(contact_id=contact_id),
             group(
-                state_summarizer_task.s(contact_id=contact_id, last_turn_state=last_turn_state),
-                profile_enhancer_task.s(contact_id=contact_id, last_turn_state=last_turn_state)
+                state_summarizer_task.s(contact_id=contact_id),
+                profile_enhancer_task.s(contact_id=contact_id)
             )
         )
 
