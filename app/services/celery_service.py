@@ -7,19 +7,19 @@ celery_app = Celery(
     broker=f'redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB_MAIN + 1}',
     backend=f'redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB_MAIN + 1}',
     include=[
-        'app.crews.main_crews.context_analysis',
+        'app.crews.main_crews.routing_agent',
         'app.crews.main_crews.strategy',
         'app.crews.main_crews.communication',
         'app.crews.main_crews.system_operations',
         'app.crews.main_crews.registration',
-        'app.crews.main_crews.routing',
+        'app.crews.main_crews.backend_routing',
         'app.crews.enrichment_crew',
         'app.services.callbell_service',
         'main'
     ]
 )
 
-celery_app.control.purge()  # Clear any existing tasks
+# celery_app.control.purge()  # Clear any existing tasks
 
 # Enhanced configuration for connection resilience
 celery_app.conf.update(
@@ -51,13 +51,12 @@ celery_app.conf.update(
     
     # Worker settings
     worker_prefetch_multiplier=1,
-    task_acks_late=True,
+    task_acks_late=False,
     worker_max_tasks_per_child=1000,
     
     # Task execution settings
     task_soft_time_limit=300,  # 5 minutes
     task_time_limit=600,       # 10 minutes
-    task_reject_on_worker_lost=True,
     
     # Serialization
     task_serializer='json',
