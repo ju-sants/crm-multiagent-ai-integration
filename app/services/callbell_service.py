@@ -188,7 +188,7 @@ def create_conversation_note(uuid: str, note_text: str) -> bool:
 @celery_app.task(name='io.send_message')
 def send_message(phone_number, messages, plan_names, contact_id):
     try:
-        from app.config.utils.messages_plans import plans_messages
+        from app.utils.static import plans_messages
         
         state, _ = state_manager.get_state(contact_id)
         if state.communication_preference.prefers_audio:
