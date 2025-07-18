@@ -33,12 +33,13 @@ class StateManagerService:
         metadata = StateMetadata(contact_id=contact_id)
         return ConversationState(metadata=metadata)
 
-    def get_state(self, contact_id: str) -> ConversationState:
+    def get_state(self, contact_id: str) -> tuple[ConversationState, bool]:
         """
         Retrieves the current conversation state for a given contact.
 
-        If no state exists, a new initial state is created and returned.
+        If no state exists, a new initial state is created and returned with a flag indicating it's new.
         If the stored state is invalid, it logs an error and returns an initial state.
+        If the stored state is valid, it returns the state with a flag indicating it's not new.
 
         Args:
             contact_id (str): The unique ID of the contact.
@@ -52,26 +53,26 @@ class StateManagerService:
             
             if stored_state_json:
                 logger.info(f"[{contact_id}] - Conversation state found, loading from Redis.")
-                return ConversationState.model_validate_json(stored_state_json)
+                return ConversationState.model_validate_json(stored_state_json), False
             else:
                 logger.info(f"[{contact_id}] - No state found. Creating a new initial state in memory.")
-                return self._get_initial_state(contact_id)
+                return self._get_initial_state(contact_id), True
 
         except redis.exceptions.RedisError as e:
             logger.error(f"[{contact_id}] - Redis error when fetching state: {e}")
-            return self._get_initial_state(contact_id)
+            return self._get_initial_state(contact_id), True
         except ValidationError as e:
             logger.warning(f"[{contact_id}] - Pydantic validation error for stored state: {e}. Attempting to migrate old state format.")
             if stored_state_json:
                 try:
                     old_state_dict = json.loads(stored_state_json)
-                    return self._migrate_old_state(old_state_dict)
+                    return self._migrate_old_state(old_state_dict), False
                 except (json.JSONDecodeError, TypeError):
                     logger.error(f"[{contact_id}] - Could not migrate old state as it is not valid JSON. Creating new state.")
-                    return self._get_initial_state(contact_id)
+                    return self._get_initial_state(contact_id), True
             else:
                 # This case should not be hit if ValidationError was raised, but as a safeguard:
-                return self._get_initial_state(contact_id)
+                return self._get_initial_state(contact_id), True
 
     def save_state(self, contact_id: str, state: ConversationState):
         """
