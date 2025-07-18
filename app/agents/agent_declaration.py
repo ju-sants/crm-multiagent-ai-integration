@@ -11,9 +11,9 @@ config_path = 'app/config/crew_definitions/agents.yaml'
 
 agents_config = yaml.safe_load(open(config_path, 'r').read())
 
-def get_context_analysis_agent() -> Agent:
+def get_routing_agent() -> Agent:
     return Agent(
-        config=agents_config['ContextAnalysisAgent'],
+        config=agents_config['RoutingAgent'],
         llm=decivise_openai_llm,
         verbose=True,
         allow_delegation=False,
@@ -33,6 +33,15 @@ def get_system_operations_agent(llm=None) -> Agent:
         config=agents_config['SystemOperationsAgent'],
         llm=decivise_openai_llm if not llm else llm,
         tools=[system_operations_tool],
+        verbose=True,
+        allow_delegation=False,
+    )
+
+def get_incremental_strategic_planner_agent(llm=None) -> Agent:
+    return Agent(
+        config=agents_config['IncrementalStrategicPlannerAgent'],
+        llm=creative_openai_llm if not llm else llm,
+        tools=[knowledge_service_tool, drill_down_topic_tool],
         verbose=True,
         allow_delegation=False,
     )
