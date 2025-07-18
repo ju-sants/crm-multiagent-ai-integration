@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from structlog.stdlib import BoundLogger
 import time
 
-from celery import chain
 from celery import signals
 
 # Importações locais
@@ -21,9 +20,7 @@ from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
 
-from app.crews.main_crews.context_analysis import context_analysis_task
-from app.crews.main_crews.routing import routing_task
-
+from app.crews.main_crews.routing_agent import pre_routing_orchestrator
 
 
 @signals.worker_ready.connect
@@ -44,17 +41,25 @@ apply_litellm_patch()
 redis_client = get_redis()
 # redis_client.flushdb()
 # exit()
-redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
+# redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
 
+# print(redis_client.hgetall("71464be80c504971ae263d710b39dd1f:attachments"))
+# exit()
 # redis_client.rpop("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
 # redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
-# redis_client.rpush("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 'voltou a funcionar corretamente, queria falar dos orçamentos')
+# redis_client.rpush("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", """Boa tarde""")
 
 # print(redis_client.lrange("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 0, -1))
 # redis_client.flushdb()
 
 state_manager = StateManagerService()
 # print(json.dumps(state_manager.get_state("71464be80c504971ae263d710b39dd1f").strategic_plan, indent=4))
+# state = state_manager.get_state("71464be80c504971ae263d710b39dd1f")
+# print(json.dumps(state.model_dump(), indent=4))
+# for dc in state.disclosure_checklist:
+#     dc.status = 'pending'
+
+# state_manager.save_state("71464be80c504971ae263d710b39dd1f", state)
 # exit()
 # state.strategic_plan = None
 # state_manager.save_state("71464be80c504971ae263d710b39dd1f", state)
@@ -104,7 +109,7 @@ def process_audio_attachment_task(contact_uuid, url):
     try:
         transcription = transcript(url)
         if transcription:
-            message = f"(Áudio transcrito): {transcription}"
+            message = f"(Áudio transcrito): {transcription.strip()}"
             redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', message)
             static_url_part = url.split('uploads/')[1].split('?')[0]
             redis_client.hset(f'{contact_uuid}:attachments', static_url_part, transcription)
@@ -121,9 +126,9 @@ def process_image_attachment_task(contact_uuid, url):
     
     try:
         description_json = client_description.describe_image(image_url=url)
-        description = description_json.get('data', {}).get('content', '')
+        description = str(description_json.get('data', {}).get('content', ''))
         if description:
-            message = f"(Descrição de imagem): {description}"
+            message = f"(Descrição de imagem): {description.strip()}"
             redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', message)
             static_url_part = url.split('uploads/')[1].split('?')[0]
             redis_client.hset(f'{contact_uuid}:attachments', static_url_part, message)
@@ -133,15 +138,23 @@ def process_image_attachment_task(contact_uuid, url):
     finally:
         redis_client.delete(f"transcribing:image:{contact_uuid}")
 
-@celery_app.task(name='main.process_message_task')
-def process_message_task(contact_uuid):
+@celery_app.task(name='main.process_message_task', bind=True)
+def process_message_task(self, contact_uuid):
     """
     This task processes the aggregated messages for a contact after a debounce period.
     It now serves as the entrypoint to the Celery State Machine.
     """
-    logger.info(f"[{contact_uuid}] - Debounced task started. Initializing state machine.")
-    
-    redis_client.delete(f'pending_task:{contact_uuid}')
+    pending_task_key = f'pending_task:{contact_uuid}'
+    latest_task_id = redis_client.get(pending_task_key)
+
+    if not latest_task_id or latest_task_id != self.request.id:
+        logger.warning(f"[{contact_uuid}] - Stale task {self.request.id} found. A newer task may be scheduled or the task is invalid. Aborting.")
+        return
+
+    # The valid task consumes its execution token to ensure idempotency.
+    redis_client.delete(pending_task_key)
+
+    logger.info(f"[{contact_uuid}] - Debounced task {self.request.id} started. Initializing state machine.")
 
     contact_lock = redis_client.set(f'processing:{contact_uuid}', value='1', nx=True, ex=300)
     if not contact_lock:
@@ -176,11 +189,8 @@ def process_message_task(contact_uuid):
         state.metadata.contact_name = contact_name
         state_manager.save_state(contact_uuid, state)
         
-        pipeline = chain(
-            context_analysis_task.s(contact_id=contact_uuid),
-            routing_task.s()
-        )
-        pipeline.apply_async()
+        pre_routing_orchestrator.apply_async(args=[contact_uuid]),
+
         logger.info(f"[{contact_uuid}] - Celery state machine triggered.")
 
     except Exception as e:
@@ -238,8 +248,9 @@ def process_incoming_message(payload):
 @app.route('/receive_message', methods=['POST'])
 def receive_message():
     webhook_payload = request.get_json()
+    logger.info("Webhook: Received payload", uuid=webhook_payload.get("payload", {}).get("uuid", "N/A"))
     if not webhook_payload:
-        logger.info("Webhook: Payload vazio recebido.")
+        logger.info("Webhook: Payload is empty.")
         return jsonify({"status": "ok", "message": "Empty payload"}), 200
 
     event = webhook_payload.get("event")
