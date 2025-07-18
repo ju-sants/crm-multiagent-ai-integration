@@ -135,7 +135,7 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
         logger.info(f"[{contact_id}] - No new messages to process. Skipping summarization.")
         return f"No new messages to summarize for {contact_id}."
     
-    new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("17/07/2025 18:28:00", "%d/%m/%Y %H:%M:%S")]
+    new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("18/07/2025 08:28:00", "%d/%m/%Y %H:%M:%S")]
 
     # The full history for context is the combination of old and new
     raw_history_json = redis_client.get(f"history_raw:{contact_id}")
@@ -244,7 +244,7 @@ def state_summarizer_task(history_summary: dict, contact_id: str):
     """
     logger.info(f"[{contact_id}] - Starting state summarization.")
 
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
 
     disclousure_checklist = state.disclosure_checklist
     strategic_plan = state.strategic_plan
@@ -288,7 +288,7 @@ def profile_enhancer_task(history_summary: dict, contact_id: str):
     Receives history_summary from the previous task in the chain.
     """
     logger.info(f"[{contact_id}] - Starting profile enhancement.")
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
     last_turn_state = state.model_dump()
 
     agent = get_profile_enhancer_agent()
