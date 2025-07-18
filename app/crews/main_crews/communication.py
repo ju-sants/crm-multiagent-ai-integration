@@ -1,6 +1,8 @@
 import json
 from crewai import Crew, Process
 from datetime import datetime, timezone
+import time
+
 from app.services.celery_service import celery_app
 from app.crews.enrichment_crew import trigger_post_processing
 from app.core.logger import get_logger
@@ -26,7 +28,11 @@ def communication_task(self, contact_id: str):
     and dispatches messages to the user asynchronously.
     """
     logger.info(f"[{contact_id}] - Starting communication task.")
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
+
+    while redis_client.keys(f"transcribing:*:{contact_id}"):
+        logger.info(f"[{contact_id}] - Waiting for transcription to complete.")
+        time.sleep(1)
 
     try:
         llm_w_tools = creative_openai_llm.bind_tools([drill_down_topic_tool])

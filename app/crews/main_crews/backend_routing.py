@@ -21,7 +21,7 @@ def backend_routing_task(contact_id: str):
     This acts as the central switchboard for the conversation flow.
     """
     logger.info(f"[{contact_id}] - Routing task started.")
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
 
     # Determine the next step based on the state
     next_task = None

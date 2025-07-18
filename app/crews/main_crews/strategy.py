@@ -25,7 +25,7 @@ def strategy_task(self, contact_id: str):
     and passes contact_id to the next task.
     """
     logger.info(f"[{contact_id}] - Starting strategy task.")
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
 
     if state.is_plan_acceptable:
         logger.info(f"[{contact_id}] - Plan is acceptable, skipping strategy generation.")

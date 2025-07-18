@@ -26,7 +26,7 @@ def pre_routing_orchestrator(self, contact_id: str):
     strategy refinement, then routes to the next step.
     """
     logger.info(f"[{contact_id}] - Orchestrating parallel backend_routing tasks and refinement.")
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
 
     strategy_agent_task = None
     if state.strategic_plan:
@@ -50,7 +50,7 @@ def _run_routing_agent_crew(contact_id: str):
     This is now an internal task called by the orchestrator.
     """
     logger.info(f"[{contact_id}] - Starting internal context analysis crew.")
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
 
     try:
         agent = get_routing_agent()
@@ -83,7 +83,7 @@ def _run_routing_agent_crew(contact_id: str):
         if json_response:
             # Lock to prevent race conditions with the parallel refine_strategy task
             with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
-                current_state = state_manager.get_state(contact_id)
+                current_state, _ = state_manager.get_state(contact_id)
                 updated_state = ConversationState(**{**current_state.model_dump(), **json_response})
                 state_manager.save_state(contact_id, updated_state)
 

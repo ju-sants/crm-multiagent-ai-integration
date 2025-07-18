@@ -23,7 +23,7 @@ def system_operations_task(contact_id: str):
     Task for handling system operations requests.
     """
     logger.info(f"[{contact_id}] - Starting system operations task.")
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
     
     try:
         llm_w_tools = decivise_openai_llm.bind_tools([system_operations_tool])

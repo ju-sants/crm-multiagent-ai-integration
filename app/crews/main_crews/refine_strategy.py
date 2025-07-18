@@ -25,7 +25,7 @@ def refine_strategy_task(self, contact_id: str):
     improve the strategic plan based on the latest client message.
     """
     logger.info(f"[{contact_id}] - Starting incremental strategy refinement task.")
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
 
     # This task should always run, as long as there is a plan to refine.
     if not state.strategic_plan:
@@ -70,7 +70,7 @@ def refine_strategy_task(self, contact_id: str):
             # Lock the state to prevent race conditions with routing_agent
             with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
                 # Re-fetch state to get latest version
-                current_state = state_manager.get_state(contact_id)
+                current_state, _ = state_manager.get_state(contact_id)
                 
                 # Log the dictionary from the agent to inspect its structure
                 logger.info(f"[{contact_id}] - Agent's raw updated_state_dict: {json.dumps(updated_state_dict, indent=2)}")

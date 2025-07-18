@@ -23,7 +23,7 @@ def registration_task(contact_id: str):
     Task for handling the customer registration data collection process.
     """
     logger.info(f"[{contact_id}] - Starting registration task.")
-    state = state_manager.get_state(contact_id)
+    state, _ = state_manager.get_state(contact_id)
 
     try:
         agent = get_registration_agent()
