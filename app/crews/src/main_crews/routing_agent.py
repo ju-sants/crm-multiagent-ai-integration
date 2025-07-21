@@ -1,7 +1,7 @@
 import json
 from crewai import Crew, Process
 import time
-from celery import group, chain
+from celery import chain
 
 from app.services.celery_service import celery_app
 from app.core.logger import get_logger
@@ -14,6 +14,9 @@ from app.services.redis_service import get_redis
 from app.crews.src.main_crews.refine_strategy import refine_strategy_task
 from app.crews.src.main_crews.strategy import strategy_task
 from app.crews.src.main_crews.backend_routing import backend_routing_task
+from app.utils.funcs.funcs import distill_conversation_state
+from app.utils.static import default_strategic_plan
+
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
@@ -29,10 +32,10 @@ def pre_routing_orchestrator(self, contact_id: str):
     state, _ = state_manager.get_state(contact_id)
 
     strategy_agent_task = None
-    if state.strategic_plan:
-        strategy_agent_task = refine_strategy_task.s(contact_id)
-    else:
+    if state.strategic_plan and state.strategic_plan == default_strategic_plan:
         strategy_agent_task = strategy_task.s(contact_id)
+    else:
+        strategy_agent_task = refine_strategy_task.s(contact_id)
     
     if strategy_agent_task:
         strategy_agent_task.apply_async()
@@ -57,24 +60,26 @@ def _run_routing_agent_crew(contact_id: str):
         task = create_strategy_agent_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
+        shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
+
         messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
-        history_summary_json = redis_client.get(f"history:{contact_id}")
-        history_summary = json.loads(history_summary_json) if history_summary_json else {}
+        longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
+        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
         history_messages = "\n\n".join(
-            [f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}" for topic in history_summary.get("topic_details", [])]
+            [f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}" for topic in longterm_history.get("topic_details", [])]
         )
 
         while redis_client.keys(f"transcribing:*:{contact_id}"):
             logger.info(f"[{contact_id}] - Waiting for transcription to complete.")
             time.sleep(1)
 
-        conversation_state_dict = state.model_dump()
-        conversation_state_dict.pop("disclosure_checklist", {})
+        conversation_state_distilled = distill_conversation_state(state, "RoutingAgent")
 
         inputs = {
             "client_message": "\n".join(messages),
-            "conversation_state": json.dumps(conversation_state_dict),
-            "history": history_messages,
+            "conversation_state": json.dumps(conversation_state_distilled),
+            "longterm_history": history_messages,
+            "shorterm_history": str(shorterm_history) if shorterm_history else "",
         }
 
         result = crew.kickoff(inputs=inputs)
