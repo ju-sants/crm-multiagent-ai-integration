@@ -7,19 +7,19 @@ celery_app = Celery(
     broker=f'redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB_MAIN + 1}',
     backend=f'redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB_MAIN + 1}',
     include=[
-        'app.crews.main_crews.routing_agent',
-        'app.crews.main_crews.strategy',
-        'app.crews.main_crews.communication',
-        'app.crews.main_crews.system_operations',
-        'app.crews.main_crews.registration',
-        'app.crews.main_crews.backend_routing',
-        'app.crews.enrichment_crew',
+        'app.crews.src.main_crews.routing_agent',
+        'app.crews.src.main_crews.strategy',
+        'app.crews.src.main_crews.communication',
+        'app.crews.src.main_crews.system_operations',
+        'app.crews.src.main_crews.registration',
+        'app.crews.src.main_crews.backend_routing',
+        'app.crews.src.enrichment_crew',
         'app.services.callbell_service',
         'main'
     ]
 )
 
-# celery_app.control.purge()  # Clear any existing tasks
+celery_app.control.purge()  # Clear any existing tasks
 
 # Enhanced configuration for connection resilience
 celery_app.conf.update(
