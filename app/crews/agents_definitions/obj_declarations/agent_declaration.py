@@ -58,7 +58,7 @@ def get_communication_agent(llm=None) -> Agent:
 def get_registration_agent() -> Agent:
     return Agent(
         config=agents_config['RegistrationDataCollectorAgent'],
-        llm=X_llm,
+        llm=default_openai_llm,
         verbose=True,
         allow_delegation=False
     )
@@ -66,7 +66,7 @@ def get_registration_agent() -> Agent:
 def get_history_summarizer_agent() -> Agent:
     return Agent(
         config=agents_config['HistorySummarizerAgent'],
-        llm=X_llm,
+        llm=default_openai_llm,
         verbose=True,
         allow_delegation=False,
     )
@@ -74,7 +74,7 @@ def get_history_summarizer_agent() -> Agent:
 def get_data_quality_agent() -> Agent:
     return Agent(
         config=agents_config['DataQualityAgent'],
-        llm=X_llm,
+        llm=default_openai_llm,
         verbose=True,
         allow_delegation=False,
     )
@@ -82,7 +82,7 @@ def get_data_quality_agent() -> Agent:
 def get_state_summarizer_agent() -> Agent:
     return Agent(
         config=agents_config['StateSummarizerAgent'],
-        llm=X_llm,
+        llm=default_openai_llm,
         verbose=True,
         allow_delegation=False,
     )
@@ -90,7 +90,7 @@ def get_state_summarizer_agent() -> Agent:
 def get_profile_enhancer_agent() -> Agent:
     return Agent(
         config=agents_config['ProfileEnhancerAgent'],
-        llm=X_llm,
+        llm=default_openai_llm,
         verbose=True,
         allow_delegation=False,
     )
