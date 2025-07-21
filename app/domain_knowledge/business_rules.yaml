@@ -1,6 +1,7 @@
 # business_rules.yaml
 # Fonte de Verdade para Regras de Negócio, Políticas, Produtos e Procedimentos da Global System.
-# Versão 5.1 - Criado em 13/06/2025
+# Versão 5.2 - Criado em 21/07/2025 by Roo
+# Alterações: Adicionado sales_guidance, sales_pitch nos produtos e reordenado para upsell.
 
 # 1. Informações da Empresa
 company_info:
@@ -89,25 +90,105 @@ communication_guidelines:
       password_reset: "O usuário e senha não são alterados fora do horário comercial. O cliente pode usar a função 'ESQUECEU SENHA' no aplicativo, desde que os dados de contato estejam atualizados."
       third_party_access_removal: "O suporte não pode remover o acesso de terceiros diretamente. O titular deve alterar a senha do aplicativo para revogar o acesso. O suporte pode auxiliar o titular neste processo."
 
-# 3. Catálogo de Produtos e Planos
+# 3. Catálogo de Produtos e Planos (Reordenado para Upsell)
 products:
-  # 3.1. Planos para Motos
+  # 3.1. Planos para Frotas e Veículos Leves (Ordem de Upsell)
+  - category: "Frotas e Veículos Leves"
+    plans:
+      - name: "Rastreador Híbrido SATELITAL"
+        type: "Rastreamento Híbrido (GSM + Satélite) para máxima eficiência em locais urbanos e remotos."
+        sales_pitch: "É a nossa solução definitiva. Oferece cobertura ininterrupta e é ideal para quem não pode arriscar perder o sinal. É o investimento mais seguro para máxima tranquilidade."
+        target_audience: "Veículos que operam em qualquer lugar, incluindo áreas sem sinal de celular como fazendas e rodovias remotas."
+        pricing:
+          adesao: 400.00
+          mensalidade:
+            sem_bloqueio: 180.00
+            com_bloqueio: 200.00
+        technology:
+          network: "Híbrido - GSM (sinal de operadora) e SATÉLITE."
+          how_it_works: "O rastreador utiliza a rede GSM como prioritária e, ao entrar em uma área sem sinal de celular, muda automaticamente para a comunicação via satélite, garantindo cobertura contínua."
+          update_frequency_gsm:
+            moving: "A cada 30 segundos"
+            stopped: "A cada 30 minutos"
+          update_frequency_satellite:
+            moving: "Em média a cada 8 minutos"
+            stopped: "Em média a cada 1 hora"
+          potential_limitation: "Locais com cobertura metálica, como galpões, postos ou túneis, podem gerar atraso na atualização via satélite. O sistema atualiza normalmente assim que o veículo sai desses locais."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo de infrações, uso fora de horário e tempo de motor ligado com veículo parado."
+        contract_terms:
+          vigencia: "24 meses"
+          cancellation_policy: "Isento de multa. Taxa de desinstalação no valor da adesão (R$ 400,00) caso cancele antes do prazo."
+          equipment_regime: "Comodato (equipamento emprestado, deve ser devolvido ao final do contrato)."
+        catalog_link: "https://wa.me/p/8781199928651103/558006068000"
+        faq:
+          - question: "Serve para todos os tipos de clientes?"
+            answer: "Sim. Ele é indicado para qualquer tipo de cliente. Mas especialmente aqueles que rodam em áreas remotas, como fazendas, rodovias e locais sem sinal de celular, pois a antena satelital transmite."
+          - question: "A antena satelital comunica em qualquer local sempre?"
+            answer: "A antena satelital tem dificuldades de comunicação e perde sinal abaixo de coberturas metálicas, como galpões, postos ou túneis. O sistema atualiza normalmente assim que o veículo sai desses locais."
+
+      - name: "Rastreador GSM (2G+3G+4G) + WI-FI"
+        type: "Rastreamento GSM com WI-FI para Fazendas e Locais Remotos"
+        sales_pitch: "A solução inteligente para conectividade em áreas rurais. Usa a internet local para garantir que você nunca perca os dados do seu maquinário, mesmo sem sinal de celular."
+        target_audience: "Fazendas ou locais remotos."
+        pricing:
+          adesao: 300.00
+          mensalidade:
+            sem_bloqueio: 75.00
+            com_bloqueio: 85.00
+        technology:
+          network: "GSM (Vivo, Claro, TIM) e Wi-Fi local."
+          offline_storage: "Memória interna para até 50.000 posições (aproximadamente 3 meses de histórico), com descarregamento automático via GSM ou Wi-Fi. O sistema prioriza a rede GSM e usa o Wi-Fi como backup."
+        includes:
+          - "2 roteadores Wi-Fi pré-configurados que funcionam como repetidores do sinal de internet existente no local (ex: Starlink, rádio, fibra)."
+          - "Suporte técnico para configuração de roteadores adicionais."
+        blocker_functionality:
+          recommendation: "Não recomendamos a instalação do bloqueio para veículos em fazendas ou áreas remotas devido à dificuldade de assistência em caso de falha elétrica ou pane."
+          availability: "A instalação é possível se o cliente estiver ciente dos riscos operacionais e os assumir."
+        contract_terms:
+          vigencia: "24 meses."
+          cancellation_policy: "Sem multa. Taxa de desinstalação de R$ 300,00 se cancelado antes de 24 meses. Gratuita após 24 meses."
+          cancellation_fee_justification: "A taxa de desinstalação não é uma multa, mas sim o pagamento pelo serviço técnico especializado de remoção do equipamento."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
+        catalog_link: "https://wa.me/p/9380395508713863/558006068000"
+        faq:
+          - question: "Qual a diferença entre o plano Rastreador GSM (2G+3G+4G) + Wi-Fi e o Rastreador GSM 4G?"
+            answer: "O plano Rastreador GSM (2G+3G+4G) + Wi-Fi inclui a instalação de dois roteadores Wi-Fi pré-configurados que funcionam como repetidores do sinal de internet existente no local (ex: Starlink, rádio, fibra). Isso permite que o sistema funcione em áreas remotas sem sinal de celular, como em fazendas. O plano Rastreador GSM 4G, por outro lado, é um plano de rastreamento que utiliza apenas a rede GSM 4G para rastreamento."
+          - question: "Para que tipo de cliente é indicado o plano Rastreador GSM (2G+3G+4G) + Wi-Fi?"
+            answer: "É **PRINCIPALMENTE** indicado para fazendas e locais remotos, mas com acesso a WI-FI local. Por isso em quase 100% dos casos se adequa apenas a fazendas, chácaras e locais parecidos."
+            
+      - name: "Rastreador GSM 4G"
+        type: "Rastreamento para veículos que rodam em locais com boa cobertura de sinal de celular."
+        sales_pitch: "Nosso plano mais popular, perfeito para o dia a dia na cidade. Oferece a confiança e a tecnologia 4G que você precisa a um preço muito competitivo."
+        pricing:
+          adesao: 200.00
+          mensalidade:
+            sem_bloqueio: 65.00
+            com_bloqueio: 75.00
+        technology:
+          network: "GSM 4G (Vivo, Claro, TIM entre outras...)."
+          offline_storage: "Em locais sem sinal, dados (trajetos, paradas) são retidos e enviados automaticamente ao reconectar."
+          update_frequency_moving: "A cada 30 segundos."
+          update_frequency_stopped: "A cada 30 minutos."
+        contract_terms:
+          vigencia: "24 meses."
+          cancellation_policy: "Isento de multa. Taxa de desinstalação de R$ 200,00 se cancelado antes de 24 meses. Gratuita após 24 meses em unidades próprias."
+          maintenance_policy: "Manutenção gratuita para defeitos de fabricação. Danos externos são avaliados e cobrados à parte."
+          contract_transfer: "É possível transferir o contrato para um novo titular em caso de venda do veículo."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
+        catalog_link: "https://wa.me/p/9321097734636816/558006068000"
+        faq:
+          - question: "Para que tipo de cliente é indicado o plano Rastreador GSM 4G?"
+            answer: "Ele é indicado a TODO tipo de cliente. Porém para clientes que rodam em áreas remotas, sem sinal de celular, o rastreador GSM puro pode ser inefetivo no rastreio, devido as constantes falhas de comunicação. É mais indicado para veículos que circulam em áreas urbanas com sinal de celular."
+
+  # 3.2. Planos para Motos (Ordem de Upsell)
   - category: "Motos"
     plans:
-      - name: "Plano Rastreamento Moto"
-        type: "Rastreamento"
-        pricing:
-          adesao: 120.00
-          mensalidade: 60.00
-        includes:
-          - "Plantão 24 horas para rastreamento."
-        technology:
-          update_frequency_moving: "A cada 30 segundos."
-          update_frequency_stopped: "A cada 8 horas (para economia de bateria)."
-        contract_type: "moto_standard"
-        catalog_link: "https://wa.me/p/9380524238652852/558006068000"
       - name: "Plano Proteção Total PGS"
-        type: "Rastreamento com Cobertura (Reembolso FIPE), APENAS PARA MOTOS!"
+        type: "Rastreamento para motos com Reembolso em caso de Roubo ou Furto."
+        sales_pitch: "É a proteção máxima para sua moto. Mais que um rastreador, é a garantia de que você não terá prejuízo. Se não recuperarmos sua moto, nós pagamos o valor da FIPE."
         pricing:
           adesao: 120.00
           reinstalacao: 100.00
@@ -150,88 +231,33 @@ products:
           - question: "Se a moto for financiada e roubada, continuo pagando?"
             answer: "Sim. O cliente se compromete a continuar o pagamento do financiamento. Após o pagamento da indenização do plano PGS, os direitos sobre o veículo passam para a Global System."
 
-  # 3.2. Planos Padrão (Carros, Frotas, etc.)
-  - category: "Frotas e Veículos Leves"
-    plans:
-      - name: "Rastreador Híbrido SATELITAL"
-        type: "Rastreamento Híbrido (GSM + Satélite)"
-        target_audience: "Veículos que operam em qualquer lugar, incluindo áreas sem sinal de celular como fazendas e rodovias remotas."
+      - name: "Plano Rastreamento Moto"
+        type: "Rastreamento puro para motos, sem compensação em caso de roubo."
+        sales_pitch: "Uma solução de rastreamento eficaz e acessível para você saber onde sua moto está 24h por dia. Perfeito para quem busca segurança com um ótimo custo-benefício."
         pricing:
-          adesao: 400.00
-          mensalidade:
-            sem_bloqueio: 180.00
-            com_bloqueio: 200.00
-        technology:
-          network: "Híbrido - GSM (sinal de operadora) e SATÉLITE."
-          how_it_works: "O rastreador utiliza a rede GSM como prioritária e, ao entrar em uma área sem sinal de celular, muda automaticamente para a comunicação via satélite, garantindo cobertura contínua."
-          update_frequency_gsm:
-            moving: "A cada 30 segundos"
-            stopped: "A cada 30 minutos"
-          update_frequency_satellite:
-            moving: "Em média a cada 8 minutos"
-            stopped: "Em média a cada 1 hora"
-          potential_limitation: "Locais com cobertura metálica, como galpões, postos ou túneis, podem gerar atraso na atualização via satélite. O sistema atualiza normalmente assim que o veículo sai desses locais."
-        exclusive_features:
-          - "Relatório diário via WhatsApp com resumo de infrações, uso fora de horário e tempo de motor ligado com veículo parado."
-        contract_terms:
-          vigencia: "24 meses"
-          cancellation_policy: "Isento de multa. Taxa de desinstalação no valor da adesão (R$ 400,00) caso cancele antes do prazo."
-          equipment_regime: "Comodato (equipamento emprestado, deve ser devolvido ao final do contrato)."
-        catalog_link: "https://wa.me/p/8781199928651103/558006068000"
-
-      - name: "Rastreador GSM (2G+3G+4G) + WI-FI"
-        target_audience: "Fazendas ou locais remotos."
-        pricing:
-          adesao: 300.00
-          mensalidade:
-            sem_bloqueio: 75.00
-            com_bloqueio: 85.00
-        technology:
-          network: "GSM (Vivo, Claro, TIM) e Wi-Fi local."
-          offline_storage: "Memória interna para até 50.000 posições (aproximadamente 3 meses de histórico), com descarregamento automático via GSM ou Wi-Fi. O sistema prioriza a rede GSM e usa o Wi-Fi como backup."
+          adesao: 120.00
+          mensalidade: 60.00
         includes:
-          - "2 roteadores Wi-Fi pré-configurados que funcionam como repetidores do sinal de internet existente no local (ex: Starlink, rádio, fibra)."
-          - "Suporte técnico para configuração de roteadores adicionais."
-        blocker_functionality:
-          recommendation: "Não recomendamos a instalação do bloqueio para veículos em fazendas ou áreas remotas devido à dificuldade de assistência em caso de falha elétrica ou pane."
-          availability: "A instalação é possível se o cliente estiver ciente dos riscos operacionais e os assumir."
-        contract_terms:
-          vigencia: "24 meses."
-          cancellation_policy: "Sem multa. Taxa de desinstalação de R$ 300,00 se cancelado antes de 24 meses. Gratuita após 24 meses."
-          cancellation_fee_justification: "A taxa de desinstalação não é uma multa, mas sim o pagamento pelo serviço técnico especializado de remoção do equipamento."
-        exclusive_features:
-          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
-        catalog_link: "https://wa.me/p/9380395508713863/558006068000"
-        
-      - name: "Rastreador GSM 4G"
-        type: "Rastreamento de Frotas"
-        pricing:
-          adesao: 200.00
-          mensalidade:
-            sem_bloqueio: 65.00
-            com_bloqueio: 75.00
+          - "Plantão 24 horas para rastreamento."
         technology:
-          network: "GSM 4G (Vivo, Claro, TIM entre outras...)."
-          offline_storage: "Em locais sem sinal, dados (trajetos, paradas) são retidos e enviados automaticamente ao reconectar."
           update_frequency_moving: "A cada 30 segundos."
-          update_frequency_stopped: "A cada 30 minutos."
-        contract_terms:
-          vigencia: "24 meses."
-          cancellation_policy: "Isento de multa. Taxa de desinstalação de R$ 200,00 se cancelado antes de 24 meses. Gratuita após 24 meses em unidades próprias."
-          maintenance_policy: "Manutenção gratuita para defeitos de fabricação. Danos externos são avaliados e cobrados à parte."
-          contract_transfer: "É possível transferir o contrato para um novo titular em caso de venda do veículo."
-        exclusive_features:
-          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
-        catalog_link: "https://wa.me/p/9321097734636816/558006068000"
-
-     
-      
-     
-
+          update_frequency_stopped: "A cada 8 horas (para economia de bateria)."
+        contract_type: "moto_standard"
+        catalog_link: "https://wa.me/p/9380524238652852/558006068000"
+        faq:
+          - question: "Como funciona o Plano Rastreamento Moto?"
+            answer: "O Plano Rastreamento Moto é um serviço de rastreamento para motos que oferece acompanhamento em tempo real 24 horas por dia, porém sem compensação em caso de roubo."
+          - question: "Qual a principal diferença pro plano PGS?"
+            answer: "O Plano Proteção Total PGS, além de rastreamento, oferece indenização em caso de roubo, com reembolso até o valor da FIPE."
+          - question: "Que tipo de rastreador é usado?"
+            answer: "Utilizamos rastreadores GSM 4G, por isso, é necessário ter sinal de celular para o funcionamento do serviço."
+  
+  # 3.3. Planos para Mobilidade Pessoal
   - category: "Mobilidade Pessoal"
     plans:
       - name: "Plano para Scooters, Patinetes e Bikes Elétricas"
-        type: "Rastreamento 4G"
+        type: "Rastreamento 4G para veículos de mobilidade pessoal."
+        sales_pitch: "Segurança para toda a família. Acompanhe em tempo real os trajetos de scooters e patinetes, garantindo a tranquilidade que você precisa no dia a dia."
         target_audience: "Ideal para monitoramento de veículos de mobilidade pessoal, como no acompanhamento de filhos para segurança da família."
         pricing:
           adesao: 100.00
@@ -243,8 +269,23 @@ products:
           cancellation_policy: "Isento de multa para rescisão. O custo da mão de obra para retirada do equipamento antes de 24 meses é de R$ 100,00."
           free_cancellation_condition: "A retirada do equipamento nas lojas da Global System é gratuita após 24 meses de contrato."
         catalog_link: "https://wa.me/p/8478546275590970/558006068000"
+        faq:
+        - question: "Para que tipo de cliente é indicado o plano para Scooters, Patinetes e Bikes Elétricas?"
+          answer: "Ideal para monitoramento de veículos de mobilidade pessoal, como no acompanhamento de filhos para segurança da família."
         
-# 4. Políticas e Procedimentos Operacionais
+# 4. Diretrizes de Venda Estratégica (NOVO)
+sales_guidance:
+  upsell_philosophy:
+    - "Sempre comece a conversa com a solução mais completa e valiosa (Híbrido/PGS). Apresente-a como a opção 'padrão ouro'."
+    - "Use os planos mais baratos como alternativas estratégicas, não como a oferta inicial. Eles são a resposta para objeções de preço, não o ponto de partida."
+    - "Conecte o preço mais alto a benefícios tangíveis e emocionais: 'mais segurança', 'cobertura total', 'zero dor de cabeça'."
+    - "Use o 'sales_pitch' de cada produto para reforçar seu valor único e justificar sua posição na hierarquia de ofertas."
+  product_hierarchy_logic:
+    - "Para carros/caminhões, a sequência é: Satelital Híbrido -> GSM+WiFi -> GSM 4G."
+    - "Para motos, a sequência é: Plano PGS -> Rastreamento Simples."
+    - "Apresente a hierarquia como uma forma de personalizar a solução, onde o cliente pode 'descer' um nível se o orçamento for uma questão crítica."
+
+# 5. Políticas e Procedimentos Operacionais
 operational_procedures:
   installation:
     general_policy:
@@ -355,7 +396,7 @@ operational_procedures:
         - "4. Calcular custos operacionais envolvidos e responder ao cliente."
       required_info_from_client: "Nome exato da cidade."
 
-# 5. Funcionalidades do Aplicativo Global System
+# 6. Funcionalidades do Aplicativo Global System
 application_features:
   overview: "Plataforma robusta para monitoramento em tempo real, gestão de alertas operacionais, criação de cercas eletrônicas, relatórios analíticos e acompanhamento completo de trajetos e atividades."
   access_and_setup:
@@ -402,9 +443,9 @@ application_features:
     - "Criação de cerca eletrônica: https://www.tiktok.com/@globalsystem24h/video/7486842696829603077"
     - "Visualização de rotas e trilhas: https://www.tiktok.com/@globalsystem24h/video/7486842532379282694"
     
-# 6. Termos Contratuais e Jurídicos (Consolidado)
+# 7. Termos Contratuais e Jurídicos (Consolidado)
 legal_and_contractual:
-  # 6.1. Definições Gerais (Aplicável a todos os contratos)
+  # 7.1. Definições Gerais (Aplicável a todos os contratos)
   general_terms:
     service_object: "Prestação de serviços de instalação, revisão e desinstalação de equipamentos de rastreamento (GSM/GPRS e/ou SATELITAL) para coleta de dados de localização e telemetria."
     legal_disclaimer: "O serviço de rastreamento é uma ferramenta para auxiliar na localização do veículo e NÃO É UM CONTRATO DE SEGURO. Não há garantia de recuperação do veículo em caso de roubo ou furto."
@@ -443,7 +484,7 @@ legal_and_contractual:
       data_subject_rights: "O titular tem direito à confirmação de tratamento, acesso, correção, anonimização, bloqueio ou eliminação dos dados, entre outros previstos na LGPD, mediante requisição."
     jurisdiction: "Fica eleito o Foro da Comarca de Luís Eduardo Magalhães - BA, podendo a parte que promove a ação optar pelo foro do domicílio do cliente."
 
-  # 6.2. Termos Específicos do Contrato Padrão (Não-PGS)
+  # 7.2. Termos Específicos do Contrato Padrão (Não-PGS)
   standard_contract:
     contract_id: "GSM_SATELITAL_NAO_PGS"
     inadimplencia:
@@ -475,7 +516,7 @@ legal_and_contractual:
       tax_code: "8020001"
       service_code: "31.01"
 
-  # 6.3. Termos Específicos do Contrato Moto com Cobertura (PGS)
+  # 7.3. Termos Específicos do Contrato Moto com Cobertura (PGS)
   moto_pgs_contract:
     contract_id: "MOTO_PGS_COBERTURA"
     reimbursement_clause:
@@ -504,7 +545,7 @@ legal_and_contractual:
     administrative_procedures:
       contract_transfer: "É possível transferir os serviços para um terceiro (novo proprietário) mediante assinatura de um novo Termo de Adesão."
 
-# 7. Scripts de Venda e Gatilhos de Perfil de Cliente
+# 8. Scripts de Venda e Gatilhos de Perfil de Cliente
 customer_profiles_and_triggers:
   - profile: "Foco em Custo"
     script: "Entendo perfeitamente que o orçamento é um ponto crucial. Muitos dos nossos clientes inicialmente pensam no custo, mas rapidamente percebem que a Global System é um investimento estratégico. Para seu caso, o plano {plano} tem adesão de R${adesao} e mensalidade de R${mensalidade}. Importante ressaltar que este é um serviço de rastreamento para auxílio na localização, e não um seguro. Podemos detalhar todos os termos e como ele se encaixa no seu orçamento?"
