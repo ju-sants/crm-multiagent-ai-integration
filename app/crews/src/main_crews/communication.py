@@ -7,13 +7,14 @@ from app.services.celery_service import celery_app
 from app.crews.src.enrichment_crew import trigger_post_processing
 from app.core.logger import get_logger
 from app.crews.agents_definitions.obj_declarations.agent_declaration import get_communication_agent
-from app.config.llm_config import creative_openai_llm
+from app.config.llm_config import X_llm
 from app.tools.knowledge_tools import drill_down_topic_tool
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_communication_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
+from app.utils.funcs.funcs import distill_conversation_state
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
@@ -35,19 +36,19 @@ def communication_task(self, contact_id: str):
         time.sleep(1)
 
     try:
-        llm_w_tools = creative_openai_llm.bind_tools([drill_down_topic_tool])
+        llm_w_tools = X_llm.bind_tools([drill_down_topic_tool])
         agent = get_communication_agent(llm_w_tools)
         task = create_communication_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
         # Process inputs
-        history_raw = redis_client.get(f"history_raw_text:{contact_id}")
+        shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
 
-        history_summary_json = redis_client.get(f"history:{contact_id}")
-        history_summary = json.loads(history_summary_json) if history_summary_json else {}
-        history_summary_messages = "\n\n".join([
+        longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
+        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
+        longterm_history = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in history_summary.get("topic_details", [])
+            for topic in longterm_history.get("topic_details", [])
         ])
 
         system_op_output = redis_client.get(f"{contact_id}:last_system_operation_output")
@@ -56,20 +57,20 @@ def communication_task(self, contact_id: str):
 
         redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
         
-        conversation_state_str = state.model_dump_json()
-        conversation_state: dict = json.loads(conversation_state_str)
+        # State Distillation
+        conversation_state_distilled = distill_conversation_state(state, "CommunicationAgent")
         
-        strategic_plan = conversation_state.pop("strategic_plan", None)
-        disclosure_checklist = conversation_state.pop("disclosure_checklist", None)
+        strategic_plan = conversation_state_distilled.pop("strategic_plan", None)
+        disclosure_checklist = conversation_state_distilled.pop("disclosure_checklist", None)
 
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "strategic_plan": json.dumps(strategic_plan),
             "system_operations_task_output": system_op_output if system_op_output else "{}",
             "customer_profile": str(redis_client.get(f"{contact_id}:customer_profile")),
-            "conversation_state": str(conversation_state),
-            "history": history_summary_messages,
-            "history_raw": str(history_raw),
+            "conversation_state": str(conversation_state_distilled),
+            "longterm_history": longterm_history,
+            "shorterm_history": str(shorterm_history),
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
             "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]) if not disclosure_checklist else str(disclosure_checklist),
             "client_message": "\n".join(last_processed_messages),
