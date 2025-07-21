@@ -3,6 +3,7 @@ from celery import group, chain
 from crewai import Crew, Process
 from typing import Any
 from datetime import datetime
+import time
 
 from app.core.logger import get_logger
 from app.services.redis_service import get_redis
@@ -11,6 +12,7 @@ from app.utils.funcs.funcs import parse_json_from_string
 from app.services.callbell_service import get_contact_messages, send_message
 from app.services.state_manager_service import StateManagerService
 from app.models.data_models import ConversationState
+from app.utils.funcs.funcs import distill_conversation_state
 
 state_manager = StateManagerService()
 
@@ -114,7 +116,7 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
     """
     logger.info(f"[{contact_id}] - Starting incremental history summarization.")
 
-    summary_key = f"history:{contact_id}"
+    summary_key = f"longterm_history:{contact_id}"
     timestamp_key = f"history:last_timestamp:{contact_id}"
 
     # Get existing data from Redis
@@ -130,13 +132,13 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
     else:
         logger.info(f"[{contact_id}] - No existing summary found. Fetching full history.")
         new_messages = get_contact_messages(contact_id, limit=50)
+    
+    new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("21/07/2025 20:35:00", "%d/%m/%Y %H:%M:%S")]
 
     if not new_messages:
         logger.info(f"[{contact_id}] - No new messages to process. Skipping summarization.")
         return f"No new messages to summarize for {contact_id}."
     
-    new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("18/07/2025 08:28:00", "%d/%m/%Y %H:%M:%S")]
-
     # The full history for context is the combination of old and new
     raw_history_json = redis_client.get(f"history_raw:{contact_id}")
     raw_history = json.loads(raw_history_json) if raw_history_json else []
@@ -146,7 +148,8 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
 
     # Normalize the history
     normalized_history = raw_history_to_messages(full_history, contact_id)
-    redis_client.set(f"history_raw_text:{contact_id}", normalized_history)
+    normalized_history = normalized_history.replace("*Alessandro Assistente Global:*\n", "")
+    redis_client.set(f"shorterm_history:{contact_id}", normalized_history)
 
     agent = get_history_summarizer_agent()
     task = create_summarize_history_task(agent)
@@ -185,7 +188,7 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
                     if start_index is not None and end_index is not None:
                         # Slice the raw history to get the relevant snippet for the noisy topic
                         raw_history_snippet = full_history[start_index:end_index + 1]
-                        data_quality_task.delay(contact_id, topic_id, json.dumps(raw_history_snippet), json.dumps(full_history))
+                        data_quality_task.apply_async(contact_id, topic_id, json.dumps(raw_history_snippet), json.dumps(full_history))
                     else:
                         logger.warning(f"[{contact_id}] - Could not trigger data quality task for topic {topic_id} due to missing indices.")
         
@@ -238,7 +241,7 @@ def data_quality_task(contact_id: str, topic_id: str, raw_history_snippet: str, 
 
 
 @celery_app.task(name='enrichment.state_summarizer')
-def state_summarizer_task(history_summary: dict, contact_id: str):
+def state_summarizer_task(longterm_history: dict, contact_id: str):
     """
     Asynchronous task to summarize and enrich the conversation state.
     """
@@ -254,27 +257,31 @@ def state_summarizer_task(history_summary: dict, contact_id: str):
 
     crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
-    last_turn_state = state.model_dump()
+    conversation_state_distilled = distill_conversation_state(state, "StateSummarizerAgent")
 
-    last_turn_state.pop('strategic_plan', None)  # Remove strategic plan from last turn state to avoid conflicts
-    last_turn_state.pop('disclosure_checklist', None)  # Remove disclosure checklist from last turn state to avoid conflicts
+    shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
 
     inputs = {
-        "history_summary": json.dumps(history_summary),
-        "last_turn_state": json.dumps(last_turn_state),
+        "longterm_history": json.dumps(longterm_history),
+        "shortem_history": str(shorterm_history),
+        "last_turn_state": json.dumps(conversation_state_distilled),
         "client_message": str(redis_client.get(f"{contact_id}:last_processed_messages"))
     }
     
     result = crew.kickoff(inputs=inputs)
     
     enriched_state = parse_json_from_string(result.raw, update=False)
-
+    
     if enriched_state:
+        
+        logger.info(f"[{contact_id}] - Enriched state: {enriched_state}")
+        disclousure_checklist_data = [dc.model_dump() for dc in disclousure_checklist] if disclousure_checklist else []
+        logger.info(f"[{contact_id}] - Enriched disclosure checklist: {disclousure_checklist_data}")
 
-        new_state = ConversationState(**enriched_state)
+        enriched_state['disclosure_checklist'] = disclousure_checklist_data
+        enriched_state['strategic_plan'] = strategic_plan
 
-        new_state.disclosure_checklist = disclousure_checklist
-        new_state.strategic_plan = strategic_plan
+        new_state = ConversationState(**{**state.model_dump(), **enriched_state})
 
         state_manager.save_state(contact_id, new_state)
 
@@ -282,10 +289,10 @@ def state_summarizer_task(history_summary: dict, contact_id: str):
     return enriched_state
 
 @celery_app.task(name='enrichment.profile_enhancer')
-def profile_enhancer_task(history_summary: dict, contact_id: str):
+def profile_enhancer_task(longterm_history: dict, contact_id: str):
     """
     Asynchronous task to enhance the long-term customer profile.
-    Receives history_summary from the previous task in the chain.
+    Receives longterm_history from the previous task in the chain.
     """
     logger.info(f"[{contact_id}] - Starting profile enhancement.")
     state, _ = state_manager.get_state(contact_id)
@@ -300,12 +307,12 @@ def profile_enhancer_task(history_summary: dict, contact_id: str):
     existing_profile_raw = redis_client.get(f"{contact_id}:customer_profile")
     existing_profile = existing_profile_raw if existing_profile_raw else "{}"
 
-    last_turn_state.pop('strategic_plan', None)  # Remove strategic plan from last turn state to avoid conflicts
-    last_turn_state.pop('disclosure_checklist', None)  # Remove disclosure checklist from
+    last_turn_state.pop('strategic_plan', None)
+    last_turn_state.pop('disclosure_checklist', None)
 
     inputs = {
         "contact_id": contact_id,
-        "history_summary": json.dumps(history_summary),
+        "longterm_history": json.dumps(longterm_history),
         "last_turn_state": json.dumps(last_turn_state),
         "existing_profile": existing_profile,
         "client_message": str(redis_client.get(f"{contact_id}:last_processed_messages"))
@@ -333,18 +340,37 @@ def profile_enhancer_task(history_summary: dict, contact_id: str):
 def trigger_post_processing(contact_id: str, send_message_task: bool = False, response_json: dict | None = None, phone_number: str | None = None):
     """
     Triggers the full asynchronous enrichment pipeline using an optimized fan-out architecture.
-    1. The history is summarized.
-    2. The history summary is then passed to two parallel tasks:
+    1. If send_message_task is True, it sends a message to the phone number.
+    2. The history is summarized.
+    3. The history summary is then passed to two parallel tasks:
        - State Summarizer
        - Profile Enhancer
     """
-    logger.info(f"[{contact_id}] - Triggering optimized fan-out enrichment pipeline.")
+    logger.info(f"[{contact_id}] - Triggering pipeline.")
 
+    trigger_message_sending = False
+    if send_message_task and phone_number and response_json:
+        trigger_message_sending = True
+
+    lock_enrichment_pipeline = redis_client.set(f"lock_enrichment_pipeline:{contact_id}", "locked", nx=True)
+
+    if not lock_enrichment_pipeline:
+        logger.info(f"[{contact_id}] - Enrichment pipeline already running. Skipping.")
+        redis_client.set("run_enrichment_pipeline_again", "true")
+
+        if trigger_message_sending:
+            logger.info(f"[{contact_id}] - Sending message to {phone_number}.")
+            send_message.apply_async(args=[phone_number, response_json['messages_sequence'], response_json.get("plan_names", []), contact_id])
+
+        return
+
+    logger.info(f"[{contact_id}] - Enrichment pipeline lock acquired.")
+    
     # The history summary is passed as the first argument to the tasks in the group.
 
     pipeline = None
-    if send_message_task and phone_number and response_json:
-        logger.info(f"[{contact_id}] - Preparing to send message to {phone_number} with response: {response_json['messages_sequence']}")
+    if trigger_message_sending:
+        logger.info(f"[{contact_id}] - Preparing to send message to {phone_number}")
         pipeline = chain(
             send_message.s(phone_number=phone_number, messages=response_json['messages_sequence'], plan_names=response_json.get("plan_names", []), contact_id=contact_id),
             history_summarizer_task.s(contact_id=contact_id),
@@ -364,8 +390,27 @@ def trigger_post_processing(contact_id: str, send_message_task: bool = False, re
         )
 
     if pipeline:
-        pipeline.apply_async()
+        result = pipeline.apply_async()
         logger.info(f"[{contact_id}] - Optimized fan-out enrichment pipeline successfully dispatched.")
+
+        try:
+            while not result.ready():
+                time.sleep(1)
+
+            logger.info(f"[{contact_id}] - Optimized fan-out enrichment pipeline completed successfully.")
+        
+        except Exception as e:
+            logger.error(f"[{contact_id}] - Error during enrichment pipeline execution: {e}")
+            redis_client.set("run_enrichment_pipeline_again", "true")
+            raise
+        
+        finally:
+            redis_client.delete(f"lock_enrichment_pipeline:{contact_id}")
+            if redis_client.get("run_enrichment_pipeline_again"):
+                redis_client.delete("run_enrichment_pipeline_again")
+
+                logger.info(f"[{contact_id}] - Enrichment pipeline re-triggered.")
+                trigger_post_processing(contact_id)
     
     else:
         logger.error(f"[{contact_id}] - Failed to trigger enrichment pipeline due to missing parameters.")
