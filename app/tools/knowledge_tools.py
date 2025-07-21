@@ -11,12 +11,16 @@ redis_client = get_redis()
 logger = get_logger(__name__)
 
 
-@tool("knowledge_service_tool")
+class KnowledgeServiceToolInput(BaseModel):
+    """Input para a ferramenta knowledge_service_tool."""
+    queries: List[Dict[str, Any]] = Field(..., description="Uma lista de dicionários de consulta a serem executados em um único lote. Cada dicionário requer uma chave 'topic' e um dicionário 'params' opcional.")
+
+
+@tool("knowledge_service_tool", args_schema=KnowledgeServiceToolInput)
 def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
     """
     Use esta ferramenta para obter informações da base de conhecimento da Global System.
     Para máxima eficiência, agrupe múltiplas perguntas em uma única chamada.
-    O input deve ser uma lista de dicionários de query.
 
     **CARDÁPIO DE TÓPICOS VÁLIDOS PARA A `knowledge_service_tool`:**
         # INFORMAÇÕES GERAIS E ESTRATÉGICAS
@@ -26,26 +30,27 @@ def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
 
         # PRODUTOS E PREÇOS
         - **'list_all_products'**: Retorna uma lista com nome e descrição de todos os planos.
-        - **'pricing'**: Para valores de um plano. `params:  "plan_name": "..." ` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto"
-        - **'faq'**: Para perguntas frequentes de um plano. `params:  "plan_name": "..." ` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto"
-        - **'product_compatibility'**: Para verificar compatibilidade. `params:  "detail": "..." `
+        - **'pricing'**: Para valores de um plano. `params: { "plan_name": "..." }` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto" | "Rastreador Híbrido SATELITAL"
+        - **'faq'**: Para perguntas frequentes de um plano. `params: { "plan_name": "..." }` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto" | "Rastreador Híbrido SATELITAL"
+        - **'product_compatibility'**: Para verificar compatibilidade. `params: { "detail": "..." }`
 
         # POLÍTICAS E PROCEDIMENTOS
-        - **'contract_terms'**: Para cláusulas contratuais. `params:  "contract_id": "..." ` # Pode ser um desses: "standard" | "moto_pgs"
-        - **'installation_policy'**: Para regras de instalação. `params:  "vehicle_type": "..." `
+        - **'contract_terms'**: Para cláusulas contratuais. `params: { "contract_id": "..." }` # Pode ser um desses: "standard" | "moto_pgs"
+        - **'installation_policy'**: Para regras de instalação. `params: { "vehicle_type": "..." }`
         - **'maintenance_policy'**: Para regras de manutenção.
         - **'scheduling_rules'**: Para regras de agendamento de serviços.
         - **'technical_limitations'**: Para obter as limitações técnicas dos rastreadores.
         - **'blocker_installation_rules'**: Para regras sobre a instalação do bloqueio.
-        - **'regional_availability'**: Para saber onde um serviço/plano está disponível. `params:  "location_info": ... `
+        - **'regional_availability'**: Para saber onde um serviço/plano está disponível. `params: { "location_info": ... }`
 
         # OUTRAS INFORMAÇÕES
         - **'application_features'**: Para detalhes e funcionalidades do aplicativo.
 
-    Exemplo de chamada: [{'topic': 'pricing', 'params': {'plan_name': 'Plano Rastreamento Moto'}}]
-
-    Args:
-        queries (List[Dict[str, Any]]): Uma lista de dicionários contendo as queries.
+        # INFORMAÇÕES IMPORTANTES
+         - **Compatibilidade de planos**:
+            * O plano "Rastreador GSM (2G+3G+4G) + WI-FI" é indicado para fazendas e locais remotos.
+            * Os planos "Plano Proteção Total PGS" e "Plano Rastreamento Moto" são apenas para motos.
+            * O plano "Rastreador Híbrido SATELITAL" é indicado para locais remotos e fazendas, e para frotas. Mas pode ser utilizado em qualquer tipo de veículo em qualquer local.
     """
     logger.info(f"--- KNOWLEDGE SERVICE TOOL CALLED with queries: {queries} ---")
 
