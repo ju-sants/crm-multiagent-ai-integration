@@ -16,7 +16,7 @@ class KnowledgeService:
             cls._instance = super(KnowledgeService, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, yaml_path: str = 'app/config/guidelines/business_rules.yaml'):
+    def __init__(self, yaml_path: str = 'app/domain_knowledge/business_rules.yaml'):
         if self._rules is None:
             self.yaml_path = yaml_path
             self._load_rules()
@@ -116,17 +116,29 @@ class KnowledgeService:
                     return plan.get('faq', [])
         return {"error": f"Plano '{plan_name}' não encontrado para busca de FAQ."}
     
-    def _search_list_all_products(self, params: Dict[str, Any]) -> List[Dict[str, str]]:
+    def _search_list_all_products(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Lista todos os produtos e injeta diretrizes de vendas estratégicas na resposta.
+        A resposta é um dicionário contendo a lista de produtos e as diretrizes de venda.
+        """
         products_data = self._get_rule_section('products')
+        sales_guidance = self._get_rule_section('sales_guidance')
+        
         product_list = []
         for category in products_data:
             for plan in category.get('plans', []):
                 product_list.append({
                     "category": category.get('category'),
                     "plan_name": plan.get('name'),
-                    "description": plan.get('type')
+                    "description": plan.get('type'),
+                    "sales_pitch": plan.get('sales_pitch'), # Adicionado pitch de vendas
+                    "pricing": plan.get('pricing'),
                 })
-        return product_list
+        
+        return {
+            "sales_guidance": sales_guidance,
+            "products": product_list
+        }
 
     def _search_pricing(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         plan_name = params.get('plan_name')
