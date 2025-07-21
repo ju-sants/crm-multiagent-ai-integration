@@ -10,6 +10,7 @@ from app.utils.funcs.funcs import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
 from app.services.telegram_service import send_single_telegram_message
+from app.utils.funcs.funcs import distill_conversation_state
 
 from datetime import datetime, timezone
 
@@ -38,12 +39,11 @@ def registration_task(contact_id: str):
         conversation_state_dict = state.model_dump()
 
         # State Distillation
-        conversation_state_dict.pop("strategic_plan", None)
-        conversation_state_dict.pop("disclosure_checklist", None)
+        conversation_state_distilled = distill_conversation_state(conversation_state_dict, "RegistrationDataCollectorAgent")
 
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "conversation_state": json.dumps(conversation_state_dict),
+            "conversation_state": json.dumps(conversation_state_distilled) if conversation_state_distilled else "{}",
             "client_message": "\n".join(last_processed_messages),
             "collected_data_so_far": user_data_so_far if user_data_so_far else "{}",
             "plan_details": plan_details if plan_details else "{}",
