@@ -84,9 +84,6 @@ class StateManagerService:
         """
         state_key = self._get_state_key(contact_id)
         
-        # Update timestamp and turn number before saving
-        state.metadata.last_updated = datetime.datetime.now().isoformat()
-        
         try:
             # Serialize the Pydantic model to a JSON string
             state_json = state.model_dump_json()
@@ -115,7 +112,6 @@ class StateManagerService:
 
         # Manually map old fields to new fields
         new_state.metadata.current_turn_number = old_dict.get("metadata", {}).get("current_turn_number", 1)
-        new_state.session_summary = old_dict.get("session_summary", "Início da conversa.")
         new_state.entities_extracted = old_dict.get("entities_extracted", [])
         new_state.products_discussed = old_dict.get("products_discussed", [])
         new_state.disclosure_checklist = old_dict.get("disclousure_checklist", []) # Note the typo in the original
@@ -127,8 +123,7 @@ class StateManagerService:
         new_state.user_sentiment_history = old_dict.get("user_sentiment_history", [])
         
         # Handle nested communication_preference
-        if "communication_preference" in old_dict:
-            new_state.communication_preference.prefers_audio = old_dict["communication_preference"].get("prefers_audio", False)
-            new_state.communication_preference.reason = old_dict["communication_preference"].get("reason", "migrated")
+        if "prefers_audio" in old_dict:
+            new_state.prefers_audio = old_dict["communication_preference"].get("prefers_audio", False)
 
         return new_state
