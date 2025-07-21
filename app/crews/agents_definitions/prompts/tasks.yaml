@@ -8,7 +8,8 @@ routing_task:
           -   **Content:** The request must be a clear, natural language description of the action needed.
           -   **Default:** In all other cases, `system_action_request` MUST be `null`.
       4.  **Determine Budget Status:** If the client gives a clear and direct signal of accepting a budget, set `budget_accepted` to true. Otherwise, set it to false.
-      5.  **Format Output:** Construct the final JSON output according to the `expected_output` schema.
+      5.  **Determine Audio Preference:** Evaluate the `client_message` to check for an audio preference, setting `prefers_audio` to true if one is detected.
+      6.  **Format Output:** Construct the final JSON output according to the `expected_output` schema.
     </INSTRUCTIONS>
 
     <SYSTEM_ACTIONS_CATALOG>
@@ -17,13 +18,15 @@ routing_task:
       - **Vehicle Commands:** Send a reset command to a tracker, this action reboots it and aim to solve communication issues.
     </SYSTEM_ACTIONS_CATALOG>
 
-    <INPUT_DATA>
+    INPUT_DATA>
       - `conversation_state`: 
-          {conversation_state}
+          {conversation_state} 
       - `client_message`: 
           {client_message}
-      - `history`: 
-          {history}
+      - `longterm_history`: 
+          {longterm_history}
+      - `shorterm_history`:
+          {shorterm_history}
     </INPUT_DATA>
   expected_output: |
     {
@@ -32,7 +35,8 @@ routing_task:
       "operational_context": "BUDGET | BUDGET_ACCEPTED | CUSTOMER_SERVICE | SUPPORT",
       "budget_accepted": <boolean>,
       "system_action_request": "<Natural language request for system action>" | null,
-      "identified_topic": "<A short, descriptive topic name for the conversation>"
+      "identified_topic": "<A short, descriptive topic name for the conversation>",
+      "prefers_audio": <boolean>,
     }
 
 develop_strategy_task:
@@ -58,10 +62,10 @@ develop_strategy_task:
           {profile_customer_task_output}
       - `client_message`: {client_message}
       - `operational_context`: {operational_context}
-      - `history`: 
-          {history}
-      - `history_raw`: 
-          {history_raw}
+      - `longterm_history`: 
+          {longterm_history}
+      - `shorterm_history`: 
+          {shorterm_history}
       - `turn`: {turn}
       - `timestamp`: {timestamp}
     </DADOS>
@@ -129,10 +133,10 @@ refine_strategy_task:
       - `profile_customer_task_output`:
           {profile_customer_task_output}
       - `operational_context`: {operational_context}
-      - `history`:
-          {history}
-      - `history_raw`:
-          {history_raw}
+      - `longterm_history`:
+          {longterm_history}
+      - `shorterm_history`:
+          {shorterm_history}
 
       - `turn`: {turn}
       - `timestamp`: {timestamp}
@@ -202,10 +206,10 @@ execute_system_operations_task:
           {conversation_state}
       - `customer_profile`: 
           {customer_profile}
-      - `history`: 
-          {history}
-      - `history_raw`: 
-          {history_raw}
+      - `longterm_history`: 
+          {longterm_history}
+      - `shorterm_history`: 
+          {shorterm_history}
       - `client_message`: {client_message}
       - `customer_name`: {customer_name}
     </DADOS>  
@@ -235,25 +239,35 @@ communication_task:
     </INSTRUCOES>
 
     <DADOS>
-      - `timestamp`: {timestamp}
       - `strategic_plan`: 
           {strategic_plan}
-      - `Operações de Sistema`: 
-          {system_operations_task_output}
-      - `conversation_state`: 
-          {conversation_state}
-      - `customer_profile`:
-          {customer_profile}
-      - `history`:
-          {history}
-      - `history_raw`:
-          {history_raw}
+
       - `disclosure_checklist`: 
           {disclosure_checklist}
+
+      - `Operações de Sistema`: 
+          {system_operations_task_output}
+
+      - `conversation_state`: 
+          {conversation_state}
+          
+      - `customer_profile`:
+          {customer_profile}
+
+      HISTÓRICOS (NÃO REPITA MENSAGENS JÁ ENVIADAS, NÃO SE APRESENTE NOVAMENTE)
+      - `longterm_history`:
+          {longterm_history}
+      - `shorterm_history`:
+          {shorterm_history}
+      
+      DEMAIS DADOS:
+      - `timestamp`: {timestamp}
       - `recently_sent_catalogs`: 
           {recently_sent_catalogs}
-      - `client_message`: 
+
+      - `client_message` (mensagem atual do cliente): 
           {client_message}
+      
     </DADOS>
 
   expected_output: |
@@ -418,8 +432,8 @@ summarize_state_task:
     <DADOS>
       - `last_turn_state`: 
           {last_turn_state}
-      - `history_summary`: 
-          {history_summary}
+      - `longterm_history`: 
+          {longterm_history}
       - `client_message`: 
           {client_message}
     </DADOS>
@@ -428,52 +442,42 @@ summarize_state_task:
         "metadata": {
           "contact_id": "<string>",
           "current_turn_number": "<integer>",
-          "last_updated": "<string: ISO 8601 format>",
           "phone_number": "<string>",
           "contact_name": "<string>"
         },
-        "communication_preference": {
-          "prefers_audio": "<boolean>",
-          "reason": "<string>"
-        },
-        "session_summary": "<Seu novo resumo da sessão que destaca a evolução da conversa>",
         "entities_extracted": [
           {
-            "entity": "<string>",
-            "value": "<any>",
-            "turn": "<integer>"
+            "entity": "<string: e.g., 'nome', 'veiculo_tipo'>",
+            "value": "<any>"
           }
         ],
-        "products_discussed": [
-          {
-            "plan_name": "<string>",
-            "details_provided": ["<array de strings>"],
-            "presented_at_turn": "<integer>"
-          }
-        ],
-        "disclosure_checklist": [
-          {
-            "item_id": "<string>",
-            "topic": "<string>",
-            "content": "<string>",
-            "status": "<'pending' ou 'communicated'>"
-          }
-        ],
-        "strategic_plan": "<Objeto JSON ou null - DEVE SER PASSADO INTACTO>",
-        "system_operation_status": "<string ou null>",
-        "system_action_request": "<string ou null>",
-        "identified_topic": "<string ou null>",
-        "operational_context": "<string ou null>",
         "user_sentiment_history": [
           {
-            "sentiment": "<string>",
+            "sentiment": "<string: e.g., 'positivo', 'negativo', 'neutro'>",
             "turn": "<integer>"
           }
         ],
-        "is_plan_acceptable": "<boolean>",
-        "budget_accepted": "<boolean>",
-        "pending_system_operation": "<string ou null>",
-        "topics_at_this_turn": ["<array de strings>"]
+        "qualification_tracker": [
+          {
+            "topic": "<string: e.g., 'vehicle_type', 'main_use'>",
+            "status": "<string: 'pending', 'collected'>",
+            "value": "<any>",
+            "turn_collected": "<integer>"
+          }
+        ],
+        "last_turn_recap": {
+          "turn_number": "<integer>",
+          "user_intent": "<string: A intenção do usuário no último turno>",
+          "agent_action": "<string: A ação do agente no último turno>",
+          "key_info_exchanged": ["<array de strings com informações chave trocadas>"]
+        },
+        "unresolved_objections": [
+          {
+            "objection": "<string: A objeção levantada pelo cliente>",
+            "status": "<string: 'raised', 'addressed'>",
+            "turn_raised": "<integer>"
+          }
+        ]
       }
 
 
@@ -486,7 +490,7 @@ enhance_profile_task:
     </INSTRUCOES>
 
     <DADOS>
-      - `history_summary`: {history_summary}
+      - `longterm_history`: {longterm_history}
       - `last_turn_state`: {last_turn_state}
       - `existing_profile`: {existing_profile}
       - `client_message`: {client_message}
