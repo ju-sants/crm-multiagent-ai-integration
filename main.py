@@ -7,8 +7,11 @@ from structlog.stdlib import BoundLogger
 import time
 
 from celery import signals
+import redis
 
 # Importações locais
+from app.models.data_models import ConversationState
+
 from app.core.logger import get_logger
 
 from app.config.settings import settings
@@ -37,13 +40,19 @@ CALLBELL_API_KEY = settings.CALLBELL_API_KEY
 CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
 IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
-
-app = Flask(__name__)
 apply_litellm_patch()
-redis_client = get_redis()
+
+app: Flask = Flask(__name__)
+state_manager: StateManagerService = StateManagerService()
+redis_client: redis.Redis = get_redis()
+client_description: ImageDescriptionAPI = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
+logger: BoundLogger = get_logger(__name__)
+
 # redis_client.flushdb()
+# get_redis(db=1).flushdb() # Clear the second database
+
 # exit()
-# redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
+redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
 
 # print(redis_client.hgetall("71464be80c504971ae263d710b39dd1f:attachments"))
 # exit()
@@ -54,7 +63,6 @@ redis_client = get_redis()
 # print(redis_client.lrange("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 0, -1))
 # redis_client.flushdb()
 
-state_manager = StateManagerService()
 # print(json.dumps(state_manager.get_state("71464be80c504971ae263d710b39dd1f").strategic_plan, indent=4))
 # state = state_manager.get_state("71464be80c504971ae263d710b39dd1f")
 # print(json.dumps(state.model_dump(), indent=4))
@@ -65,9 +73,6 @@ state_manager = StateManagerService()
 # exit()
 # state.strategic_plan = None
 # state_manager.save_state("71464be80c504971ae263d710b39dd1f", state)
-
-client_description = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
-logger: BoundLogger = get_logger(__name__)
 
 def get_callbell_headers():
     """Retorna os headers padrão para as requisições Callbell."""
@@ -191,11 +196,25 @@ def process_message_task(self, contact_uuid):
         state.metadata.contact_name = contact_name
         state_manager.save_state(contact_uuid, state)
 
+        # Verify if theres another instance processing the strategy, waiting before routing agent can judge the strategy properly
+        if redis_client.exists(f"doing_strategy:{contact_uuid}") or redis_client.exists(f"refining_strategy:{contact_uuid}"):
+            logger.info(f"[{contact_uuid}] - Strategy is already being refined / created. Waiting...")
+            while redis_client.exists(f"doing_strategy:{contact_uuid}") or redis_client.exists(f"refining_strategy:{contact_uuid}"):
+                time.sleep(1)
+            
+            logger.info(f"[{contact_uuid}] - Strategy is ready. Continuing...")
+
         if not is_new:
             pre_routing_orchestrator.apply_async(args=[contact_uuid])
         
         else:
-            state.strategic_plan = default_strategic_plan
+            state_dict = state.model_dump()
+            state_dict['strategic_plan'] = default_strategic_plan
+
+            state = ConversationState(**{**state.model_dump(), **state_dict})
+
+            state_manager.save_state(contact_uuid, state)
+
             communication_task.apply_async(args=[contact_uuid])
 
 
@@ -231,10 +250,10 @@ def process_incoming_message(payload):
     content_image = [attach for attach in content if any(ext in attach for ext in IMAGE_EXTENSIONS)]
 
     for audio_url in content_audio:
-        process_audio_attachment_task.delay(contact_uuid, audio_url)
+        process_audio_attachment_task.apply_async(contact_uuid, audio_url)
     
     for image_url in content_image:
-        process_image_attachment_task.delay(contact_uuid, image_url)
+        process_image_attachment_task.apply_async(contact_uuid, image_url)
 
     if text:
         redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', text)
