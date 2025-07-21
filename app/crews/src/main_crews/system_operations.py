@@ -1,9 +1,10 @@
 import json
 from crewai import Crew, Process
+
 from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.crews.agents_definitions.obj_declarations.agent_declaration import get_system_operations_agent
-from app.config.llm_config import decivise_openai_llm
+from app.config.llm_config import X_llm
 from app.tools.system_operations_tools import system_operations_tool
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_execute_system_operations_task
 from app.services.state_manager_service import StateManagerService
@@ -12,6 +13,7 @@ from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
 from app.crews.src.main_crews.communication import communication_task
 from app.crews.src.enrichment_crew import trigger_post_processing
+from app.utils.funcs.funcs import distill_conversation_state
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
@@ -26,34 +28,33 @@ def system_operations_task(contact_id: str):
     state, _ = state_manager.get_state(contact_id)
     
     try:
-        llm_w_tools = decivise_openai_llm.bind_tools([system_operations_tool])
+        llm_w_tools = X_llm.bind_tools([system_operations_tool])
         agent = get_system_operations_agent(llm_w_tools)
         task = create_execute_system_operations_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
         profile = redis_client.get(f"{contact_id}:customer_profile")
 
-        history_raw = redis_client.get(f"history_raw_text:{contact_id}")
+        shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
 
-        history_summary_json = redis_client.get(f"history:{contact_id}")
-        history_summary = json.loads(history_summary_json) if history_summary_json else {}
-        history_summary_messages = "\n\n".join([
+        longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
+        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
+        longterm_history = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in history_summary.get("topic_details", [])
+            for topic in longterm_history.get("topic_details", [])
         ])
 
         last_processed_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
 
-        conversation_state = state.model_dump()
-        conversation_state.pop("strategic_plan", None)  # Remove strategic plan to avoid conflicts
-        conversation_state.pop("disclosure_checklist", None)  # Remove disclosure checklist to avoid
+        # State Distillation
+        conversation_state_distilled = distill_conversation_state(state, "SystemOperationsAgent")
 
         inputs = {
             "action_requested": state.system_action_request,
             "customer_profile": str(profile),
-            "conversation_state": str(conversation_state),
-            "history": history_summary_messages,
-            "history_raw": str(history_raw),
+            "conversation_state": str(conversation_state_distilled),
+            "longterm_history": longterm_history,
+            "shorterm_history": str(shorterm_history),
             "client_message": "\n".join(last_processed_messages),
             "customer_name": state.metadata.contact_name,
         }
@@ -75,7 +76,7 @@ def system_operations_task(contact_id: str):
 
                 redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
 
-                trigger_post_processing.delay(contact_id)
+                trigger_post_processing(contact_id)
 
                 # Cleaning up the messages
                 all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
@@ -97,7 +98,7 @@ def system_operations_task(contact_id: str):
                 if state.strategic_plan and "system_action_request" in state.strategic_plan:
                     del state.strategic_plan["system_action_request"]
 
-                communication_task.delay(contact_id)
+                communication_task.apply_async(contact_id)
 
         
         state_manager.save_state(contact_id, state)
