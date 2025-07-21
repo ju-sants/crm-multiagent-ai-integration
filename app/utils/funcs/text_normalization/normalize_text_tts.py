@@ -1,8 +1,7 @@
 import re
 import json
 
-
-dict_text_normalization = json.load(open('app/utils/funcs/text_normalization/dict_text_normalization.json', 'r'))
+from app.utils.static import dict_text_normalization
 
 def number_to_words(num):
     """Converte um número inteiro para sua representação por extenso em português"""
@@ -533,6 +532,7 @@ def normalize_symbols_for_tts(text: str) -> str:
 
 def normalize_words_for_tts(text: str) -> str:
     text = re.sub(r'wi[\s\-_.]*fi', 'wifi', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bapp\b', 'aplicativo', text, flags=re.IGNORECASE)
 
     for key, value in dict_text_normalization.items():
         text = text.replace(key, value)
@@ -558,6 +558,3 @@ def apply_normalizations(text: str) -> str:
     text = normalize_bar_for_tts(text)
 
     return text
-
-
-print(apply_normalizations("(2G + 3G + 4G)"))
