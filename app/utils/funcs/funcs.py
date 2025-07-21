@@ -6,6 +6,9 @@ from unidecode import unidecode
 from app.core.logger import get_logger
 from app.config.settings import settings
 from app.services.redis_service import get_redis
+from app.models.data_models import ConversationState
+from app.utils.static import agent_state_mapping
+
 
 logger = get_logger(__name__)
 redis_client = get_redis()
@@ -125,6 +128,9 @@ def parse_json_from_string(json_string: str, update=True) -> tuple[None, None] |
         return (None, None) if update else None
     processed_string = match.group(0)
 
+    # Remove single-line comments
+    processed_string = re.sub(r"//.*", "", processed_string)
+
     processed_string = processed_string.replace(': True', ': true').replace(': False', ': false')
     processed_string = processed_string.replace(': None', ': null')
 
@@ -133,7 +139,10 @@ def parse_json_from_string(json_string: str, update=True) -> tuple[None, None] |
     except json.JSONDecodeError as e:
         logger.warning(f"Initial JSON parsing failed: {e}. Attempting to fix common errors...")
         try:
-            fixed_string = re.sub(r',\s*([\}\]])', r'\1', processed_string)
+            # Remove invalid control characters
+            fixed_string = "".join(char for char in processed_string if 31 < ord(char) < 127 or ord(char) in (9, 10, 13))
+            
+            fixed_string = re.sub(r',\s*([\}\]])', r'\1', fixed_string)
             
             fixed_string = re.sub(r'(?<=")\s+(?=")', ',', fixed_string)
 
@@ -151,3 +160,31 @@ def parse_json_from_string(json_string: str, update=True) -> tuple[None, None] |
         return task_output, updated_state
     else:
         return json_response
+
+def distill_conversation_state(conversation_state: ConversationState, agent_name: str) -> dict:
+    """
+    Filtra o ConversationState para fornecer a cada agente apenas os dados
+    necessários para sua tarefa, otimizando o contexto e a performance.
+
+    Args:
+        conversation_state: O objeto de estado completo da conversa.
+        agent_name: O nome do agente para o qual o estado será destilado.
+
+    Returns:
+        Um dicionário contendo apenas as chaves do estado relevantes para o agente.
+    """
+    required_keys = agent_state_mapping.get(agent_name)
+    conversation_dict = conversation_state.model_dump()
+
+    # Se o agente não está no mapa ou se o valor é None, retorne o estado completo.
+    if required_keys is None:
+        logger.debug(f"Nenhum mapeamento de estado encontrado para o agente '{agent_name}'. Retornando estado completo.")
+        return conversation_dict
+
+    distilled_state = {}
+    for key in required_keys:
+        if key in conversation_dict:
+            distilled_state[key] = conversation_dict[key]
+
+    logger.debug(f"Estado destilado para o agente '{agent_name}': {list(distilled_state.keys())}")
+    return distilled_state
