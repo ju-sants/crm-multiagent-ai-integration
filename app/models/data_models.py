@@ -25,33 +25,45 @@ class HierarchicalHistory(BaseModel):
 class StateMetadata(BaseModel):
     contact_id: str
     current_turn_number: int = 0
-    last_updated: Optional[str] = None
     phone_number: Optional[str] = None
     contact_name: Optional[str] = None
-
-class CommunicationPreference(BaseModel):
-    prefers_audio: bool = False
-    reason: str = "default"
-
 class EntityItem(BaseModel):
     entity: str
     value: Any
-    turn: int
 
 class ProductItem(BaseModel):
     plan_name: str
     details_provided: List[str]
-    presented_at_turn: int
 
 class ChecklistItem(BaseModel):
     topic: str
     content: str
-    status: str # "pending" or "communicated"
+    status: str
+class QualificationItem(BaseModel):
+    topic: str
+    status: str
+    value: Optional[Any]
+    turn_collected: Optional[int]
+
+class TurnRecap(BaseModel):
+    turn_number: int
+    user_intent: Optional[str]
+    agent_action: Optional[str]
+    key_info_exchanged: List[str]
+
+class ObjectionItem(BaseModel):
+    objection: str
+    status: str
+    turn_raised: int
+
+class ConversationGoal(BaseModel):
+    goal: str
+    status: str
+
 
 class ConversationState(BaseModel):
     metadata: StateMetadata
-    communication_preference: CommunicationPreference = Field(default_factory=CommunicationPreference)
-    session_summary: str = "Início da conversa."
+    prefers_audio: bool = False
     entities_extracted: List[EntityItem] = []
     products_discussed: List[ProductItem] = []
     disclosure_checklist: List[ChecklistItem] = []
@@ -64,7 +76,10 @@ class ConversationState(BaseModel):
     is_plan_acceptable: bool = False
     budget_accepted: bool = False
     pending_system_operation: Optional[str] = None
-    topics_at_this_turn: List[str] = []
+    qualification_tracker: List[QualificationItem] = []
+    last_turn_recap: Optional[TurnRecap] = None
+    unresolved_objections: List[ObjectionItem] = []
+    conversation_goals: List[ConversationGoal] = []
 
 # --- Models for Customer Profile ---
 
