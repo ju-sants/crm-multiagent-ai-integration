@@ -49,7 +49,7 @@ def send_callbell_message(phone_number: str, messages: str = None, type: str = N
             statuses.append(response.status_code)
         else:
             for i, message in enumerate(messages):
-                sleep(2 if i % 3 != 0 else 5)
+                sleep(1 if i % 3 != 0 else 3)
                 
                 url = "https://api.callbell.eu/v1/messages/send"
                 headers = {
@@ -191,7 +191,7 @@ def send_message(phone_number, messages, plan_names, contact_id):
         from app.utils.static import plans_messages
         
         state, _ = state_manager.get_state(contact_id)
-        if state.communication_preference.prefers_audio:
+        if state.prefers_audio:
             logger.info(f'[{contact_id}] - "prefers_audio" encontrado em state. Enviando mensagem de áudio.')
             audio_url = eleven_labs_service(messages)
             if audio_url:
