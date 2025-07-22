@@ -94,3 +94,11 @@ def get_profile_enhancer_agent() -> Agent:
         verbose=True,
         allow_delegation=False,
     )
+
+def get_follow_up_agent() -> Agent:
+    return Agent(
+        config=agents_config['FollowUpAgent'],
+        llm=default_openai_llm,
+        verbose=True,
+        allow_delegation=False,
+    )
