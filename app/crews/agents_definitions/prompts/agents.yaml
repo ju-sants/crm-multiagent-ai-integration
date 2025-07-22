@@ -686,7 +686,7 @@ FollowUpAgent:
       ENDIF
 
       # ETAPA 4: SAÍDA
-      RETURN { "send_follow_up": send_follow_up }
+      RETURN {{ "send_follow_up": send_follow_up }}
     </LOGIC_FLOW>
   verbose: true
   allow_delegation: false

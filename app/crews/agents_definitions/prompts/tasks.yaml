@@ -529,3 +529,24 @@ enhance_profile_task:
           }
         }
       }
+
+
+follow_up_task:
+  description: |
+    <INSTRUCTIONS>
+      1. **Analyze Inputs:** Review the provided `longterm_history`, `customer_profile`, `now_timestamp`, and `last_message_timestamp`.
+      2. **Decision Logic:** Based on the analysis, decide if a follow-up message is appropriate at this time. Consider the time since the last message and the customer's historical engagement.
+      3. **Format Output:** Construct the final JSON output according to the `expected_output` schema.
+    </INSTRUCTIONS>
+
+    <INPUT_DATA>
+      - `contact_id`: {contact_id}
+      - `longterm_history`: {longterm_history}
+      - `customer_profile`: {customer_profile}
+      - `now_timestamp`: {now_timestamp}
+      - `last_message_timestamp`: {last_message_timestamp}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "send_follow_up": <boolean>
+    }
