@@ -303,7 +303,7 @@ def receive_message():
         # Alessandro's team UUID
         if contact_info.get("team", {}).get("uuid") == "d468731afdba45c3a3a65895e4b08a5a":
             # Salvando o timestamp da última mensagem recebida
-            redis_client.set(f"history:last_timestamp:{contact_info['uuid']}", str(datetime.now().isoformat()))
+            redis_client.set(f"history:last_timestamp:to_follow_up:{contact_info['uuid']}", str(datetime.now().isoformat()))
             
             # Roteamento
             process_incoming_message(payload)
