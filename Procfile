@@ -1,1 +1,1 @@
-web: supervisord -c supervisord.conf
+web: chmod +x start.sh && ./start.sh
