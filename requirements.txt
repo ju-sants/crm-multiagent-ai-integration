@@ -105,6 +105,8 @@ executing==2.2.0
     # via stack-data
 filelock==3.18.0
     # via huggingface-hub
+filetype==1.2.0
+    # via langchain-google-genai
 flask==3.1.1
     # via -r requirements.in
 flatbuffers==25.2.10
@@ -115,10 +117,19 @@ frozenlist==1.7.0
     #   aiosignal
 fsspec==2025.7.0
     # via huggingface-hub
+google-ai-generativelanguage==0.6.18
+    # via langchain-google-genai
+google-api-core==2.25.1
+    # via google-ai-generativelanguage
 google-auth==2.40.3
-    # via kubernetes
+    # via
+    #   google-ai-generativelanguage
+    #   google-api-core
+    #   kubernetes
 googleapis-common-protos==1.70.0
     # via
+    #   google-api-core
+    #   grpcio-status
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
 googlemaps==4.10.0
@@ -126,7 +137,11 @@ googlemaps==4.10.0
 grpcio==1.73.1
     # via
     #   chromadb
+    #   google-api-core
+    #   grpcio-status
     #   opentelemetry-exporter-otlp-proto-grpc
+grpcio-status==1.73.1
+    # via google-api-core
 gunicorn==23.0.0
     # via -r requirements.in
 h11==0.16.0
@@ -204,8 +219,11 @@ kubernetes==33.1.0
     # via chromadb
 langchain-core==0.3.70
     # via
+    #   langchain-google-genai
     #   langchain-openai
     #   langchain-xai
+langchain-google-genai==2.1.8
+    # via -r requirements.in
 langchain-openai==0.3.28
     # via
     #   -r requirements.in
@@ -319,11 +337,19 @@ propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
+proto-plus==1.26.1
+    # via
+    #   google-ai-generativelanguage
+    #   google-api-core
 protobuf==6.31.1
     # via
+    #   google-ai-generativelanguage
+    #   google-api-core
     #   googleapis-common-protos
+    #   grpcio-status
     #   onnxruntime
     #   opentelemetry-proto
+    #   proto-plus
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
@@ -346,6 +372,7 @@ pydantic==2.11.7
     #   elevenlabs
     #   instructor
     #   langchain-core
+    #   langchain-google-genai
     #   langsmith
     #   litellm
     #   openai
@@ -407,6 +434,7 @@ requests==2.32.4
     # via
     #   auth0-python
     #   elevenlabs
+    #   google-api-core
     #   googlemaps
     #   huggingface-hub
     #   instructor

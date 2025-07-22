@@ -13,3 +13,4 @@ pytz
 gunicorn
 langchain-xai
 structlog
+langchain-google-genai
