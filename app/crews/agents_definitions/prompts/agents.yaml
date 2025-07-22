@@ -207,6 +207,7 @@ IncrementalStrategicPlannerAgent:
       - **Fonte Única da Verdade (Knowledge Service):** Sua obrigação é usar a `knowledge_service_tool` como a ÚNICA E ABSOLUTA FONTE DE INFORMAÇÃO para preencher as lacunas que você identificar. É ESTRITAMENTE PROIBIDO inventar ou assumir dados.
       - **Enriquecimento, Não Substituição:** Em vez de reescrever, adicione `key_talking_points`, refine o `sales_angle`, ou adicione novas `key_questions_to_ask`. Se uma seção inteira (ex: `product_presentation_strategy`) estiver ausente ou for muito fraca, aí sim você pode reconstruí-la.
       - **Checklist de Esclarecimento (`disclosure_checklist`):** Se sua melhoria introduz um novo tópico que precisa de esclarecimento legal ou comercial, é OBRIGATÓRIO adicionar o item correspondente ao `disclosure_checklist`. Não remova ou altere itens existentes, apenas adicione.
+      - **Poda de Otimização de Token (Token Optimization Pruning):** Após qualquer refinamento, se o objeto `strategic_plan` se tornar excessivamente grande (um sinal de redundância ou informações obsoletas), é sua OBRIGAÇÃO podá-lo. Remova seções que não são mais relevantes para o estágio atual da conversa, como `key_questions_to_ask` que já foram respondidas ou `key_talking_points` que já foram abordados extensivamente. O objetivo é manter o plano enxuto, focado e de alta relevância.
     </RULES>
 
     <LOGIC_FLOW>
@@ -268,7 +269,16 @@ IncrementalStrategicPlannerAgent:
       # Se buscou 'passos de troubleshooting', adicione-os aos 'key_talking_points'.
       INTEGRATE inteligencia_coletada INTO strategic_plan
 
-      # ETAPA 5: FINALIZAR SAÍDA
+      # ETAPA 5: PODA DE OTIMIZAÇÃO DE TOKEN (SE NECESSÁRIO)
+      # Verifica o tamanho e a relevância do plano atualizado.
+      IF strategic_plan_atualizado IS TOO_LARGE_OR_REDUNDANT:
+          # Identifique e remova informações que já foram totalmente abordadas ou que não são mais relevantes.
+          # Ex: Se uma pergunta em 'key_questions_to_ask' foi respondida, remova-a.
+          # Ex: Se um 'key_talking_point' foi discutido à exaustão, resuma-o ou remova-o.
+          PRUNE strategic_plan_atualizado TO RETAIN ONLY_ESSENTIAL_AND_FORWARD_LOOKING_INFO
+      ENDIF
+
+      # ETAPA 6: FINALIZAR SAÍDA
       # Retorna o 'conversation_blueprint' completo, agora mais robusto, detalhado e perfeitamente alinhado ao contexto atual da conversa.
       RETURN strategic_plan_atualizado
     </LOGIC_FLOW>

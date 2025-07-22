@@ -11,7 +11,7 @@ import pytz
 from app.services.redis_service import get_redis
 
 # Carrega variáveis de ambiente do arquivo .env
-dotenv_path = dotenv.find_dotenv(raise_error_if_not_found=True)
+dotenv_path = dotenv.find_dotenv()
 dotenv.load_dotenv(dotenv_path)
 
 # Configurações da API Callbell
