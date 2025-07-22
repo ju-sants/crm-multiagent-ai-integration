@@ -23,10 +23,11 @@ redis_client = get_redis()
 
 # --- Main Communication Task ---
 @celery_app.task(name='main_crews.communication', bind=True)
-def communication_task(self, contact_id: str):
+def communication_task(self, contact_id: str, is_follow_up: bool = False):
     """
     Third task in the state machine chain. Loads state, generates the final response,
     and dispatches messages to the user asynchronously.
+    Can be triggered as a follow-up, which alters the agent's context.
     """
     logger.info(f"[{contact_id}] - Starting communication task.")
     state, _ = state_manager.get_state(contact_id)
@@ -73,7 +74,8 @@ def communication_task(self, contact_id: str):
             "shorterm_history": str(shorterm_history),
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
             "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]) if not disclosure_checklist else str(disclosure_checklist),
-            "client_message": "\n".join(last_processed_messages),
+            "client_message": "\n".join(last_processed_messages) if not is_follow_up else "",
+            "is_follow_up": is_follow_up,
         }
 
         result = crew.kickoff(inputs=inputs)
