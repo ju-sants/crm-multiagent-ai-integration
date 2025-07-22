@@ -1,1 +1,1 @@
-web: celery -A app.services.celery_service.celery_app worker --loglevel=INFO && gunicorn -b 0.0.0.0:2828 main:app
+web: supervisord -c supervisord.conf
