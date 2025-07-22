@@ -21,12 +21,14 @@ routing_task:
     INPUT_DATA>
       - `conversation_state`: 
           {conversation_state} 
-      - `client_message`: 
-          {client_message}
       - `longterm_history`: 
           {longterm_history}
       - `shorterm_history`:
           {shorterm_history}
+
+
+      - `client_message`: 
+          {client_message}
     </INPUT_DATA>
   expected_output: |
     {
@@ -128,6 +130,8 @@ refine_strategy_task:
     </INSTRUCOES>
 
     <DADOS>
+      - `last_system_operation`:
+          {last_system_operation}
       - `conversation_state`:
           {conversation_state}
       - `profile_customer_task_output`:
@@ -246,7 +250,7 @@ communication_task:
           {disclosure_checklist}
 
       - `Operações de Sistema`: 
-          {system_operations_task_output}
+          {last_system_operation}
 
       - `conversation_state`: 
           {conversation_state}
