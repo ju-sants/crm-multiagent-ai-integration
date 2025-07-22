@@ -12,3 +12,4 @@ pydantic-settings
 pytz
 gunicorn
 langchain-xai
+structlog
