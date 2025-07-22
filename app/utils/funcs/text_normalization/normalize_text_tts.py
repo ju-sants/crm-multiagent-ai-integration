@@ -517,17 +517,20 @@ def normalize_numbers_for_tts(text: str) -> str:
 def normalize_symbols_for_tts(text: str) -> str:
     symbols_to_words = {
         '+': 'mais',
-        '-': 'menos',
         '*': 'vezes',
         '/': 'dividido por',
         '=': 'igual a',
         '(': 'abre parênteses',
         ')': 'fecha parênteses',
     }
-
+    
+    # Para cada símbolo (exceto hífen)
     for symbol, word in symbols_to_words.items():
         text = text.replace(symbol, f' {word} ')
-
+    
+    text = re.sub(r'(?<=\s)-(?=\s)', ' menos ', text)
+    text = re.sub(r'(?<=\d)\s*-\s*(?=\d)', ' menos ', text)
+    
     return text
 
 def normalize_words_for_tts(text: str) -> str:
