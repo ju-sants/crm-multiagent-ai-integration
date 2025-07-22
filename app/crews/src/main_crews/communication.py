@@ -67,7 +67,7 @@ def communication_task(self, contact_id: str, is_follow_up: bool = False):
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "strategic_plan": json.dumps(strategic_plan),
-            "system_operations_task_output": system_op_output if system_op_output else "{}",
+            "last_system_operation": system_op_output if system_op_output else "{}",
             "customer_profile": str(redis_client.get(f"{contact_id}:customer_profile")),
             "conversation_state": str(conversation_state_distilled),
             "longterm_history": longterm_history,
@@ -111,7 +111,7 @@ def communication_task(self, contact_id: str, is_follow_up: bool = False):
         pipe.execute()
 
         # 2. Trigger enrichment pipeline (now self-sufficient) and send_message if needed
-        trigger_post_processing(contact_id, send_message, response_json, phone_number)
+        trigger_post_processing.apply_async(args=[contact_id, send_message, response_json, phone_number])
         
         return {"status": "communication_dispatched"}
     except Exception as e:
