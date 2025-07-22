@@ -51,7 +51,7 @@ def inactivity_worker_task():
                 logger.info(f"Contact {contact_id} has reached the max follow-up level. Skipping.")
                 continue
 
-            last_message_timestamp_str = redis_client.get(f"history:last_timestamp:{contact_id}")
+            last_message_timestamp_str = redis_client.get(f"history:last_timestamp:to_follow_up{contact_id}")
             
             if not last_message_timestamp_str:
                 continue
