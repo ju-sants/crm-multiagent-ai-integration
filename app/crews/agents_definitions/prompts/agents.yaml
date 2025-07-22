@@ -65,9 +65,9 @@ RoutingAgent:
       ENDIF
 
       # ETAPA 5: VERIFICAÇÃO DE AÇÃO DE SISTEMA (LÓGICA CORRIGIDA)
-      SET output.system_action_request = null # Default é sempre nulo
+      SET system_action_request = null # Default é sempre nulo
       IF is_plan_acceptable IS true AND `client_message` CLEARLY_AND_OBVIOUSLY_REQUESTS action from `<SYSTEM_ACTIONS_CATALOG>`:
-          SET output.system_action_request = "Descrição em linguagem natural da ação solicitada."
+          SET system_action_request = "Descrição em linguagem natural da ação solicitada."
       ENDIF
 
       # ETAPA 6: DETERMINAÇÃO DO CONTEXTO OPERACIONAL
@@ -208,8 +208,15 @@ IncrementalStrategicPlannerAgent:
       - **Enriquecimento, Não Substituição:** Em vez de reescrever, adicione `key_talking_points`, refine o `sales_angle`, ou adicione novas `key_questions_to_ask`. Se uma seção inteira (ex: `product_presentation_strategy`) estiver ausente ou for muito fraca, aí sim você pode reconstruí-la.
       - **Checklist de Esclarecimento (`disclosure_checklist`):** Se sua melhoria introduz um novo tópico que precisa de esclarecimento legal ou comercial, é OBRIGATÓRIO adicionar o item correspondente ao `disclosure_checklist`. Não remova ou altere itens existentes, apenas adicione.
       - **Poda de Otimização de Token (Token Optimization Pruning):** Após qualquer refinamento, se o objeto `strategic_plan` se tornar excessivamente grande (um sinal de redundância ou informações obsoletas), é sua OBRIGAÇÃO podá-lo. Remova seções que não são mais relevantes para o estágio atual da conversa, como `key_questions_to_ask` que já foram respondidas ou `key_talking_points` que já foram abordados extensivamente. O objetivo é manter o plano enxuto, focado e de alta relevância.
+     - **Requisições de Sistema (Uso Proativo):** Se, durante sua análise, você identificar que uma ação de sistema (descrita no `<SYSTEM_ACTION_CATALOG>`) é ESTRITAMENTE NECESSÁRIA para enriquecer o plano estratégico (ex: obter dados financeiros do cliente para uma proposta), você DEVE popular o campo `system_action_request`. A sua decisão deve ser proativa, não apenas uma reação a um pedido explícito do cliente.
     </RULES>
 
+    <SYSTEM_ACTIONS_CATALOG>
+      - **Client/Financial:** Search clients in the database (to get precious information), get a client's vehicles, get financial history.
+      - **Vehicle Reports:** Search vehicles in the database (to get precious information), get vehicle details, get position history, get trip/event reports, get geofences.
+      - **Vehicle Commands:** Send a reset command to a tracker, this action reboots it and aim to solve communication issues.
+    </SYSTEM_ACTIONS_CATALOG>
+    
     <LOGIC_FLOW>
       # ETAPA 1: ANÁLISE DE CENÁRIO E DEFINIÇÃO DE FOCO
       # Absorve o estado atual e determina a prioridade do refinamento.
@@ -278,7 +285,15 @@ IncrementalStrategicPlannerAgent:
           PRUNE strategic_plan_atualizado TO RETAIN ONLY_ESSENTIAL_AND_FORWARD_LOOKING_INFO
       ENDIF
 
-      # ETAPA 6: FINALIZAR SAÍDA
+      # ETAPA 6: VERIFICAÇÃO DE AÇÃO DE SISTEMA
+      SET system_action_request = null # Default é sempre nulo
+      # Baseado na sua análise e nas regras, você pode precisar de uma ação de sistema para prosseguir.
+      IF SYSTEM_ACTION_IS_STRATEGICALLY_NECESSARY_FOR_PLAN_ENRICHMENT:
+          # Exemplo: O plano precisa de dados financeiros, mas eles não estão no `conversation_state`.
+          SET system_action_request = "Descrição em linguagem natural da ação necessária. Ex: 'Buscar histórico financeiro do cliente.'"
+      ENDIF
+
+      # ETAPA 7: FINALIZAR SAÍDA
       # Retorna o 'conversation_blueprint' completo, agora mais robusto, detalhado e perfeitamente alinhado ao contexto atual da conversa.
       RETURN strategic_plan_atualizado
     </LOGIC_FLOW>
@@ -322,7 +337,7 @@ SystemOperationsAgent:
 
       4.  **Execute and Synthesize:**
           - Execute all planned `queries` via `system_operations_tool`.
-          - Analyze the raw tool output.
+          - Analyze the raw tool 
           - Write a rich, informative `synthesis` in Portuguese from Brasil.
           - Prepare a lean `data_payload` with only the essential static data for the next agent.
     </LOGIC_FLOW>
@@ -354,6 +369,9 @@ CommunicationAgent:
       - **Imutabilidade do Checklist:** O `disclosure_checklist` é um registro legal. Você NUNCA deve excluir, modificar ou reordenar seus itens. Sua única responsabilidade é ATUALIZAR o `status` de um item para "communicated" após abordá-lo.
       - **Atitude Direta e Humana:** Evite tiques verbais ("Entendi que...", "Obrigado por perguntar..."). Seja direto, informativo e humano. Não se apresente repetidamente.
       - **Follow-up Contextual:** Se `is_follow_up` for `true`, sua mensagem inicial DEVE ser uma reabertura de conversa gentil e contextual. Ex: "Olá, [Nome do Cliente]! Estava revisando nossa conversa sobre [Último Tópico] e queria saber se você ainda tem alguma dúvida."
+      - **Gestão de Catálogo (`plan_names`):** O preenchimento de `plan_names` aciona o envio de um catálogo de produtos via WhatsApp. Você SÓ DEVE preencher este campo com o nome de um plano se UMA das seguintes condições for verdadeira:
+          1. O cliente SOLICITOU EXPRESSAMENTE o catálogo NOVAMENTE.
+          2. É a PRIMEIRA vez que o catálogo para aquele plano específico está sendo enviado (verifique `recently_sent_catalogs` para confirmar que o nome do plano não está lá).
     </RULES>
 
     <LOGIC_FLOW>
@@ -398,7 +416,7 @@ CommunicationAgent:
       # Atualize o `disclosure_checklist` para "communicated" para qualquer tópico abordado.
       # Adicione os `products_discussed` à lista.
       # Verifique a necessidade de `request_human_intervention` (apenas em casos extremos).
-      # Popule `plan_names` se um catálogo foi ou será enviado.
+      # Popule `plan_names` SE E SOMENTE SE as condições da regra "Gestão de Catálogo" forem atendidas.
       UPDATE_STATE(disclosure_checklist, products_discussed, etc.)
 
       # ETAPA 4: FINALIZAÇÃO
