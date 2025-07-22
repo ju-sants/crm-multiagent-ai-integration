@@ -52,8 +52,10 @@ def refine_strategy_task(self, contact_id: str):
 
         # State Distillation
         conversation_state_distilled = distill_conversation_state(state, "IncrementalStrategicPlannerAgent")
-
+        system_op_output = redis_client.get(f"{contact_id}:last_system_operation_output")
+        
         inputs = {
+            "last_system_operation": system_op_output if system_op_output else "",
             "longterm_history": history_messages,
             "shorterm_history": str(shorterm_history),
             "conversation_state": json.dumps(conversation_state_distilled) if conversation_state_distilled else "{}",
