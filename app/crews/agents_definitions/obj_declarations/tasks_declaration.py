@@ -66,3 +66,9 @@ def create_collect_registration_data_task(agent: Agent) -> Task:
         config=tasks_config['collect_registration_data_task'],
         agent=agent,
     )
+
+def create_follow_up_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['follow_up_task'],
+        agent=agent,
+    )
