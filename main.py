@@ -204,6 +204,13 @@ def process_message_task(self, contact_uuid):
             
             logger.info(f"[{contact_uuid}] - Strategy is ready. Continuing...")
 
+        # Adicionando o contato na lista de contatos se não estiver lá
+        if not redis_client.sismember("contacts", contact_uuid):
+            logger.info(f"[{contact_uuid}] - Adding contact {contact_uuid} to contacts set.")
+            redis_client.sadd("contacts", contact_uuid)
+
+
+        # Roteamento
         if not is_new:
             pre_routing_orchestrator.apply_async(args=[contact_uuid])
         
@@ -240,8 +247,12 @@ def process_incoming_message(payload):
     # Store contact info for the async task
     redis_client.set(f"contact_info:{contact_uuid}", json.dumps(contact_info), ex=86400) # Expire after 1 day
 
-    text = str(payload.get('text', ''))
-    text = '' if text == 'None' else text
+    text = ""
+    if 'messageContext' in payload and 'target' in payload['messageContext'] and 'text' in payload['messageContext']['target']:
+        if payload['messageContext']['target']['text'] != "None":
+            text = f"Resposta direta a mensagem `{payload['messageContext']['target']['text']}`:\n"
+
+    text += str(payload.get('text', ''))
     
     content = payload.get('attachments', [])
     
@@ -291,6 +302,7 @@ def receive_message():
         
         # Alessandro's team UUID
         if contact_info.get("team", {}).get("uuid") == "d468731afdba45c3a3a65895e4b08a5a":
+            redis_client.set(f"history:last_timestamp:{contact_info['uuid']}", str(datetime.now().isoformat()))
             process_incoming_message(payload)
                 
     return jsonify({'status': 'ok'}), 200
