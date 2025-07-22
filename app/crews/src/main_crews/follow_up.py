@@ -1,5 +1,5 @@
 import json
-from crewai import Crew, Process, Task
+from crewai import Crew, Process
 from datetime import datetime, timezone
 
 from app.core.logger import get_logger
@@ -7,6 +7,7 @@ from app.services.celery_service import celery_app
 from app.services.redis_service import get_redis
 from app.crews.src.main_crews.communication import communication_task
 from app.crews.agents_definitions.obj_declarations.agent_declaration import get_follow_up_agent
+from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_follow_up_task
 from app.utils.funcs.funcs import parse_json_from_string
 
 logger = get_logger(__name__)
@@ -22,11 +23,7 @@ def follow_up_task(contact_id: str):
 
     agent = get_follow_up_agent()
 
-    task = Task(
-        description="Analyze the customer's profile and conversation history to decide if a follow-up is appropriate.",
-        expected_output="A JSON object with a single boolean key: 'send_follow_up'.",
-        agent=agent
-    )
+    task = create_follow_up_task(agent)
 
     crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
@@ -41,8 +38,8 @@ def follow_up_task(contact_id: str):
         "contact_id": contact_id,
         "longterm_history": json.dumps(longterm_history),
         "customer_profile": json.dumps(customer_profile),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "last_message_timestamp": redis_client.get(f"history:last_timestamp:{contact_id}")
+        "now_timestamp": datetime.now(timezone.utc).isoformat(),
+        "last_message_timestamp": redis_client.get(f"history:last_timestamp:to_follow_up:{contact_id}")
     }
 
     result = crew.kickoff(inputs=inputs)
