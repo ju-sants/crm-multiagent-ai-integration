@@ -65,11 +65,11 @@ def registration_task(contact_id: str):
             redis_client.set(f"{contact_id}:user_data_so_far", json.dumps(response_json))
             
             if response_json.get("status") == 'COLLECTION_COMPLETE':
-                send_callbell_message(phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
+                send_callbell_message(contact_id=contact_id, phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
                 send_single_telegram_message(result, '-4854533163')
                 redis_client.delete(f"{contact_id}:getting_data_from_user")
             elif response_json.get("next_message_to_send"):
-                send_callbell_message(phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
+                send_callbell_message(contact_id=contact_id, phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
                 redis_client.set(f"{contact_id}:getting_data_from_user", "1")
             
             # Liberating the lock

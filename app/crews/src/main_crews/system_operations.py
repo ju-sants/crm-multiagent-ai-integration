@@ -68,7 +68,7 @@ def system_operations_task(contact_id: str):
                 # Pause the operation and wait for more user input
                 state.pending_system_operation = state.system_action_request
                 state.system_action_request = None
-                send_callbell_message(phone_number=state.metadata.phone_number, messages=[response_json.get("message_to_user", "")])
+                send_callbell_message(contact_id=contact_id, phone_number=state.metadata.phone_number, messages=[response_json.get("message_to_user", "")])
 
                 # Liberating the lock
                 redis_client.delete(f'processing:{contact_id}')
