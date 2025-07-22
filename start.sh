@@ -1,9 +1,6 @@
 echo "Iniciando Celery worker..."
 celery -A app.services.celery_service.celery_app worker \
-  --loglevel=INFO \
-  --concurrency=2 \
-  --pool=prefork \
-  --max-tasks-per-child=1000 &
+  --loglevel=INFO
 
 echo "Aguardando 5 segundos para Celery inicializar..."
 sleep 5
