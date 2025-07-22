@@ -4,6 +4,7 @@ from crewai import Crew, Process
 from typing import Any
 from datetime import datetime
 import time
+import re
 
 from app.core.logger import get_logger
 from app.services.redis_service import get_redis
@@ -274,7 +275,6 @@ def state_summarizer_task(longterm_history: dict, contact_id: str):
     
     if enriched_state:
         
-        logger.info(f"[{contact_id}] - Enriched state: {enriched_state}")
         disclousure_checklist_data = [dc.model_dump() for dc in disclousure_checklist] if disclousure_checklist else []
         logger.info(f"[{contact_id}] - Enriched disclosure checklist: {disclousure_checklist_data}")
 
@@ -337,6 +337,7 @@ def profile_enhancer_task(longterm_history: dict, contact_id: str):
     return f"Profile for {contact_id} enhanced."
 
 
+@celery_app.task(name='enrichment.trigger_post_processing')
 def trigger_post_processing(contact_id: str, send_message_task: bool = False, response_json: dict | None = None, phone_number: str | None = None):
     """
     Triggers the full asynchronous enrichment pipeline using an optimized fan-out architecture.
