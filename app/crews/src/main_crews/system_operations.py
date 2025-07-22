@@ -76,7 +76,7 @@ def system_operations_task(contact_id: str):
 
                 redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
 
-                trigger_post_processing(contact_id)
+                trigger_post_processing.apply_async(args=[contact_id])
 
                 # Cleaning up the messages
                 all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
