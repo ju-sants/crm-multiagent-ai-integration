@@ -22,25 +22,37 @@ def number_to_words(num):
         if n == 0:
             return ""
         
+        # Garante que n está no intervalo válido (0-999)
+        if n > 999:
+            n = n % 1000
+        
         result = []
         
         # Centenas
         if n >= 100:
+            hundreds_digit = n // 100
             if n == 100:
                 result.append("cem")
-            else:
-                result.append(hundreds[n // 100])
+            elif hundreds_digit < len(hundreds):
+                result.append(hundreds[hundreds_digit])
             n %= 100
         
         # Dezenas e unidades
         if n >= 20:
-            result.append(tens[n // 10])
+            tens_digit = n // 10
+            if tens_digit < len(tens):
+                result.append(tens[tens_digit])
             if n % 10 != 0:
-                result.append(units[n % 10])
+                units_digit = n % 10
+                if units_digit < len(units):
+                    result.append(units[units_digit])
         elif n >= 10:
-            result.append(teens[n - 10])
+            teens_index = n - 10
+            if teens_index < len(teens):
+                result.append(teens[teens_index])
         elif n > 0:
-            result.append(units[n])
+            if n < len(units):
+                result.append(units[n])
         
         return " e ".join(result)
     
