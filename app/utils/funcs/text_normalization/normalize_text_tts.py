@@ -486,11 +486,16 @@ def normalize_numbers_for_tts(text: str) -> str:
     """
     Função universal que converte para extenso:
     - Valores monetários: R$ 15.110,65 -> quinze mil cento e dez reais e sessenta e cinco centavos
+    - Valores abreviados: R$ 10 mil -> dez mil reais | R$ 1,5 milhão -> um milhão e quinhentos mil reais
     - Porcentagens: 3% -> três porcento | 0,033% -> zero vírgula zero três três porcento
     - Números decimais: 3,14 -> três vírgula quatorze
     """
     
-    # 1. MOEDAS: R$ X.XXX,XX
+    # 1. MOEDAS ABREVIADAS: R$ X mil/milhão/bilhão
+    abbreviated_currency_pattern = r'R\$\s*([0-9]+(?:[,.][0-9]+)?)\s+(mil|milhão|milhões|bilhão|bilhões)'
+    text = re.sub(abbreviated_currency_pattern, parse_abbreviated_currency, text, flags=re.IGNORECASE)
+    
+    # 2. MOEDAS TRADICIONAIS: R$ X.XXX,XX
     def replace_currency(match):
         inteiros_str = match.group(1).replace('.', '')
         centavos_str = match.group(2)
