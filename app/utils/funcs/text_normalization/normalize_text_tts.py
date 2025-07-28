@@ -522,7 +522,10 @@ def normalize_numbers_for_tts(text: str) -> str:
         
         return ' '.join(parts)
     
-    # 2. PORCENTAGENS: X% ou X,XXX%
+    currency_pattern = r'R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{2}))?'
+    text = re.sub(currency_pattern, replace_currency, text)
+    
+    # 3. PORCENTAGENS: X% ou X,XXX%
     def replace_percentage(match):
         inteiro_str = match.group(1)
         decimal_str = match.group(2)
@@ -545,7 +548,10 @@ def normalize_numbers_for_tts(text: str) -> str:
         parts.append("porcento")
         return " ".join(parts)
     
-    # 3. NÚMEROS DECIMAIS: X,XXX (que não sejam porcentagens)
+    percentage_pattern = r'(\d+)(?:,(\d+))?%'
+    text = re.sub(percentage_pattern, replace_percentage, text)
+    
+    # 4. NÚMEROS DECIMAIS: X,XXX (que não sejam porcentagens)
     def replace_decimal(match):
         inteiro_str = match.group(1)
         decimal_str = match.group(2)
@@ -561,17 +567,6 @@ def normalize_numbers_for_tts(text: str) -> str:
         
         return " ".join(parts)
     
-    # Aplica as substituições em ordem:
-    
-    # 1. Primeiro as moedas
-    currency_pattern = r'R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{2}))?'
-    text = re.sub(currency_pattern, replace_currency, text)
-    
-    # 2. Depois as porcentagens
-    percentage_pattern = r'(\d+)(?:,(\d+))?%'
-    text = re.sub(percentage_pattern, replace_percentage, text)
-    
-    # 3. Por último os números decimais restantes
     decimal_pattern = r'\b(\d+),(\d+)\b'
     text = re.sub(decimal_pattern, replace_decimal, text)
     
