@@ -276,7 +276,6 @@ def state_summarizer_task(longterm_history: dict, contact_id: str):
     if enriched_state:
         
         disclousure_checklist_data = [dc.model_dump() for dc in disclousure_checklist] if disclousure_checklist else []
-        logger.info(f"[{contact_id}] - Enriched disclosure checklist: {disclousure_checklist_data}")
 
         enriched_state['disclosure_checklist'] = disclousure_checklist_data
         enriched_state['strategic_plan'] = strategic_plan
