@@ -105,6 +105,52 @@ def decimal_to_words(decimal_str):
         # Para casos normais, converte o número decimal como inteiro
         return number_to_words(int(decimal_str))
 
+def parse_abbreviated_currency(match: re.Match):
+    """Processa valores monetários abreviados como 'R$ 10 mil' ou 'R$ 1,5 milhão'"""
+    amount_str = match.group(1).replace(',', '.')  # Converte vírgula decimal para ponto
+    unit = match.group(2).lower()
+    
+    try:
+        amount = float(amount_str)
+    except ValueError:
+        return match.group(0)  # Retorna o texto original se não conseguir converter
+    
+    # Converte para o valor real baseado na unidade
+    if unit in ['mil']:
+        total_value = amount * 1000
+    elif unit in ['milhão', 'milhões']:
+        total_value = amount * 1000000
+    elif unit in ['bilhão', 'bilhões']:
+        total_value = amount * 1000000000
+    else:
+        return match.group(0)  # Unidade não reconhecida
+    
+    # Separa parte inteira e decimal
+    integer_part = int(total_value)
+    decimal_part = round((total_value - integer_part) * 100)  # Centavos
+    
+    parts = []
+    
+    # Parte inteira
+    if integer_part > 0:
+        integer_extenso = number_to_words(integer_part)
+        if integer_part == 1:
+            parts.append(f"{integer_extenso} real")
+        else:
+            parts.append(f"{integer_extenso} reais")
+    
+    # Parte decimal (centavos)
+    if decimal_part > 0:
+        if integer_part > 0:
+            parts.append("e")
+        decimal_extenso = number_to_words(decimal_part)
+        if decimal_part == 1:
+            parts.append(f"{decimal_extenso} centavo")
+        else:
+            parts.append(f"{decimal_extenso} centavos")
+    
+    return ' '.join(parts)
+
 def normalize_dates_for_tts(text: str) -> str:
     """
     Normaliza datas em vários formatos para TTS, sempre convertendo para DD/MM/YYYY em palavras:
