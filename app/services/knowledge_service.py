@@ -192,7 +192,7 @@ class KnowledgeService:
             return {"error": f"Funcionalidade '{feature_name}' não encontrada."}
         
         # Se nenhum nome for fornecido, retorna a visão geral
-        return app_features.get('overview')
+        return {"overview": app_features.get('overview')}
 
     def _search_faq(self, params: Dict[str, Any]) -> Any:
         plan_name = params.get('plan_name')
