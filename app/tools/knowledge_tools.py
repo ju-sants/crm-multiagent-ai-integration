@@ -60,12 +60,35 @@ def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
     if not isinstance(queries, list):
         return "Erro de formato: O input deve ser uma lista de dicionários de query."
 
-    # Itera sobre a lista de queries e coleta os resultados
-    results = [knowledge_service_instance.find_information(query) for query in queries]
+    results = []
+    for query in queries:
+        # Criar uma chave de cache única e determinística para a query
+        # Ordenar o dicionário garante que a mesma query gere sempre a mesma chave
+        cache_key = f"knowledge_cache:{json.dumps(query, sort_keys=True)}"
+        
+        try:
+            # Tentar obter o resultado do cache primeiro
+            cached_result = redis_client.get(cache_key)
+            if cached_result:
+                logger.info(f"Cache HIT para a query: {query}")
+                results.append(json.loads(cached_result))
+                continue  # Pula para a próxima query
+        except Exception as e:
+            logger.error(f"Erro ao acessar o cache Redis: {e}")
+
+        # Se não estiver no cache (Cache MISS), executa a busca
+        logger.info(f"Cache MISS para a query: {query}. Buscando na KnowledgeService.")
+        result = knowledge_service_instance.find_information(query)
+        results.append(result)
+        
+        # Salva o novo resultado no cache com um tempo de expiração (e.g., 1 hora)
+        try:
+            redis_client.set(cache_key, json.dumps(result, ensure_ascii=False), ex=3600)
+        except Exception as e:
+            logger.error(f"Erro ao salvar no cache Redis: {e}")
 
     # Retorna a lista de resultados como uma string formatada para o agente
     if len(results) == 1:
-        # Se houver apenas um resultado, retorna-o diretamente para simplicidade
         final_result = results[0]
     else:
         final_result = results
