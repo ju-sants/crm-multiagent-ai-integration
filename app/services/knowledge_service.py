@@ -144,6 +144,9 @@ class KnowledgeService:
             'blocker_installation_rules': self._search_blocker_installation_rules,
             'application_features': self._search_application_features,
             'faq': self._search_faq,
+            'key_selling_points': self._search_key_selling_points,
+            'objection_handling': self._search_objection_handling,
+            'customer_profile_scripts': self._search_customer_profiles,
         }
 
         # Tentativa de correspondência exata primeiro
