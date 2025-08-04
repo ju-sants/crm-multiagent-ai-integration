@@ -1,6 +1,10 @@
 import yaml
 import os
 from typing import Dict, Any, List, Optional
+from thefuzz import process
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
 
 class KnowledgeService:
     """
@@ -87,14 +91,13 @@ class KnowledgeService:
 
     def find_information(self, query: Dict[str, Any]) -> Any:
         """
-        Ponto de entrada principal para buscar informações.
-        Funciona como um roteador que chama a função de busca apropriada
-        com base no 'topic' da query.
+        Ponto de entrada principal para buscar informações com lógica de fallback de busca semântica.
+        Primeiro, tenta uma correspondência exata do tópico. Se falhar, usa a correspondência fuzzy
+        para encontrar o tópico mais provável e executa a consulta com ele.
         """
         topic = query.get('topic')
         params = query.get('params', {})
 
-        # Dicionário completo de tópicos e funções correspondentes
         search_functions = {
             'list_all_products': self._search_list_all_products,
             'pricing': self._search_pricing,
@@ -112,15 +115,23 @@ class KnowledgeService:
             'faq': self._search_faq,
         }
 
+        # Tentativa de correspondência exata primeiro
         search_function = search_functions.get(topic)
-
         if search_function:
             return search_function(params)
-        else:
-            valid_topics = list(search_functions.keys())
-            return f"Erro: Tópico '{topic}' inválido. Por favor, use um dos seguintes tópicos: {valid_topics}"
 
-    # --- Funções de Busca ---
+        # Fallback para busca fuzzy se a correspondência exata falhar
+        valid_topics = list(search_functions.keys())
+        best_match, score = process.extractOne(topic, valid_topics)
+
+        # Executa a função correspondente se a pontuação de similaridade for alta o suficiente
+        if score > 80:  # Limiar de confiança ajustável
+            logger.info(f"KnowledgeService: Tópico original '{topic}' não encontrado. Usando a melhor correspondência '{best_match}' com pontuação {score}.")
+            return search_functions[best_match](params)
+        else:
+            return f"Erro: Tópico '{topic}' inválido e nenhuma correspondência suficientemente boa foi encontrada. Tópicos válidos: {valid_topics}"
+
+    # --- Funções de Busca (Refatoradas para retornar blocos de dados) ---
     def _search_company_info(self, params: Dict[str, Any]) -> Dict:
         return self._get_rule_section('company_info')
 
