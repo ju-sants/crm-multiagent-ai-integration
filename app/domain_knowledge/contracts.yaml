@@ -1,0 +1,121 @@
+general_terms:
+  service_object: "Prestação de serviços de instalação, revisão e desinstalação de equipamentos de rastreamento (GSM/GPRS e/ou SATELITAL) para coleta de dados de localização e telemetria."
+  legal_disclaimer: "O serviço de rastreamento é uma ferramenta para auxiliar na localização do veículo e NÃO É UM CONTRATO DE SEGURO. Não há garantia de recuperação do veículo em caso de roubo ou furto."
+  recovery_responsibility: "A recuperação do veículo é atividade única e exclusiva das autoridades policiais."
+  client_monitoring_responsibility: "A Global System garante o funcionamento do equipamento. O monitoramento e acompanhamento do veículo são de responsabilidade exclusiva do CLIENTE."
+  non_liability_clauses:
+    - "A Global System não se responsabiliza por danos emergentes ou lucros cessantes do cliente relacionados a interrupções ou falhas no serviço."
+    - "A Global System não se responsabiliza pela perda de garantia do veículo decorrente da instalação do rastreador."
+    - "A Global System não se responsabiliza por falhas de hardware ou software do rastreador utilizado pelo cliente."
+  equipment_handling:
+    rule: "O cliente não pode, sob qualquer pretexto, manusear ou permitir que terceiros manuseiem o equipamento."
+    penalty: "Caso o cliente identifique o local do equipamento ou o manuseie, deverá solicitar imediatamente uma revisão da instalação, cujo custo será o valor de uma nova adesão."
+  client_confidentiality_obligation: "O cliente se compromete a não deixar ou carregar no veículo documentos que indiquem que ele é rastreado (boletos, manual do usuário, etc.)."
+  service_start: "A prestação de serviço tem início em até 24 horas após a instalação do equipamento."
+  contract_renewal:
+    policy: "A renovação do contrato é automática por períodos iguais."
+    cancellation_notice: "A renovação pode ser impedida mediante manifestação por escrito de qualquer das partes, com antecedência mínima de 30 dias do término do prazo contratual."
+    price_adjustment: "Os valores poderão ser atualizados monetariamente pelo menor período permitido em lei, utilizando como base o IGPM/FGV ou índice substituto."
+  data_privacy_and_lgpd:
+    retention_period: "Os dados pessoais serão mantidos por até 5 anos após o encerramento do contrato para cumprimento de obrigações legais."
+    dpo_contact: "dpo@globalsystem24h.com"
+    data_types_collected:
+      - "Dados de Identificação: Nome completo, nome empresarial, data de nascimento, RG, CPF, CNH, CNPJ, Fotografia 3x4."
+      - "Dados de Contato: Endereço completo, telefones, WhatsApp, e-mails."
+      - "Dados Financeiros: Dados de contas bancárias, dados de cartões de crédito."
+      - "Dados de Acesso: Nome de usuário e senha para sistemas da empresa."
+      - "Comunicações: Registros de comunicação verbal e escrita entre o Titular e a empresa."
+    processing_purposes:
+      - "Identificação e contato para fins comerciais."
+      - "Elaboração de contratos, emissão de cobranças e notas fiscais."
+      - "Alimentação de banco de dados interno de clientes."
+      - "Realização de pesquisas de mercado e oferta de novos produtos/serviços."
+      - "Realização de cobranças e cadastro em órgãos de proteção ao crédito (SPC, Serasa)."
+    data_sharing: "A empresa fica autorizada a compartilhar dados com outros agentes de tratamento, se necessário para as finalidades do contrato, em conformidade com a LGPD."
+    security_incident: "Em caso de incidente de segurança que possa acarretar risco, o Controlador comunicará o Titular e a Autoridade Nacional de Proteção de Dados (ANPD)."
+    data_subject_rights: "O titular tem direito à confirmação de tratamento, acesso, correção, anonimização, bloqueio ou eliminação dos dados, entre outros previstos na LGPD, mediante requisição."
+  jurisdiction: "Fica eleito o Foro da Comarca de Luís Eduardo Magalhães - BA, podendo a parte que promove a ação optar pelo foro do domicílio do cliente."
+  related_queries:
+    - topic: "contract_terms"
+      params: { contract_id: "standard_contract" }
+      description: "Ver os termos do contrato padrão."
+    - topic: "contract_terms"
+      params: { contract_id: "moto_pgs_contract" }
+      description: "Ver os termos do contrato de moto com cobertura."
+
+# 7.2. Termos Específicos do Contrato Padrão (Não-PGS)
+standard_contract:
+  contract_id: "GSM_SATELITAL_NAO_PGS"
+  inadimplencia:
+    late_fee: "Juros de 0,033% ao dia e multa de 3% sobre o valor inadimplente."
+    consequences:
+      - "Suspensão do acesso ao sistema após 10 dias de atraso."
+      - "Cancelamento da linha GSM ou suspensão do link Satelital, com custos de reativação para o cliente."
+      - "Rescisão contratual após 90 dias de inadimplência (comodato) ou 60 dias (venda)."
+      - "Interrupção do serviço pela Global System requer notificação prévia ao cliente via WhatsApp com 5 dias de antecedência."
+  cancellation:
+    policy: "Não há multa contratual para rescisão, mas o cliente é responsável pelo pagamento proporcional da mensalidade e custos de serviços já realizados (instalação, desinstalação, deslocamento)."
+    procedure: "A solicitação de cancelamento deve ser feita via WhatsApp (0800 606 8000) ou presencialmente, com 30 dias de antecedência."
+    prepaid_refund: "Caso existam valores pagos antecipadamente, o cliente pode solicitar reembolso proporcional."
+  fees_and_penalties:
+    unauthorized_uninstallation_penalty:
+      - "Rastreador GSM: R$ 800,00"
+      - "Rastreador Satelital: R$ 1.800,00"
+    misuse_penalty: "Cobrança de multa no valor de 10 vezes a taxa de adesão."
+    equipment_loss_value:
+      - "GSM: R$ 350,00"
+      - "Satelital Global Star: R$ 800,00"
+    displacement_cost_per_km: "R$ 1,50"
+  administrative_procedures:
+    payment_slip_request_obligation: "Se o cliente não receber o boleto, é sua responsabilidade solicitar a segunda via antes do vencimento."
+    vehicle_sale_procedure: "Em caso de venda do veículo, o cliente é obrigado a agendar a desinstalação. A Global System não tem obrigação de contatar o novo proprietário."
+  fiscal_information:
+    description: "Serviço de Gestão Operacional de Equipamentos de Segurança Eletrônica"
+    cnae: "8020001"
+    tax_code: "8020001"
+    service_code: "31.01"
+
+# 7.3. Termos Específicos do Contrato Moto com Cobertura (PGS)
+moto_pgs_contract:
+  contract_id: "MOTO_PGS_COBERTURA"
+  reimbursement_clause:
+    description: "Este contrato NÃO é um seguro, mas em caso de NÃO recuperação da motocicleta, haverá REEMBOLSO do valor da motocicleta de acordo com a tabela FIPE, respeitando o valor máximo do plano contratado."
+    payment_deadline: "O pagamento da cobertura será realizado no período máximo de 90 dias após o roubo, caso a motocicleta não seja recuperada."
+    related_queries:
+      - topic: "pricing"
+        params: { plan_name: "Plano Rastreamento + Proteção Total PGS" }
+        description: "Verificar as faixas de preço e reembolso do plano PGS."
+      - topic: "theft_communication_scripts"
+        params: { script_id: "moto_pgs" }
+        description: "Acessar o script de comunicação em caso de roubo."
+  coverage_exclusions:
+    - "Avarias e violações na motocicleta recuperada que não excedam 30% do valor de tabela FIPE."
+    - "Bens ou acessórios subtraídos da motocicleta."
+  client_obligations_for_coverage:
+    - "Comunicar o roubo nos primeiros 60 minutos (para roubo) ou 24 horas (para furto). O não cumprimento elimina a cobertura."
+    - "Não manusear o equipamento, sob pena de cancelamento da cobertura."
+    - "Informar a Global System sempre que a motocicleta for para uma oficina mecânica."
+    - "Manter a documentação da motocicleta (IPVA, licenciamento) rigorosamente em dia. Débitos serão descontados do reembolso."
+    - "Manter os pagamentos do financiamento em dia, caso o veículo seja financiado."
+    - "Para receber o valor, entregar o documento da motocicleta preenchido, assinado e autenticado, transferindo a propriedade para a Global System."
+  inadimplencia:
+    late_fee: "Juros de 0,3% ao mês 'pro rata die' e multa de 3% sobre o valor inadimplente."
+    consequences:
+      - "Suspensão dos serviços e da cobertura após o 1º dia de atraso."
+      - "Ocorrido o roubo/furto com mensalidades em atraso, a cobertura é CANCELADA e não será aceito pagamento para restabelecer."
+      - "Inclusão em órgãos de proteção ao crédito após 30 dias de atraso."
+      - "Na cobrança judicial do débito, incidirão honorários advocatícios de 20% do montante devido, mais custas judiciais."
+  fees_and_penalties:
+    false_alarm_penalty: "Será cobrada uma multa no valor de 50% do valor total do contrato em caso de alarme falso."
+    non_return_penalty: "Caso o cliente não compareça por duas vezes ao agendamento de desinstalação, ficará obrigado ao pagamento de multa de 30% do valor do equipamento, mais o valor integral do equipamento não devolvido."
+  administrative_procedures:
+    contract_transfer: "É possível transferir os serviços para um terceiro (novo proprietário) mediante assinatura de um novo Termo de Adesão."
+
+# 8. Scripts de Venda e Gatilhos de Perfil de Cliente
+customer_profiles_and_triggers:
+- profile: "Foco em Custo"
+  script: "Entendo perfeitamente que o orçamento é um ponto crucial. Muitos dos nossos clientes inicialmente pensam no custo, mas rapidamente percebem que a Global System é um investimento estratégico. Para seu caso, o plano {plano} tem adesão de R${adesao} e mensalidade de R${mensalidade}. Importante ressaltar que este é um serviço de rastreamento para auxílio na localização, e não um seguro. Podemos detalhar todos os termos e como ele se encaixa no seu orçamento?"
+- profile: "Medo da Perda"
+  script: "A sensação de insegurança é desgastante, não é? Nossa solução de rastreamento {plano} é projetada para maximizar as chances de localização. Embora nosso serviço não seja um seguro e não ofereça indenização (exceto no plano PGS sob condições específicas), nossa tecnologia é robusta. Como seria para você ter essa ferramenta ao seu dispor? Gostaria de ver todos os detalhes e limitações operacionais?"
+- profile: "Já teve o bem roubado"
+  script: "Sinto muito pela sua experiência anterior, imagino a frustração. Situações assim nos motivam ainda mais na Global System. Nosso diferencial é {diferencial_1} e {diferencial_2}. É crucial entender que nosso serviço é de rastreamento, não um seguro, mas focamos em tecnologia de ponta para localização. Gostaria de entender como nossa proposta formalizada pode te ajudar?"

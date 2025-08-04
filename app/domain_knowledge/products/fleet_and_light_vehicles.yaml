@@ -1,0 +1,139 @@
+plans:
+      - name: "Rastreador Híbrido SATELITAL"
+        type: "Rastreamento Híbrido (GSM + Satélite) para máxima eficiência em locais urbanos e remotos."
+        sales_pitch: "É a nossa solução definitiva. Oferece cobertura ininterrupta e é ideal para quem não pode arriscar perder o sinal. É o investimento mais seguro para máxima tranquilidade."
+        key_selling_points:
+          - "Cobertura Ininterrupta: Funciona em áreas com e sem sinal de celular."
+          - "Máxima Segurança: Ideal para operações críticas e veículos de alto valor."
+          - "Tecnologia Dupla: Muda automaticamente de GSM para Satélite."
+          - "Tranquilidade Total: A solução mais robusta do nosso portfólio."
+        target_audience: "Veículos que operam em qualquer lugar, incluindo áreas sem sinal de celular como fazendas e rodovias remotas."
+        pricing:
+          adesao: 400.00
+          mensalidade:
+            sem_bloqueio: 180.00
+            com_bloqueio: 200.00
+        technology:
+          network: "Híbrido - GSM (sinal de operadora) e SATÉLITE."
+          how_it_works: "O rastreador utiliza a rede GSM como prioritária e, ao entrar em uma área sem sinal de celular, muda automaticamente para a comunicação via satélite, garantindo cobertura contínua."
+          update_frequency_gsm:
+            moving: "A cada 30 segundos"
+            stopped: "A cada 30 minutos"
+          update_frequency_satellite:
+            moving: "Em média a cada 8 minutos"
+            stopped: "Em média a cada 1 hora"
+          potential_limitation: "Locais com cobertura metálica, como galpões, postos ou túneis, podem gerar atraso na atualização via satélite. O sistema atualiza normalmente assim que o veículo sai desses locais."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo de infrações, uso fora de horário e tempo de motor ligado com veículo parado."
+        contract_terms:
+          vigencia: "24 meses"
+          cancellation_policy: "Isento de multa. Taxa de desinstalação no valor da adesão (R$ 400,00) caso cancele antes do prazo."
+          equipment_regime: "Comodato (equipamento emprestado, deve ser devolvido ao final do contrato)."
+        catalog_link: "https://wa.me/p/8781199928651103/558006068000"
+        faq:
+          - question: "Serve para todos os tipos de clientes?"
+            answer: "Sim. Ele é indicado para qualquer tipo de cliente. Mas especialmente aqueles que rodam em áreas remotas, como fazendas, rodovias e locais sem sinal de celular, pois a antena satelital transmite."
+          - question: "A antena satelital comunica em qualquer local sempre?"
+            answer: "A antena satelital tem dificuldades de comunicação e perde sinal abaixo de coberturas metálicas, como galpões, postos ou túneis. O sistema atualiza normalmente assim que o veículo sai desses locais."
+        objection_handling:
+          - objection: "É muito caro comparado ao plano GSM."
+            response: "Entendo o ponto sobre o investimento inicial. A diferença de valor se traduz em segurança e tranquilidade absolutas. Com o Híbrido, você tem a garantia de cobertura contínua, mesmo em áreas rurais ou rodovias sem sinal de celular. É um investimento na certeza de que seu patrimônio estará sempre visível, eliminando qualquer 'ponto cego' na operação."
+          - objection: "Eu só rodo na cidade, não preciso de satélite."
+            response: "É uma observação válida para quem tem uma rotina 100% urbana. No entanto, mesmo em cidades, podemos ter áreas de sombra de sinal em túneis ou garagens subterrâneas. O Híbrido oferece essa camada extra de segurança. Além disso, se um dia precisar fazer uma viagem inesperada, você já terá a tecnologia mais completa à sua disposição, sem precisar se preocupar."
+        related_queries:
+          - topic: "contract_terms"
+            params: { contract_id: "standard_contract" }
+            description: "Verificar os termos contratuais padrão."
+          - topic: "technical_limitations"
+            params: { detail: "satelital" }
+            description: "Consultar limitações da tecnologia satelital."
+
+      - name: "Rastreador GSM (2G+3G+4G) + WI-FI"
+        type: "Rastreamento GSM com WI-FI para Fazendas e Locais Remotos"
+        sales_pitch: "A solução inteligente para conectividade em áreas rurais. Usa a internet local para garantir que você nunca perca os dados do seu maquinário, mesmo sem sinal de celular."
+        key_selling_points:
+          - "Conectividade Garantida em Fazendas: Usa Wi-Fi local para descarregar dados onde não há sinal de celular."
+          - "Armazenamento Inteligente: Guarda até 3 meses de dados e envia assim que conecta."
+          - "Solução Completa: Inclui 2 roteadores prontos para usar com sua internet (ex: Starlink)."
+          - "Ideal para o Agronegócio: A melhor opção para maquinário agrícola em áreas rurais."
+        target_audience: "Fazendas ou locais remotos."
+        pricing:
+          adesao: 300.00
+          mensalidade:
+            sem_bloqueio: 75.00
+            com_bloqueio: 85.00
+        technology:
+          network: "GSM (Vivo, Claro, TIM) e Wi-Fi local."
+          offline_storage: "Memória interna para até 50.000 posições (aproximadamente 3 meses de histórico), com descarregamento automático via GSM ou Wi-Fi. O sistema prioriza a rede GSM e usa o Wi-Fi como backup."
+        includes:
+          - "2 roteadores Wi-Fi pré-configurados que funcionam como repetidores do sinal de internet existente no local (ex: Starlink, rádio, fibra)."
+          - "Suporte técnico para configuração de roteadores adicionais."
+        blocker_functionality:
+          recommendation: "Não recomendamos a instalação do bloqueio para veículos em fazendas ou áreas remotas devido à dificuldade de assistência em caso de falha elétrica ou pane."
+          availability: "A instalação é possível se o cliente estiver ciente dos riscos operacionais e os assumir."
+        contract_terms:
+          vigencia: "24 meses."
+          cancellation_policy: "Sem multa. Taxa de desinstalação de R$ 300,00 se cancelado antes de 24 meses. Gratuita após 24 meses."
+          cancellation_fee_justification: "A taxa de desinstalação não é uma multa, mas sim o pagamento pelo serviço técnico especializado de remoção do equipamento."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
+        catalog_link: "https://wa.me/p/9380395508713863/558006068000"
+        faq:
+          - question: "Qual a diferença entre o plano Rastreador GSM (2G+3G+4G) + Wi-Fi e o Rastreador GSM 4G?"
+            answer: "O plano Rastreador GSM (2G+3G+4G) + Wi-Fi inclui a instalação de dois roteadores Wi-Fi pré-configurados que funcionam como repetidores do sinal de internet existente no local (ex: Starlink, rádio, fibra). Isso permite que o sistema funcione em áreas remotas sem sinal de celular, como em fazendas. O plano Rastreador GSM 4G, por outro lado, é um plano de rastreamento que utiliza apenas a rede GSM 4G para rastreamento."
+          - question: "Para que tipo de cliente é indicado o plano Rastreador GSM (2G+3G+4G) + Wi-Fi?"
+            answer: "É **PRINCIPALMENTE** indicado para fazendas e locais remotos, mas com acesso a WI-FI local. Por isso em quase 100% dos casos se adequa apenas a fazendas, chácaras e locais parecidos."
+        objection_handling:
+          - objection: "Preciso de um técnico para instalar os roteadores?"
+            response: "Não se preocupe, os roteadores já vão pré-configurados pela nossa equipe. É basicamente 'plugar e usar' na sua rede de internet existente, como a da Starlink. E se tiver qualquer dúvida, nosso suporte técnico está pronto para ajudar remotamente."
+          - objection: "E se minha internet da fazenda cair?"
+            response: "Excelente ponto. O rastreador tem uma memória interna que armazena todos os dados de trajeto por até 3 meses. Assim que sua internet voltar, ou o veículo entrar em uma área com sinal de celular, ele descarrega todo o histórico automaticamente. Você não perde nenhuma informação."
+        related_queries:
+          - topic: "technical_limitations"
+            params: { detail: "gsm_gprs" }
+            description: "Consultar limitações da tecnologia GSM."
+          - topic: "compatibility"
+            params: { detail: "john_deere_autopilot" }
+            description: "Verificar compatibilidade com piloto automático John Deere."
+            
+      - name: "Rastreador GSM 4G"
+        type: "Rastreamento para veículos que rodam em locais com boa cobertura de sinal de celular."
+        sales_pitch: "Nosso plano mais popular, perfeito para o dia a dia na cidade. Oferece a confiança e a tecnologia 4G que você precisa a um preço muito competitivo."
+        key_selling_points:
+          - "Custo-Benefício Imbatível: A tecnologia 4G mais confiável com o melhor preço do mercado."
+          - "Perfeito para Cidades: Rastreamento em tempo real onde você mais precisa."
+          - "Sempre Conectado: Armazena o trajeto mesmo em áreas de sombra e envia ao reconectar."
+          - "Relatórios na Mão: Acompanhe tudo pelo WhatsApp com nosso relatório diário."
+        pricing:
+          adesao: 200.00
+          mensalidade:
+            sem_bloqueio: 65.00
+            com_bloqueio: 75.00
+        technology:
+          network: "GSM 4G (Vivo, Claro, TIM entre outras...)."
+          offline_storage: "Em locais sem sinal, dados (trajetos, paradas) são retidos e enviados automaticamente ao reconectar."
+          update_frequency_moving: "A cada 30 segundos."
+          update_frequency_stopped: "A cada 30 minutos."
+        contract_terms:
+          vigencia: "24 meses."
+          cancellation_policy: "Isento de multa. Taxa de desinstalação de R$ 200,00 se cancelado antes de 24 meses. Gratuita após 24 meses em unidades próprias."
+          maintenance_policy: "Manutenção gratuita para defeitos de fabricação. Danos externos são avaliados e cobrados à parte."
+          contract_transfer: "É possível transferir o contrato para um novo titular em caso de venda do veículo."
+        exclusive_features:
+          - "Relatório diário via WhatsApp com resumo da frota e individual por placa, sem custo adicional para um número (+R$ 20,00/mês por número adicional)."
+        catalog_link: "https://wa.me/p/9321097734636816/558006068000"
+        faq:
+          - question: "Para que tipo de cliente é indicado o plano Rastreador GSM 4G?"
+            answer: "Ele é indicado a TODO tipo de cliente. Porém para clientes que rodam em áreas remotas, sem sinal de celular, o rastreador GSM puro pode ser inefetivo no rastreio, devido as constantes falhas de comunicação. É mais indicado para veículos que circulam em áreas urbanas com sinal de celular."
+        objection_handling:
+          - objection: "Mas e se o veículo for para uma área sem sinal?"
+            response: "Ótima pergunta. O rastreador foi projetado para isso. Ele tem uma memória interna que grava todo o percurso enquanto está offline. Assim que ele retorna para uma área com cobertura 4G, ele transmite todo o histórico de localização para o sistema. Você não perde o trajeto."
+          - objection: "O Híbrido não é mais seguro?"
+            response: "O Híbrido Satelital é nossa solução mais robusta para quem opera constantemente fora de área de cobertura. Porém, para a rotina em cidades e rodovias principais, o GSM 4G é extremamente eficiente e oferece o melhor custo-benefício. Ele atende a grande maioria das necessidades de rastreamento com um investimento menor."
+        related_queries:
+          - topic: "contract_terms"
+            params: { contract_id: "standard_contract" }
+            description: "Verificar os termos contratuais padrão."
+          - topic: "technical_limitations"
+            params: { detail: "gsm_gprs" }
+            description: "Consultar limitações da tecnologia GSM."

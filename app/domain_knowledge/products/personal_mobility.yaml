@@ -1,0 +1,32 @@
+plans:
+      - name: "Plano para Scooters, Patinetes e Bikes Elétricas"
+        type: "Rastreamento 4G para veículos de mobilidade pessoal."
+        sales_pitch: "Segurança para toda a família. Acompanhe em tempo real os trajetos de scooters e patinetes, garantindo a tranquilidade que você precisa no dia a dia."
+        key_selling_points:
+          - "Segurança Familiar: Monitore os trajetos dos seus filhos em tempo real."
+          - "Ideal para Mobilidade Urbana: Perfeito para scooters, patinetes e bikes elétricas."
+          - "Leve e Discreto: Equipamento projetado para não interferir no veículo."
+          - "Acompanhe pelo App: Visualize a localização e crie cercas de segurança facilmente."
+        target_audience: "Ideal para monitoramento de veículos de mobilidade pessoal, como no acompanhamento de filhos para segurança da família."
+        pricing:
+          adesao: 100.00
+          mensalidade: 45.00
+        technology:
+          network: "4G"
+        contract_terms:
+          vigencia: "24 meses"
+          cancellation_policy: "Isento de multa para rescisão. O custo da mão de obra para retirada do equipamento antes de 24 meses é de R$ 100,00."
+          free_cancellation_condition: "A retirada do equipamento nas lojas da Global System é gratuita após 24 meses de contrato."
+        catalog_link: "https://wa.me/p/8478546275590970/558006068000"
+        faq:
+        - question: "Para que tipo de cliente é indicado o plano para Scooters, Patinetes e Bikes Elétricas?"
+          answer: "Ideal para monitoramento de veículos de mobilidade pessoal, como no acompanhamento de filhos para segurança da família."
+        objection_handling:
+          - objection: "Descarrega a bateria do patinete?"
+            response: "O equipamento tem um consumo de energia muito baixo, projetado especificamente para veículos menores. Em uso normal, o impacto na autonomia é mínimo. Ele foi feito para proteger sem atrapalhar o uso no dia a dia."
+          - objection: "É caro para um veículo tão pequeno."
+            response: "Entendo o ponto. O valor da mensalidade é um investimento na sua tranquilidade. Pense na segurança de saber exatamente onde seu filho está ou na capacidade de localizar sua bike elétrica em caso de furto. É um custo baixo para ter essa paz de espírito."
+        related_queries:
+          - topic: "contract_terms"
+            params: { contract_id: "standard_contract" }
+            description: "Verificar os termos de cancelamento e serviço."

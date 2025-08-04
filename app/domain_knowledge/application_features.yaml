@@ -1,0 +1,48 @@
+overview: "Plataforma robusta para monitoramento em tempo real, gestão de alertas operacionais, criação de cercas eletrônicas, relatórios analíticos e acompanhamento completo de trajetos e atividades."
+access_and_setup:
+  - "Download na Play Store (Android) e App Store (iOS)."
+  - "Acesso via login e senha fornecidos pela Global System."
+  - "Na primeira utilização, o usuário pode configurar uma senha de segurança opcional."
+  - "A interface inicial exibe todos os veículos vinculados com ferramentas de busca e filtros."
+  - "Menu Principal: Acesso a alteração de senha, dados do veículo, status financeiro e suporte."
+  - "Ao selecionar um veículo, exibe: localização, status da ignição, velocidade, horário da última atualização e nível da bateria do rastreador."
+notifications:
+  types: "Ignition ON/OFF, Entrada/Saída de cercas, Excesso de velocidade, Operação fora de horário."
+  storage: "As notificações ficam registradas na barra do dispositivo e no histórico interno do aplicativo."
+  configuration_options:
+    - "Definição de limite de velocidade."
+    - "Programação de horários de operação permitidos."
+    - "Habilitação/desabilitação de tipos de alerta."
+    - "Filtros para visualização seletiva de eventos."
+  interactivity: "Ao clicar em uma notificação, o mapa exibe o ponto exato do evento com data, horário e placa."
+security_zones_and_locations:
+  temporary_zone: "Criada automaticamente no local onde o veículo para e se desativa quando o veículo se move."
+  fixed_locations: "Permite definir e nomear locais (casa, trabalho) e configurar alertas de entrada/saída."
+  management: "Permite redimensionar, mover, renomear ou excluir zonas diretamente no mapa interativo."
+geofencing_and_routes:
+  creation: "Definição livre de perímetros no mapa (polígonos, rotas, áreas circulares)."
+  functionality: "Gera alertas automáticos de entrada/saída para segurança e gestão logística."
+  specific_speed_limit: "É possível adicionar um limite de velocidade a uma cerca específica, mediante solicitação à central técnica."
+reports:
+  trail_report: # Rastreamento Histórico
+    objective: "Visualizar a rota percorrida em um intervalo de tempo definido."
+    timeline_tool: "Permite avançar e retroceder no percurso para análise sequencial."
+  trip_report: # Análise Detalhada de Viagem
+    info_available: "Endereço e horário de partida/chegada, duração, distância, velocidade média/máxima."
+    example:
+      saida: "Rua São Francisco, 10h51"
+      chegada: "Av. Juscelino Kubitschek, 10h57"
+      distancia: "2 km"
+      duracao: "6 minutos"
+      velocidade_maxima: "36 km/h"
+      velocidade_media: "15 km/h"
+video_tutorials:
+  - "Primeiro acesso: https://www.tiktok.com/@globalsystem24h/video/7486843959570894086"
+  - "Configuração de notificações: https://www.tiktok.com/@globalsystem24h/video/7486843049679621381"
+  - "Zona de segurança e locais: https://www.tiktok.com/@globalsystem24h/video/7486842891252288774"
+  - "Criação de cerca eletrônica: https://www.tiktok.com/@globalsystem24h/video/7486842696829603077"
+  - "Visualização de rotas e trilhas: https://www.tiktok.com/@globalsystem24h/video/7486842532379282694"
+related_queries:
+  - topic: "get_support_philosophy"
+    params: {}
+    description: "Consultar as diretrizes de suporte ao cliente."

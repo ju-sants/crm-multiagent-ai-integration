@@ -1,0 +1,103 @@
+  plans:
+    - name: "Plano Rastreamento + Proteção Total PGS"
+      type: "Rastreamento para motos com Reembolso em caso de Roubo ou Furto."
+      sales_pitch: "É a proteção máxima para sua moto. Mais que um rastreador, é a garantia de que você não terá prejuízo. Se não recuperarmos sua moto, nós pagamos o valor da FIPE."
+      key_selling_points:
+        - "Proteção Financeira: Reembolso pela tabela FIPE em caso de não recuperação."
+        - "Moto Reserva: Disponibilizamos uma moto reserva durante a busca."
+        - "Tranquilidade Garantida: A Global System assume a responsabilidade da recuperação."
+        - "Sem Burocracia: Processo de indenização ágil e direto conosco."
+      pricing:
+        adesao: 120.00
+        reinstalacao: 100.00
+        reativacao_inadimplencia: 200.00
+        desinstalacao: 120.00
+        faixas_mensalidade:
+          - fipe_range: "Até R$ 15.000,00"
+            valor: 77.00
+            reembolso_maximo: 15000.00
+          - fipe_range: "De R$ 16.000,00 a R$ 22.000,00"
+            valor: 85.00
+            reembolso_maximo: 22000.00
+          - fipe_range: "De R$ 23.000,00 a R$ 30.000,00"
+            valor: 110.00
+            reembolso_maximo: 30000.00
+      benefits:
+        - "Se a moto não for recuperada em até 90 dias, o cliente recebe o valor da Tabela FIPE."
+        - "Se a moto não for recuperada em até uma semana, a Global System disponibiliza uma moto reserva até o recebimento da indenização."
+      contract_rules:
+          - "É possível contratar o plano sem possuir CNH."
+          - "É possível transferir o contrato para outro veículo, mediante pagamento de desinstalação e nova instalação."
+      observations:
+        - "Apenas para MOTOS!, esse plano NÃO é válido para carros, caminhões ou outros veículos."
+      technology:
+        update_frequency_moving: "A cada 30 segundos."
+        update_frequency_stopped: "A cada 8 horas (para economia de bateria)."
+      contract_type: "moto_pgs_com_cobertura"
+      catalog_link: "https://wa.me/p/9380524238652852/558006068000"
+      regional_restrictions:
+        - "Plano PGS NÃO está disponível para localidades com DDD 66 (Mato Grosso)."
+      faq:
+        - question: "É um seguro?"
+          answer: "Não, mas para o Plano PGS, há o reembolso do valor conforme a Tabela FIPE se a moto não for recuperada em 90 dias, cumpridas as condições contratuais."
+        - question: "E se eu atrasar a mensalidade?"
+          answer: "A cobertura é suspensa com 1 dia de atraso. Se o roubo ocorrer com o plano em inadimplência, o cliente perde o direito ao rastreamento e ao eventual reembolso."
+        - question: "Perco a garantia da moto?"
+          answer: "A instalação não anula a garantia completa. Pode impactar a garantia de partes elétricas específicas (bateria, etc.), a critério da concessionária. A garantia de componentes principais (motor, chassi, câmbio) permanece válida. A Global System oferece garantia por qualquer dano comprovadamente causado pelo rastreador."
+        - question: "O rastreador descarrega a bateria da moto?"
+          answer: "Para uso regular, a chance é mínima. Para uso esporádico (moto parada por longos períodos), pode haver risco. O rastreador possui modo de economia de bateria (atualiza a cada 8h quando parada) para mitigar isso. Recomenda-se dar recargas semanais na bateria em caso de uso esporádico."
+        - question: "Se a moto for financiada e roubada, continuo pagando?"
+          answer: "Sim. O cliente se compromete a continuar o pagamento do financiamento. Após o pagamento da indenização do plano PGS, os direitos sobre o veículo passam para a Global System."
+      objection_handling:
+        - objection: "É um seguro?"
+          response: "Não é um seguro, e sim um plano de proteção com reembolso. A grande vantagem é que toda a gestão é feita diretamente pela Global System, sem a burocracia de uma seguradora. Se sua moto não for recuperada, nós garantimos o pagamento pela FIPE, conforme o contrato."
+        - objection: "A instalação pode danificar minha moto ou anular a garantia?"
+          response: "Nossa instalação é feita por técnicos especializados para garantir a segurança. Ela não anula a garantia de componentes principais como motor e chassi. Apenas a parte elétrica específica pode ser impactada, a critério da concessionária, mas nós oferecemos garantia por qualquer dano que nosso equipamento possa causar."
+      related_queries:
+        - topic: "contract_terms"
+          params: { contract_id: "moto_pgs_contract" }
+          description: "Acessar as cláusulas específicas do contrato PGS."
+        - topic: "theft_communication_scripts"
+          params: { script_id: "moto_pgs" }
+          description: "Ver o script de comunicação em caso de roubo."
+        - topic: "regional_availability"
+          params: { ddd: "66" }
+          description: "Verificar restrições de disponibilidade regional."
+
+    - name: "Plano Rastreamento Moto Básico"
+      type: "Rastreamento puro para motos, sem compensação em caso de roubo."
+      sales_pitch: "Uma solução de rastreamento eficaz e acessível para você saber onde sua moto está 24h por dia. Perfeito para quem busca segurança com um ótimo custo-benefício."
+      key_selling_points:
+        - "O Melhor Custo-Benefício: Rastreamento de qualidade com a mensalidade mais baixa."
+        - "Localização 24h: Saiba sempre onde sua moto está, a qualquer hora."
+        - "Plantão Dedicado: Nossa equipe está a postos 24h para auxiliar na localização."
+        - "Tecnologia 4G: Comunicação rápida e eficiente em áreas com cobertura."
+      pricing:
+        adesao: 120.00
+        mensalidade: 60.00
+      includes:
+        - "Plantão 24 horas para rastreamento."
+      technology:
+        update_frequency_moving: "A cada 30 segundos."
+        update_frequency_stopped: "A cada 8 horas (para economia de bateria)."
+      contract_type: "moto_standard"
+      catalog_link: "https://wa.me/p/9380524238652852/558006068000"
+      faq:
+        - question: "Como funciona o Plano Rastreamento Moto Básico?"
+          answer: "O Plano Rastreamento Moto Básico é um serviço de rastreamento para motos que oferece acompanhamento em tempo real 24 horas por dia, porém sem compensação em caso de roubo."
+        - question: "Qual a principal diferença pro plano PGS?"
+          answer: "O Plano Rastreamento + Proteção Total PGS, além de rastreamento, oferece indenização em caso de roubo, com reembolso até o valor da FIPE."
+        - question: "Que tipo de rastreador é usado?"
+          answer: "Utilizamos rastreadores GSM 4G, por isso, é necessário ter sinal de celular para o funcionamento do serviço."
+      objection_handling:
+        - objection: "Mas se não recuperar, eu perco a moto?"
+          response: "Nesse plano, o foco é o rastreamento, que é uma ferramenta poderosa para auxiliar na localização. Atuamos 24h para buscar a moto, mas não há a garantia de reembolso como no plano PGS. Se a sua maior preocupação é a proteção financeira total contra a perda, o plano PGS foi desenhado exatamente para isso."
+        - objection: "Não é melhor colocar o PGS logo?"
+          response: "O PGS é, sem dúvida, nossa proteção mais completa. Este plano Básico é uma alternativa para quem busca uma solução de segurança com um custo mensal mais acessível, mas ainda quer contar com a tecnologia e o suporte da Global System para rastrear a moto. A escolha depende do seu foco principal: localização ou garantia financeira."
+      related_queries:
+        - topic: "theft_communication_scripts"
+          params: { script_id: "moto_rastreamento" }
+          description: "Ver o script de comunicação para roubo neste plano."
+        - topic: "products"
+          params: { name: "Plano Rastreamento + Proteção Total PGS" }
+          description: "Comparar com o plano PGS para upsell."

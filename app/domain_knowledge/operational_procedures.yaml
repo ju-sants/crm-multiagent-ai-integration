@@ -1,0 +1,157 @@
+installation:
+  general_policy:
+    - "A instalação deve ser realizada exclusivamente pela Global System ou por quem ela determinar."
+    - "A instalação só será feita se houver viabilidade técnica e o veículo apresentar condições normais de funcionamento."
+    - "O serviço de instalação pode levar de 1 a 3 horas."
+    - "Instalações adicionais em outros veículos são cobradas à parte."
+    - "Fazemos instalações aos sábados (via deslocamento de técnico de LEM para Barreiras, por exemplo)."
+  location_policy:
+    default: "O local da instalação é sigiloso, considerado segredo comercial, e determinado pela Global System, não sendo divulgado ao cliente para dificultar a localização do equipamento."
+    exception_moto: "A instalação de rastreadores em motocicletas é feita EXCLUSIVAMENTE em uma de nossas lojas autorizadas para garantir a segurança e a vedação correta do equipamento."
+    related_queries:
+      - topic: "maintenance_policy"
+        params: {}
+        description: "Consultar a política de manutenção após a instalação."
+      - topic: "scheduling_rules"
+        params: {}
+        description: "Verificar as regras de agendamento de serviços."
+maintenance:
+  policy: "A revisão pode ser solicitada pela Global System ou pelo cliente. É gratuita, exceto se o deslocamento exceder 10km da base mais próxima ou se for constatada avaria por terceiros."
+  client_obligation:
+    - "O cliente deve verificar diariamente o funcionamento do rastreador e solicitar manutenção em caso de mau funcionamento."
+    - "O cliente deve agendar uma revisão caso o veículo se envolva em acidente que implique em manutenção estrutural ou elétrica."
+  related_queries:
+    - topic: "scheduling_rules"
+      params: {}
+      description: "Verificar as regras para agendamento de manutenções."
+    - topic: "installation_policy"
+      params: {}
+      description: "Revisar a política de instalação original."
+scheduling:
+  arrival: "O cliente deve comparecer com 10 minutos de antecedência. Atraso máximo tolerado de 15 minutos."
+  no_show_policy: "Caso não possa comparecer, o cliente deve avisar com no mínimo 2 horas de antecedência (contrato padrão) ou 24 horas (contrato moto). O não comparecimento pode gerar multa de R$ 100,00."
+  related_queries:
+    - topic: "contract_terms"
+      params: { contract_id: "standard_contract" }
+      description: "Verificar penalidades contratuais por não comparecimento."
+    - topic: "maintenance_policy"
+      params: {}
+      description: "Consultar como o agendamento se aplica à manutenção."
+technical_limitations:
+  general: "O serviço depende de fatores externos. A Global System não se responsabiliza por falhas de sinal (GSM ou Satélite), internet, ou eventos de força maior. A empresa também não se responsabiliza, civil ou criminalmente, caso as autoridades competentes não atuem de forma hábil."
+  gsm_gprs: "Funciona apenas em áreas com cobertura de operadora de celular. O equipamento possui memória interna que armazena dados offline e transmite ao restabelecer o sinal."
+  satelital: "Possui cobertura em todo o território nacional, mas requer visada constante para o céu para comunicação com os satélites."
+  related_queries:
+    - topic: "pricing"
+      params: { plan_name: "Rastreador Híbrido SATELITAL" }
+      description: "Ver detalhes e limitações específicas do plano Satelital."
+    - topic: "pricing"
+      params: { plan_name: "Rastreador GSM 4G" }
+      description: "Comparar com as limitações da tecnologia GSM."
+compatibility:
+  john_deere_autopilot:
+    is_compatible: false
+    explanation: "Rastreador Satelital Híbrido PODE gerar interferência em maquinários John Deere que utilizam piloto automático."
+    recommendation: "NÃO instalar rastreadores satelitais nestes casos. A alternativa é o plano GSM 4G com Wi-Fi."
+    exception: "Se o cliente possui máquinas John Deere MAS NÃO utiliza o piloto automático, a instalação PODE ser feita normalmente."
+    related_queries:
+      - topic: "pricing"
+        params: { plan_name: "Rastreador GSM (2G+3G+4G) + WI-FI" }
+        description: "Verificar o custo da solução alternativa recomendada."
+      - topic: "pricing"
+        params: { plan_name: "Rastreador Híbrido SATELITAL" }
+        description: "Verificar o custo do plano que pode causar interferência."
+blocker_installation_rules:
+  in_house_technicians: "A ativação de bloqueio remoto para clientes em cidades com técnicos próprios requer a assinatura prévia do Termo de Responsabilidade de Bloqueio."
+  outsourced_technicians: "NÃO são instalados bloqueios em veículos por técnicos terceirizados, como medida de segurança e garantia da qualidade do serviço."
+  motorcycles: "A função de bloqueio NÃO está disponível no aplicativo para motos. O acionamento é feito exclusivamente pela central da Global System, mediante solicitação validada do cliente."
+  related_queries:
+    - topic: "contract_terms"
+      params: { contract_id: "standard_contract" }
+      description: "Consultar o termo de responsabilidade de bloqueio."
+    - topic: "pricing"
+      params: { plan_name: "Plano Rastreamento Moto Básico" }
+      description: "Verificar qual plano de moto possui bloqueio."
+regional_service_rules:
+  contact_origin_indicators:
+    - origin: "Instagram"
+      inferred_location: "Oeste da Bahia (região de Luís Eduardo Magalhães)."
+      plan_availability: "Todos os planos são válidos, incluindo Proteção Total para moto."
+    - origin: "WhatsApp (DDDs 77, 71, 74, etc.)"
+      inferred_location: "Oeste da Bahia."
+      plan_availability: "Todos os planos estão disponíveis."
+    - origin: "Telefone (DDD 66)"
+      inferred_location: "Regiões de Confresa, Vila Rica, Sorriso, Sinop, Lucas do Rio Verde (MT)."
+      plan_availability: "Plano PGS para moto NÃO está disponível. Demais planos podem ser oferecidos."
+  technician_availability:
+    - city: "Luís Eduardo Magalhães (BA)"
+      type: "Matriz"
+      team: "Quatro técnicos próprios disponíveis."
+      service_level: "Atendimento rápido e direto."
+    - city: "Barreiras (BA)"
+      team: "Um técnico fixo."
+      availability: "Segundas, quartas e sextas (dia todo). Terças, quintas e sábados pela manhã (pode haver deslocamento de técnico de LEM)."
+    - city: "Sorriso (MT)"
+      type: "Loja Física"
+      team: "Técnico fixo."
+      availability: "Atendimento diário, sujeito à agenda e deslocamentos."
+    - city: "Sinop (MT) / Lucas do Rio Verde (MT)"
+      team: "Atendimento realizado pelo técnico de Sorriso."
+      scheduling: "Obrigatório agendamento com pelo menos 1 dia de antecedência."
+  outsourced_service_policy:
+    execution: "Realizado por técnicos terceirizados."
+    additional_fee: 150.00
+    fee_covers: "Envio do equipamento via Correios e mão de obra do técnico."
+    equipment_logistics: "Envio via Correios, prazo de 7 a 10 dias úteis. Geralmente NÃO há estoque local."
+  outsourced_cities_with_local_stock:
+    - "Confresa (MT)"
+    - "Vila Rica (MT)"
+  outsourced_cities_list:
+    - "ANÁPOLIS - GO"
+    - "BALSAS - MA"
+    - "BARRA DO GARÇAS - MT"
+    - "BELO HORIZONTE - MG"
+    - "BETIM - MG"
+    - "BOA VISTA - RR"
+    - "CAMAÇARI - BA"
+    - "CONTAGEM - MG"
+    - "CUIABÁ – MT"
+    - "CURITIBA - PR"
+    - "ERECHIM - RS"
+    - "FEIRA DE SANTANA – BA"
+    - "FORTALEZA - CE"
+    - "GARANHUNS - PE"
+    - "GOIÂNIA - GO"
+    - "GUANAMBI - BA"
+    - "ITABERAÍ – GO"
+    - "JANAUBA - MG"
+    - "MARABÁ - PA"
+    - "MARINGÁ - PR"
+    - "ORÓS - CE"
+    - "PALMAS - TO"
+    - "PETROLINA - PE"
+    - "RECIFE - PE"
+    - "REDENÇÃO - PA"
+    - "SÃO BERNARDO - SP"
+    - "SÃO LUÍS - MA"
+    - "SEABRA - BA"
+    - "SIMÕES FILHO - BA"
+    - "TOLEDO - PR"
+    - "URUÇUÍ - PI"
+    - "VOLTA REDONDA - RJ"
+  procedure_for_unlisted_cities:
+    status: "Não significa impossibilidade de atendimento."
+    action: "Setor interno realiza busca e análise de viabilidade técnica."
+    steps:
+      - "1. Localizar técnico na região."
+      - "2. Consultar valores de mão de obra."
+      - "3. Confirmar disponibilidade do técnico."
+      - "4. Calcular custos operacionais envolvidos e responder ao cliente."
+    required_info_from_client: "Nome exato da cidade."
+  related_queries:
+    - topic: "installation_policy"
+      params: {}
+      description: "Verificar a política para serviços terceirizados."
+    - topic: "pricing"
+      params: { plan_name: "Plano Rastreamento + Proteção Total PGS" }
+      description: "Verificar restrições do plano PGS por região."
