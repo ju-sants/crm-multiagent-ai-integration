@@ -4,7 +4,6 @@ from crewai import Crew, Process
 from typing import Any
 from datetime import datetime
 import time
-import re
 
 from app.core.logger import get_logger
 from app.services.redis_service import get_redis
