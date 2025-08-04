@@ -247,7 +247,7 @@ IncrementalStrategicPlannerAgent:
 
       # Vetor de Análise 3: 'information_payload'
       # PERGUNTA-CHAVE: O payload de dados está vazio ou incompleto para o produto que está sendo discutido?
-      # OPORTUNIDADE: Se a conversa mencionou o "Plano Rastreamento Moto", mas o 'information_payload' não tem seu 'pricing' e 'contract_terms', a oportunidade é buscar esses dados exatos. Adicione essas buscas à sua lista de tarefas de pesquisa.
+      # OPORTUNIDADE: Se a conversa mencionou o "Plano Rastreamento Moto Básico", mas o 'information_payload' não tem seu 'pricing' e 'contract_terms', a oportunidade é buscar esses dados exatos. Adicione essas buscas à sua lista de tarefas de pesquisa.
 
       # Após analisar todos os vetores, você DEVE ter uma 'lista_de_consultas_planejadas'.
 
