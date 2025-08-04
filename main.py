@@ -154,8 +154,12 @@ def process_message_task(self, contact_uuid):
     pending_task_key = f'pending_task:{contact_uuid}'
     latest_task_id = redis_client.get(pending_task_key)
 
-    if not latest_task_id or latest_task_id != self.request.id:
-        logger.warning(f"[{contact_uuid}] - Stale task {self.request.id} found. A newer task may be scheduled or the task is invalid. Aborting.")
+    if not latest_task_id:
+        logger.warning(f"[{contact_uuid}] - No pending task found in Redis for task {self.request.id}. Aborting.")
+        return
+
+    if latest_task_id != self.request.id:
+        logger.warning(f"[{contact_uuid}] - Stale task {self.request.id} found. Latest task is {latest_task_id}. Aborting.")
         return
 
     # The valid task consumes its execution token to ensure idempotency.
@@ -275,12 +279,18 @@ def process_incoming_message(payload):
     existing_task_id = redis_client.get(pending_task_key)
     
     if existing_task_id:
-        celery_app.control.revoke(existing_task_id)
+        logger.info(f"[{contact_uuid}] - A pending task {existing_task_id} already exists. It will be replaced.")
+        # Revoke the old task
+        celery_app.control.revoke(existing_task_id, terminate=True)
         logger.info(f"[{contact_uuid}] - Revoked previous pending task: {existing_task_id}")
 
+    # Schedule the new task
     new_task = process_message_task.apply_async(args=[contact_uuid], eta=datetime.now() + timedelta(seconds=4))
-    redis_client.set(pending_task_key, new_task.id, ex=30)
-    logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} in 4 seconds.")
+    
+    # Atomically set the new task ID
+    redis_client.set(pending_task_key, new_task.id, ex=60) # Increased expiry for safety
+    
+    logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} to run in 4 seconds. Pending task key set.")
 
 
 @app.route('/receive_message', methods=['POST'])
