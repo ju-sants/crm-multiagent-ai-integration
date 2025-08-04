@@ -98,6 +98,11 @@ products:
       - name: "Rastreador Híbrido SATELITAL"
         type: "Rastreamento Híbrido (GSM + Satélite) para máxima eficiência em locais urbanos e remotos."
         sales_pitch: "É a nossa solução definitiva. Oferece cobertura ininterrupta e é ideal para quem não pode arriscar perder o sinal. É o investimento mais seguro para máxima tranquilidade."
+        key_selling_points:
+          - "Cobertura Ininterrupta: Funciona em áreas com e sem sinal de celular."
+          - "Máxima Segurança: Ideal para operações críticas e veículos de alto valor."
+          - "Tecnologia Dupla: Muda automaticamente de GSM para Satélite."
+          - "Tranquilidade Total: A solução mais robusta do nosso portfólio."
         target_audience: "Veículos que operam em qualquer lugar, incluindo áreas sem sinal de celular como fazendas e rodovias remotas."
         pricing:
           adesao: 400.00
@@ -130,6 +135,11 @@ products:
       - name: "Rastreador GSM (2G+3G+4G) + WI-FI"
         type: "Rastreamento GSM com WI-FI para Fazendas e Locais Remotos"
         sales_pitch: "A solução inteligente para conectividade em áreas rurais. Usa a internet local para garantir que você nunca perca os dados do seu maquinário, mesmo sem sinal de celular."
+        key_selling_points:
+          - "Conectividade Garantida em Fazendas: Usa Wi-Fi local para descarregar dados onde não há sinal de celular."
+          - "Armazenamento Inteligente: Guarda até 3 meses de dados e envia assim que conecta."
+          - "Solução Completa: Inclui 2 roteadores prontos para usar com sua internet (ex: Starlink)."
+          - "Ideal para o Agronegócio: A melhor opção para maquinário agrícola em áreas rurais."
         target_audience: "Fazendas ou locais remotos."
         pricing:
           adesao: 300.00
@@ -161,6 +171,11 @@ products:
       - name: "Rastreador GSM 4G"
         type: "Rastreamento para veículos que rodam em locais com boa cobertura de sinal de celular."
         sales_pitch: "Nosso plano mais popular, perfeito para o dia a dia na cidade. Oferece a confiança e a tecnologia 4G que você precisa a um preço muito competitivo."
+        key_selling_points:
+          - "Custo-Benefício Imbatível: A tecnologia 4G mais confiável com o melhor preço do mercado."
+          - "Perfeito para Cidades: Rastreamento em tempo real onde você mais precisa."
+          - "Sempre Conectado: Armazena o trajeto mesmo em áreas de sombra e envia ao reconectar."
+          - "Relatórios na Mão: Acompanhe tudo pelo WhatsApp com nosso relatório diário."
         pricing:
           adesao: 200.00
           mensalidade:
@@ -189,6 +204,11 @@ products:
       - name: "Plano Proteção Total PGS"
         type: "Rastreamento para motos com Reembolso em caso de Roubo ou Furto."
         sales_pitch: "É a proteção máxima para sua moto. Mais que um rastreador, é a garantia de que você não terá prejuízo. Se não recuperarmos sua moto, nós pagamos o valor da FIPE."
+        key_selling_points:
+          - "Proteção Financeira: Reembolso pela tabela FIPE em caso de não recuperação."
+          - "Moto Reserva: Disponibilizamos uma moto reserva durante a busca."
+          - "Tranquilidade Garantida: A Global System assume a responsabilidade da recuperação."
+          - "Sem Burocracia: Processo de indenização ágil e direto conosco."
         pricing:
           adesao: 120.00
           reinstalacao: 100.00
@@ -234,6 +254,11 @@ products:
       - name: "Plano Rastreamento Moto"
         type: "Rastreamento puro para motos, sem compensação em caso de roubo."
         sales_pitch: "Uma solução de rastreamento eficaz e acessível para você saber onde sua moto está 24h por dia. Perfeito para quem busca segurança com um ótimo custo-benefício."
+        key_selling_points:
+          - "O Melhor Custo-Benefício: Rastreamento de qualidade com a mensalidade mais baixa."
+          - "Localização 24h: Saiba sempre onde sua moto está, a qualquer hora."
+          - "Plantão Dedicado: Nossa equipe está a postos 24h para auxiliar na localização."
+          - "Tecnologia 4G: Comunicação rápida e eficiente em áreas com cobertura."
         pricing:
           adesao: 120.00
           mensalidade: 60.00
@@ -258,6 +283,11 @@ products:
       - name: "Plano para Scooters, Patinetes e Bikes Elétricas"
         type: "Rastreamento 4G para veículos de mobilidade pessoal."
         sales_pitch: "Segurança para toda a família. Acompanhe em tempo real os trajetos de scooters e patinetes, garantindo a tranquilidade que você precisa no dia a dia."
+        key_selling_points:
+          - "Segurança Familiar: Monitore os trajetos dos seus filhos em tempo real."
+          - "Ideal para Mobilidade Urbana: Perfeito para scooters, patinetes e bikes elétricas."
+          - "Leve e Discreto: Equipamento projetado para não interferir no veículo."
+          - "Acompanhe pelo App: Visualize a localização e crie cercas de segurança facilmente."
         target_audience: "Ideal para monitoramento de veículos de mobilidade pessoal, como no acompanhamento de filhos para segurança da família."
         pricing:
           adesao: 100.00
