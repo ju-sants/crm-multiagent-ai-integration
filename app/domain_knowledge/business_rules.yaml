@@ -1,6 +1,6 @@
 # business_rules.yaml
 # Fonte de Verdade para Regras de Negócio, Políticas, Produtos e Procedimentos da Global System.
-# Versão 5.2 - Criado em 21/07/2025 by Roo
+# Versão 5.5 - Atualizado em 21/07/2025 by Roo
 # Alterações: Adicionado sales_guidance, sales_pitch nos produtos e reordenado para upsell.
 
 # 1. Informações da Empresa
