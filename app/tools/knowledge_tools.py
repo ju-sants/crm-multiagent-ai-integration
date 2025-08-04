@@ -52,7 +52,7 @@ def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
         # INFORMAÇÕES IMPORTANTES
          - **Compatibilidade de planos**:
             * O plano "Rastreador GSM (2G+3G+4G) + WI-FI" é indicado para fazendas e locais remotos.
-            * Os planos "Plano Proteção Total PGS" e "Plano Rastreamento Moto" são apenas para motos.
+            * Os planos "Plano Rastreamento + Proteção Total PGS" e "Plano Rastreamento Moto Básico" são apenas para motos.
             * O plano "Rastreador Híbrido SATELITAL" é indicado para locais remotos e fazendas, e para frotas. Mas pode ser utilizado em qualquer tipo de veículo em qualquer local.
     """
     logger.info(f"--- KNOWLEDGE SERVICE TOOL CALLED with queries: {queries} ---")
