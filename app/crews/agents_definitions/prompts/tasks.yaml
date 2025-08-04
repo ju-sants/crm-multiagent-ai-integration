@@ -280,18 +280,18 @@ communication_task:
         "request_human_intervention": false,
         "messages_sequence": [
           "Juan, entendi sua preocupação com a segurança da sua moto, já que a usa para tudo.",
-          "Com base nisso, nossa recomendação principal é o Plano Proteção Total PGS.",
+          "Com base nisso, nossa recomendação principal é o Plano Rastreamento + Proteção Total PGS.",
           "O grande diferencial dele é a tranquilidade da proteção financeira.",
           "Se sua moto for roubada e não a recuperarmos, você recebe o valor dela pela tabela FIPE.",
           "Um ponto importante, para total transparência: nosso serviço é de rastreamento com essa garantia de reembolso, não um seguro tradicional.",
           "Essa abordagem com foco total na sua segurança faz sentido para você?"
         ],
-        "plan_names": ["Plano Proteção Total PGS"]
+        "plan_names": ["Plano Rastreamento + Proteção Total PGS"]
       },
      "updated_state": {
         "products_discussed": [
           {
-            "plan_name": "Plano Rastreamento Moto",
+            "plan_name": "Plano Rastreamento Moto Básico",
             "details_provided": ["pricing"],
             "presented_at_turn": 4
           }
@@ -518,7 +518,7 @@ enhance_profile_task:
           "clients_mindset": {
             "primary_motivations": ["<Array de motivações inferidas, ex: 'Eficiência operacional', 'Segurança dos ativos'>"],
             "known_frustrations": ["<Array de frustrações conhecidas, ex: 'Aplicativos que não funcionam'>"],
-            "key_interests": ["<Array de interesses chave, ex: 'Plano Proteção Total PGS'>"]
+            "key_interests": ["<Array de interesses chave, ex: 'Plano Rastreamento + Proteção Total PGS'>"]
           },
           "current_mission": {
             "immediate_goal": "O objetivo claro e imediato da conversa atual.",
