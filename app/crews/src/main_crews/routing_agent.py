@@ -22,6 +22,8 @@ logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
+HISTORY_TOPIC_LIMIT = 10
+
 @celery_app.task(name='main_crews.pre_routing', bind=True)
 def pre_routing_orchestrator(self, contact_id: str):
     """
@@ -66,7 +68,7 @@ def _run_routing_agent_crew(contact_id: str):
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
         longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
         history_messages = "\n\n".join(
-            [f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}" for topic in longterm_history.get("topic_details", [])]
+            [f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}" for topic in longterm_history.get("topic_details", [])[-AGENT_TOPIC_LIMIT:]]
         )
 
         while redis_client.keys(f"transcribing:*:{contact_id}"):

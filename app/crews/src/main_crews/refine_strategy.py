@@ -19,6 +19,8 @@ logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
+AGENT_TOPIC_LIMIT =10
+
 @celery_app.task(name='main_crews.refine_strategy', bind=True)
 def refine_strategy_task(self, contact_id: str):
     """
@@ -46,7 +48,7 @@ def refine_strategy_task(self, contact_id: str):
         longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
         history_messages = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in longterm_history.get("topic_details", [])
+            for topic in longterm_history.get("topic_details", [])[-AGENT_TOPIC_LIMIT:]
         ])
 
 

@@ -14,6 +14,8 @@ from app.services.state_manager_service import StateManagerService
 from app.models.data_models import ConversationState
 from app.utils.funcs.funcs import distill_conversation_state
 
+SUMMARIZER_HISTORY_TOPIC_LIMIT = 15
+
 state_manager = StateManagerService()
 
 # Import agent and task creation functions
@@ -124,7 +126,9 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
     last_timestamp = redis_client.get(timestamp_key)
     
     existing_summary = json.loads(existing_summary_json) if existing_summary_json else None
-
+    if existing_summary and existing_summary.get("topic_details"):
+        existing_summary["topic_details"] = existing_summary["topic_details"][-SUMMARIZER_HISTORY_TOPIC_LIMIT:]
+    
     # Fetch new messages
     if last_timestamp:
         logger.info(f"[{contact_id}] - Fetching new messages since {last_timestamp}.")
