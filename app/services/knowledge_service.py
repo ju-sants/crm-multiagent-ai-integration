@@ -89,6 +89,37 @@ class KnowledgeService:
             return None
         return self._rules.get(section_name, {})
 
+    def _get_all_plans(self) -> List[Dict[str, Any]]:
+        """Helper para extrair todos os planos de todas as categorias de produtos."""
+        all_plans = []
+        for category in self._get_rule_section('products'):
+            all_plans.extend(category.get('plans', []))
+        return all_plans
+
+    def _find_plan_by_name(self, plan_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Helper para encontrar um plano específico pelo nome usando busca fuzzy.
+        Retorna o plano mais correspondente se a pontuação de similaridade for alta o suficiente.
+        """
+        if not plan_name:
+            return None
+
+        all_plans = self._get_all_plans()
+        plan_names = [plan['name'] for plan in all_plans]
+
+        # Usa process.extractOne para encontrar a melhor correspondência
+        best_match, score = process.extractOne(plan_name, plan_names)
+
+        # Se a pontuação for boa o suficiente, encontre e retorne o objeto completo do plano
+        if score > 85:  # Limiar de confiança ajustável
+            logger.info(f"Busca por plano: '{plan_name}' correspondeu a '{best_match}' com score {score}.")
+            for plan in all_plans:
+                if plan['name'] == best_match:
+                    return plan
+        
+        logger.warning(f"Nenhum plano correspondente encontrado para '{plan_name}' (melhor tentativa: '{best_match}', score: {score}).")
+        return None
+
     def find_information(self, query: Dict[str, Any]) -> Any:
         """
         Ponto de entrada principal para buscar informações com lógica de fallback de busca semântica.
