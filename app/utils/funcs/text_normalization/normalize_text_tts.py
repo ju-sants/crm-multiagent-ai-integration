@@ -482,6 +482,33 @@ def normalize_license_plates_for_tts(text: str) -> str:
     
     return text
 
+def normalize_cnpj_for_tts(text: str) -> str:
+    """
+    Normaliza números de CNPJ para TTS, lendo os dígitos individualmente.
+    Formato: XX.XXX.XXX/XXXX-XX
+    """
+    def replace_cnpj(match):
+        cnpj_digits = match.group(0).replace('.', '').replace('/', '').replace('-', '')
+        return ' '.join(cnpj_digits)
+
+    # Padrão para CNPJ
+    cnpj_pattern = r'\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b'
+    text = re.sub(cnpj_pattern, replace_cnpj, text)
+    return text
+def normalize_address_for_tts(text: str) -> str:
+    """
+    Normaliza formatos de endereço para TTS:
+    - "N° 2499" -> "número dois mil quatrocentos e noventa e nove"
+    - Converte números inteiros isolados para extenso.
+    """
+    # Substitui "N°" por "número"
+    text = re.sub(r'\bN°\s*(\d+)\b', lambda m: f"número {number_to_words(int(m.group(1)))}", text, flags=re.IGNORECASE)
+    
+    # Converte números inteiros que não foram capturados por outras regras
+    text = re.sub(r'\b(\d+)\b', lambda m: number_to_words(int(m.group(1))), text)
+    
+    return text
+
 def normalize_numbers_for_tts(text: str) -> str:
     """
     Função universal que converte para extenso:
@@ -586,8 +613,11 @@ def normalize_symbols_for_tts(text: str) -> str:
     for symbol, word in symbols_to_words.items():
         text = text.replace(symbol, f' {word} ')
     
-    text = re.sub(r'(?<=\s)-(?=\s)', ' menos ', text)
+    # Substitui hífen por "menos" apenas quando entre dígitos (contexto matemático)
     text = re.sub(r'(?<=\d)\s*-\s*(?=\d)', ' menos ', text)
+    
+    # Preserva o hífen em outros contextos, como "Luís Eduardo Magalhães - BA"
+    text = re.sub(r'(?<=\s)-(?=\s)', ' ', text)
     
     return text
 
@@ -611,7 +641,9 @@ def apply_normalizations(text: str) -> str:
     text = normalize_numbers_for_tts(text)
     text = normalize_dates_for_tts(text)
     text = normalize_times_for_tts(text)
+    text = normalize_cnpj_for_tts(text)
     text = normalize_license_plates_for_tts(text)
+    text = normalize_address_for_tts(text)
     
     # 2. Símbolos e palavras
     text = normalize_words_for_tts(text)
