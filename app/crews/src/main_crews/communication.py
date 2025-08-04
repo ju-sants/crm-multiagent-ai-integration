@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
-AGENT_TOPIC_LIMIT = 10
+HISTORY_TOPIC_LIMIT = 10
 
 # --- Main Communication Task ---
 @celery_app.task(name='main_crews.communication', bind=True)
@@ -48,7 +48,7 @@ def communication_task(self, contact_id: str, is_follow_up: bool = False):
 
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
         longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
-        topic_details = longterm_history.get("topic_details", [])[-AGENT_TOPIC_LIMIT:]
+        topic_details = longterm_history.get("topic_details", [])[-HISTORY_TOPIC_LIMIT:]
         longterm_history = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
             for topic in topic_details

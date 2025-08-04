@@ -43,7 +43,7 @@ def system_operations_task(contact_id: str):
         longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
         longterm_history = "\n\n".join([
             f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in longterm_history.get("topic_details", [])[-AGENT_TOPIC_LIMIT:]
+            for topic in longterm_history.get("topic_details", [])[-HISTORY_TOPIC_LIMIT:]
         ])
 
         last_processed_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)

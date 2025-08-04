@@ -68,7 +68,7 @@ def _run_routing_agent_crew(contact_id: str):
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
         longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
         history_messages = "\n\n".join(
-            [f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}" for topic in longterm_history.get("topic_details", [])[-AGENT_TOPIC_LIMIT:]]
+            [f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}" for topic in longterm_history.get("topic_details", [])[-HISTORY_TOPIC_LIMIT:]]
         )
 
         while redis_client.keys(f"transcribing:*:{contact_id}"):
