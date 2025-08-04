@@ -16,25 +16,67 @@ class KnowledgeService:
             cls._instance = super(KnowledgeService, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, yaml_path: str = 'app/domain_knowledge/business_rules.yaml'):
+    def __init__(self, knowledge_base_path: str = 'app/domain_knowledge'):
         if self._rules is None:
-            self.yaml_path = yaml_path
+            self.knowledge_base_path = knowledge_base_path
             self._load_rules()
 
-    def _load_rules(self):
-        try:
-            if not os.path.exists(self.yaml_path):
-                raise FileNotFoundError(f"Arquivo de regras não encontrado em: {self.yaml_path}")
+    def _deep_merge(self, destination: Dict, source: Dict):
+        """
+        Combina dicionários aninhados de forma recursiva, fundindo o 'source' no 'destination'.
+        """
+        for key, value in source.items():
+            if isinstance(value, dict) and key in destination and isinstance(destination[key], dict):
+                self._deep_merge(destination[key], value)
+            else:
+                destination[key] = value
 
-            with open(self.yaml_path, 'r', encoding='utf-8') as file:
-                self._rules = yaml.safe_load(file)
+    def _load_rules(self):
+        """
+        Carrega regras de negócio de forma recursiva a partir de um diretório de arquivos YAML.
+        Os arquivos na raiz são mesclados em chaves de nível superior baseadas em seus nomes.
+        Arquivos em subdiretórios (como 'products') são agrupados em listas.
+        """
+        self._rules = {}
+        try:
+            if not os.path.isdir(self.knowledge_base_path):
+                raise FileNotFoundError(f"Diretório da base de conhecimento não encontrado em: {self.knowledge_base_path}")
+
+            # Processa todos os arquivos YAML no diretório raiz
+            for file_path in os.listdir(self.knowledge_base_path):
+                full_path = os.path.join(self.knowledge_base_path, file_path)
+                if os.path.isfile(full_path) and file_path.endswith('.yaml'):
+                    filename_no_ext = os.path.splitext(file_path)[0]
+                    with open(full_path, 'r', encoding='utf-8') as file:
+                        data = yaml.safe_load(file)
+                        if data:
+                            # O arquivo 'business_rules.yaml' é especial; seu conteúdo é mesclado na raiz.
+                            if filename_no_ext == 'business_rules':
+                                self._deep_merge(self._rules, data)
+                            else:
+                                self._rules[filename_no_ext] = data
             
+            # Processa a pasta de produtos separadamente para criar uma lista de produtos
+            products_path = os.path.join(self.knowledge_base_path, 'products')
+            if os.path.isdir(products_path):
+                self._rules['products'] = []
+                for file_path in os.listdir(products_path):
+                    full_path = os.path.join(products_path, file_path)
+                    if os.path.isfile(full_path) and file_path.endswith('.yaml'):
+                        with open(full_path, 'r', encoding='utf-8') as file:
+                            product_data = yaml.safe_load(file)
+                            if product_data:
+                                # Injeta o nome da categoria com base no nome do arquivo para referência futura
+                                filename_no_ext = os.path.splitext(file_path)[0]
+                                product_data['category'] = filename_no_ext.replace('_', ' ').title()
+                                self._rules['products'].append(product_data)
+
             if not self._rules:
-                raise ValueError("Arquivo de regras está vazio ou malformado.")
+                raise ValueError("Nenhuma regra foi carregada. A base de conhecimento está vazia ou malformada.")
                 
-            print("KnowledgeService: Regras de negócio carregadas com sucesso.")
+            logger.info("KnowledgeService: Regras de negócio modulares carregadas com sucesso.")
         except Exception as e:
-            print(f"ERRO CRÍTICO no KnowledgeService: {e}")
+            logger.info(f"ERRO CRÍTICO no KnowledgeService ao carregar regras modulares: {e}")
             self._rules = {}
 
     def _get_rule_section(self, section_name: str) -> Any:
