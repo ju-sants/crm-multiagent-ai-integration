@@ -34,7 +34,7 @@ default_strategic_plan = {
 
 
 plans_messages = {
-                "Plano Rastreamento Moto": """
+                "Plano Rastreamento Moto Básico": """
 MOTO GSM/PGS
 
 🛵🏍️ Para sua moto, temos duas opções incríveis:
@@ -47,13 +47,13 @@ Adesão Única: R$ 120,00
 Plano Rastreamento (sem cobertura FIPE):
 Apenas R$ 60/mês, com plantão 24h incluso para sua segurança!
 
-Plano Proteção Total PGS (com cobertura FIPE):
+Plano Rastreamento + Proteção Total PGS (com cobertura FIPE):
 Com este plano, se não recuperarmos sua moto, você recebe o valor da FIPE!
     Até R$ 15 mil: R$ 77/mês
     De R$ 16 a 22 mil: R$ 85/mês
     De R$ 23 a 30 mil: R$ 110/mês
 """,
-                "Plano Proteção Total PGS": """
+                "Plano Rastreamento + Proteção Total PGS": """
 MOTO GSM/PGS
 
 🛵🏍️ Para sua moto, temos duas opções incríveis:
@@ -66,7 +66,7 @@ Adesão Única: R$ 120,00
 Plano Rastreamento (sem cobertura FIPE):
 Apenas R$ 60/mês, com plantão 24h incluso para sua segurança!
 
-Plano Proteção Total PGS (com cobertura FIPE):
+Plano Rastreamento + Proteção Total PGS (com cobertura FIPE):
 Com este plano, se não recuperarmos sua moto, você recebe o valor da FIPE!
     Até R$ 15 mil: R$ 77/mês
     De R$ 16 a 22 mil: R$ 85/mês
