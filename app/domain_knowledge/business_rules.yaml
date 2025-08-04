@@ -234,10 +234,10 @@ products:
             params: { detail: "gsm_gprs" }
             description: "Consultar limitações da tecnologia GSM."
 
-  # 3.2. Planos para Motos (Ordem de Upsell)
+  # 3.2. Planos para Motos
   - category: "Motos"
     plans:
-      - name: "Plano Proteção Total PGS"
+      - name: "Plano Rastreamento + Proteção Total PGS"
         type: "Rastreamento para motos com Reembolso em caso de Roubo ou Furto."
         sales_pitch: "É a proteção máxima para sua moto. Mais que um rastreador, é a garantia de que você não terá prejuízo. Se não recuperarmos sua moto, nós pagamos o valor da FIPE."
         key_selling_points:
@@ -302,7 +302,7 @@ products:
             params: { ddd: "66" }
             description: "Verificar restrições de disponibilidade regional."
 
-      - name: "Plano Rastreamento Moto"
+      - name: "Plano Rastreamento Moto Básico"
         type: "Rastreamento puro para motos, sem compensação em caso de roubo."
         sales_pitch: "Uma solução de rastreamento eficaz e acessível para você saber onde sua moto está 24h por dia. Perfeito para quem busca segurança com um ótimo custo-benefício."
         key_selling_points:
