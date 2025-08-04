@@ -63,6 +63,9 @@
         - topic: "regional_availability"
           params: { ddd: "66" }
           description: "Verificar restrições de disponibilidade regional."
+        - topic: "pricing"
+          params: { plan_name: "Plano Rastreamento Moto Básico" }
+          description: "Comparar preço com o plano Básico."
 
     - name: "Plano Rastreamento Moto Básico"
       type: "Rastreamento puro para motos, sem compensação em caso de roubo."
@@ -101,3 +104,6 @@
         - topic: "products"
           params: { name: "Plano Rastreamento + Proteção Total PGS" }
           description: "Comparar com o plano PGS para upsell."
+        - topic: "pricing"
+          params: { plan_name: "Plano Rastreamento + Proteção Total PGS" }
+          description: "Comparar preço com o plano PGS."

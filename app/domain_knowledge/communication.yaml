@@ -64,6 +64,9 @@ sales:
       - topic: "contract_terms"
         params: { contract_id: "standard_contract" }
         description: "Revisar os termos do contrato padrão."
+      - topic: "get_sales_philosophy"
+        params: {}
+        description: "Revisar a filosofia de vendas."
 
   # 2.2. Regras para o Contexto de Suporte
   support:
@@ -92,3 +95,6 @@ sales:
       - topic: "technical_limitations"
         params: {}
         description: "Consultar as limitações técnicas dos produtos."
+      - topic: "get_support_philosophy"
+        params: {}
+        description: "Revisar a filosofia de suporte."

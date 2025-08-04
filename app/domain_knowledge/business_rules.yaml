@@ -34,6 +34,15 @@ sales_guidance:
     - topic: "list_all_products"
       params: {}
       description: "Consultar a lista completa de produtos para entender a hierarquia."
+    - topic: "pricing"
+      params: { plan_name: "Rastreador Híbrido SATELITAL" }
+      description: "Ver o preço do plano Híbrido."
+    - topic: "key_selling_points"
+      params: { plan_name: "Plano Rastreamento + Proteção Total PGS" }
+      description: "Ver os pontos fortes do plano PGS."
+    - topic: "faq"
+      params: { plan_name: "Rastreador GSM 4G" }
+      description: "Ver as perguntas frequentes do plano GSM 4G."
 
 # 8. Scripts de Venda e Gatilhos de Perfil de Cliente
 customer_profiles_and_triggers:

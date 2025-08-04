@@ -30,3 +30,6 @@ plans:
           - topic: "contract_terms"
             params: { contract_id: "standard_contract" }
             description: "Verificar os termos de cancelamento e serviço."
+          - topic: "faq"
+            params: { plan_name: "Plano para Scooters, Patinetes e Bikes Elétricas" }
+            description: "Ver as perguntas frequentes sobre o plano."

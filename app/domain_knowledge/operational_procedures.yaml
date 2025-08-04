@@ -15,6 +15,9 @@ installation:
       - topic: "scheduling_rules"
         params: {}
         description: "Verificar as regras de agendamento de serviços."
+      - topic: "blocker_installation_rules"
+        params: {}
+        description: "Verificar regras para instalação de bloqueadores."
 maintenance:
   policy: "A revisão pode ser solicitada pela Global System ou pelo cliente. É gratuita, exceto se o deslocamento exceder 10km da base mais próxima ou se for constatada avaria por terceiros."
   client_obligation:
@@ -27,6 +30,9 @@ maintenance:
     - topic: "installation_policy"
       params: {}
       description: "Revisar a política de instalação original."
+    - topic: "regional_service_rules"
+      params: {}
+      description: "Consultar a disponibilidade de técnicos por região."
 scheduling:
   arrival: "O cliente deve comparecer com 10 minutos de antecedência. Atraso máximo tolerado de 15 minutos."
   no_show_policy: "Caso não possa comparecer, o cliente deve avisar com no mínimo 2 horas de antecedência (contrato padrão) ou 24 horas (contrato moto). O não comparecimento pode gerar multa de R$ 100,00."
@@ -155,3 +161,6 @@ regional_service_rules:
     - topic: "pricing"
       params: { plan_name: "Plano Rastreamento + Proteção Total PGS" }
       description: "Verificar restrições do plano PGS por região."
+    - topic: "list_all_products"
+      params: {}
+      description: "Listar todos os produtos para verificar a disponibilidade."

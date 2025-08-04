@@ -47,6 +47,9 @@ plans:
           - topic: "technical_limitations"
             params: { detail: "satelital" }
             description: "Consultar limitações da tecnologia satelital."
+          - topic: "pricing"
+            params: { plan_name: "Rastreador GSM (2G+3G+4G) + WI-FI" }
+            description: "Comparar preço com o plano GSM + WI-FI."
 
       - name: "Rastreador GSM (2G+3G+4G) + WI-FI"
         type: "Rastreamento GSM com WI-FI para Fazendas e Locais Remotos"
@@ -95,6 +98,9 @@ plans:
           - topic: "compatibility"
             params: { detail: "john_deere_autopilot" }
             description: "Verificar compatibilidade com piloto automático John Deere."
+          - topic: "pricing"
+            params: { plan_name: "Rastreador GSM 4G" }
+            description: "Comparar preço com o plano GSM 4G."
             
       - name: "Rastreador GSM 4G"
         type: "Rastreamento para veículos que rodam em locais com boa cobertura de sinal de celular."
@@ -137,3 +143,6 @@ plans:
           - topic: "technical_limitations"
             params: { detail: "gsm_gprs" }
             description: "Consultar limitações da tecnologia GSM."
+          - topic: "pricing"
+            params: { plan_name: "Rastreador Híbrido SATELITAL" }
+            description: "Comparar preço com o plano Híbrido."
