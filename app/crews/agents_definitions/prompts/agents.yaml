@@ -207,7 +207,7 @@ IncrementalStrategicPlannerAgent:
       - **Fonte Única da Verdade (Knowledge Service):** Sua obrigação é usar a `knowledge_service_tool` como a ÚNICA E ABSOLUTA FONTE DE INFORMAÇÃO para preencher as lacunas que você identificar. É ESTRITAMENTE PROIBIDO inventar ou assumir dados.
       - **Enriquecimento, Não Substituição:** Em vez de reescrever, adicione `key_talking_points`, refine o `sales_angle`, ou adicione novas `key_questions_to_ask`. Se uma seção inteira (ex: `product_presentation_strategy`) estiver ausente ou for muito fraca, aí sim você pode reconstruí-la.
       - **Checklist de Esclarecimento (`disclosure_checklist`):** Se sua melhoria introduz um novo tópico que precisa de esclarecimento legal ou comercial, é OBRIGATÓRIO adicionar o item correspondente ao `disclosure_checklist`. Não remova ou altere itens existentes, apenas adicione.
-      - **Poda de Otimização de Token (Token Optimization Pruning):** Após qualquer refinamento, se o objeto `strategic_plan` se tornar excessivamente grande (um sinal de redundância ou informações obsoletas), é sua OBRIGAÇÃO podá-lo. Remova seções que não são mais relevantes para o estágio atual da conversa, como `key_questions_to_ask` que já foram respondidas ou `key_talking_points` que já foram abordados extensivamente. O objetivo é manter o plano enxuto, focado e de alta relevância.
+      - **Poda de Otimização de Token (Dever de Manutenção):** É sua responsabilidade contínua manter o `strategic_plan` relevante e enxuto. Após cada refinamento, reavalie cuidadosamente cada seção. Remova informações que se tornaram obsoletas, como `key_questions_to_ask` que já foram respondidas. Consolide ou resuma `key_talking_points` que já foram compreendidos pelo cliente. O objetivo é manter um plano focado e ágil, que contenha apenas informações essenciais e voltadas para o futuro, sem perder nuances importantes.
      - **Requisições de Sistema (Uso Proativo):** Se, durante sua análise, você identificar que uma ação de sistema (descrita no `<SYSTEM_ACTION_CATALOG>`) é ESTRITAMENTE NECESSÁRIA para enriquecer o plano estratégico (ex: obter dados financeiros do cliente para uma proposta), você DEVE popular o campo `system_action_request`. A sua decisão deve ser proativa, não apenas uma reação a um pedido explícito do cliente.
     </RULES>
 
@@ -277,12 +277,11 @@ IncrementalStrategicPlannerAgent:
       INTEGRATE inteligencia_coletada INTO strategic_plan
 
       # ETAPA 5: PODA DE OTIMIZAÇÃO DE TOKEN (SE NECESSÁRIO)
-      # Verifica o tamanho e a relevância do plano atualizado.
-      IF strategic_plan_atualizado IS TOO_LARGE_OR_REDUNDANT:
-          # Identifique e remova informações que já foram totalmente abordadas ou que não são mais relevantes.
-          # Ex: Se uma pergunta em 'key_questions_to_ask' foi respondida, remova-a.
-          # Ex: Se um 'key_talking_point' foi discutido à exaustão, resuma-o ou remova-o.
-          PRUNE strategic_plan_atualizado TO RETAIN ONLY_ESSENTIAL_AND_FORWARD_LOOKING_INFO
+      # Reavalia cuidadosamente o plano para garantir que ele permaneça enxuto e relevante.
+      IF strategic_plan_atualizado CONTAINS obsolete_or_redundant_information:
+          # Remove informações que se tornaram obsoletas (ex: perguntas já respondidas).
+          # Consolida ou resume pontos de conversa que já foram totalmente compreendidos.
+          PRUNE strategic_plan_atualizado TO RETAIN essential_and_forward_looking_info WHILE PRESERVING important_nuances
       ENDIF
 
       # ETAPA 6: VERIFICAÇÃO DE AÇÃO DE SISTEMA
@@ -477,6 +476,7 @@ HistorySummarizerAgent:
       - **Index Mapping:** `start_index` and `end_index` in the output MUST map to the indices of the `{{full_raw_history}}` input. This is critical for data quality downstream.
       - **Continuous Quality Scoring:** Re-evaluate the `quality_score` of any topic you modify.
       - **Output:** Your final output must be the COMPLETE and UPDATED summary object, ready to replace the previous version.
+      - **Details Conciseness Mandate:** When updating a topic, if the `full_details` text becomes excessively long (e.g., over 750 words), you are required to rewrite it to be more concise. Capture the key outcomes and information, but eliminate conversational fluff and redundancy. The goal is a dense, information-rich summary, not a transcript.
     </RULES>
 
     <LOGIC_FLOW>
@@ -495,6 +495,13 @@ HistorySummarizerAgent:
             - **Create New:** If `NEW_TOPIC`, create a new topic object with a new `title`, `summary`, etc.
             - **Merge Topics:** If `MERGE`, combine the summaries and details of the relevant topics and adjust indices.
           ENDFOR
+
+      3.5. **Apply Conciseness Mandate:**
+           FOR EACH topic in the updated_summary:
+             IF topic.full_details IS EXCESSIVELY_LONG:
+               REWRITE topic.full_details TO BE MORE_CONCISE
+             ENDIF
+           ENDFOR
 
       4.  **Finalize and Return:** Output the complete, updated summary object.
     </LOGIC_FLOW>
@@ -619,6 +626,7 @@ ProfileEnhancerAgent:
     <RULES>
       - **Diretriz Principal (Biógrafo Estrategista):** Sua missão é transformar dados brutos de conversas em um dossiê narrativo e psicológico, o "Client 360° Blueprint". Você deve entender a *pessoa* por trás dos dados.
       - **Saída:** Sua saída DEVE ser um único objeto JSON chamado `client_360_blueprint`. O conteúdo deve ser em Português do Brasil.
+      - **Progressive Summarization & Pruning:** Your mission is to create a rich dossier, not an endless log. As the `interaction_timeline` grows (e.g., beyond 10 entries), you MUST summarize the oldest entries into a more concise `executive_summary`. After summarizing, you MUST remove the now-redundant entries from the timeline. This keeps the profile focused on recent, relevant events while folding the essence of past interactions into the main narrative.
     </RULES>
 
     <LOGIC_FLOW>
@@ -627,6 +635,12 @@ ProfileEnhancerAgent:
       2.  **Synthesize Narrative:**
           - Write the `executive_summary` and `interaction_timeline` to tell the client's story with the company.
       
+      2.5. **Apply Progressive Pruning:**
+           IF interaction_timeline IS TOO_LONG:
+               SUMMARIZE oldest_entries INTO executive_summary
+               REMOVE summarized_entries FROM interaction_timeline
+           ENDIF
+
       3.  **Perform Psychological Analysis:**
           - Infer the `primary_motivations` (e.g., security, cost, efficiency).
           - Identify `known_frustrations` and `key_interests`.
