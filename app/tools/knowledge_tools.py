@@ -27,15 +27,18 @@ def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
         - **'get_company_info'**: Retorna informações básicas da empresa (CNPJ, endereço).
         - **'get_sales_philosophy'**: Retorna as diretrizes gerais de venda (fluxo, tom, princípios).
         - **'get_support_philosophy'**: Retorna as diretrizes gerais de suporte.
+        - **'customer_profile_scripts'**: Retorna scripts de abordagem para diferentes perfis de cliente.
 
         # PRODUTOS E PREÇOS
         - **'list_all_products'**: Retorna uma lista com nome e descrição de todos os planos.
-        - **'pricing'**: Para valores de um plano. `params: { "plan_name": "..." }` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto" | "Rastreador Híbrido SATELITAL"
-        - **'faq'**: Para perguntas frequentes de um plano. `params: { "plan_name": "..." }` # pode ser um desses: "Rastreador GSM (2G+3G+4G) + WI-FI" | "Rastreador GSM 4G" | "Plano Proteção Total PGS" | "Plano Rastreamento Moto" | "Rastreador Híbrido SATELITAL"
+        - **'pricing'**: Para valores de um plano. `params: { "plan_name": "..." }`
+        - **'faq'**: Para perguntas frequentes de um plano. `params: { "plan_name": "...", "question_keyword": "..." }`
+        - **'key_selling_points'**: Retorna os pontos chave de venda para um plano. `params: { "plan_name": "..." }`
+        - **'objection_handling'**: Retorna respostas para objeções comuns de um plano. `params: { "plan_name": "..." }`
         - **'product_compatibility'**: Para verificar compatibilidade. `params: { "detail": "..." }`
 
         # POLÍTICAS E PROCEDIMENTOS
-        - **'contract_terms'**: Para cláusulas contratuais. `params: { "contract_id": "..." }` # Pode ser um desses: "standard" | "moto_pgs"
+        - **'contract_terms'**: Para cláusulas contratuais. `params: { "contract_id": "..." }` # IDs: "standard_contract", "moto_pgs_contract"
         - **'installation_policy'**: Para regras de instalação. `params: { "vehicle_type": "..." }`
         - **'maintenance_policy'**: Para regras de manutenção.
         - **'scheduling_rules'**: Para regras de agendamento de serviços.
