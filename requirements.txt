@@ -2,7 +2,7 @@
 #    uv pip compile requirements.in
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.12.14
+aiohttp==3.12.15
     # via
     #   auth0-python
     #   instructor
@@ -14,7 +14,7 @@ amqp==5.3.1
     # via kombu
 annotated-types==0.7.0
     # via pydantic
-anyio==4.9.0
+anyio==4.10.0
     # via
     #   httpx
     #   openai
@@ -40,13 +40,13 @@ blinker==1.9.0
     # via
     #   crewai
     #   flask
-build==1.2.2.post1
+build==1.3.0
     # via chromadb
 cachetools==5.5.2
     # via google-auth
 celery==5.5.3
     # via -r requirements.in
-certifi==2025.7.14
+certifi==2025.8.3
     # via
     #   httpcore
     #   httpx
@@ -97,7 +97,7 @@ docstring-parser==0.17.0
     # via instructor
 durationpy==0.10
     # via kubernetes
-elevenlabs==2.8.0
+elevenlabs==2.8.1
     # via -r requirements.in
 et-xmlfile==2.0.0
     # via openpyxl
@@ -134,13 +134,13 @@ googleapis-common-protos==1.70.0
     #   opentelemetry-exporter-otlp-proto-http
 googlemaps==4.10.0
     # via -r requirements.in
-grpcio==1.73.1
+grpcio==1.74.0
     # via
     #   chromadb
     #   google-api-core
     #   grpcio-status
     #   opentelemetry-exporter-otlp-proto-grpc
-grpcio-status==1.73.1
+grpcio-status==1.74.0
     # via google-api-core
 gunicorn==23.0.0
     # via -r requirements.in
@@ -161,7 +161,7 @@ httpx==0.28.1
     #   langsmith
     #   litellm
     #   openai
-huggingface-hub==0.33.4
+huggingface-hub==0.34.3
     # via tokenizers
 humanfriendly==10.0
     # via coloredlogs
@@ -197,7 +197,7 @@ jiter==0.10.0
     # via
     #   instructor
     #   openai
-json-repair==0.47.8
+json-repair==0.48.0
     # via crewai
 jsonpatch==1.33
     # via langchain-core
@@ -217,7 +217,7 @@ kombu==5.5.4
     # via celery
 kubernetes==33.1.0
     # via chromadb
-langchain-core==0.3.70
+langchain-core==0.3.72
     # via
     #   langchain-google-genai
     #   langchain-openai
@@ -228,11 +228,13 @@ langchain-openai==0.3.28
     # via
     #   -r requirements.in
     #   langchain-xai
-langchain-xai==0.2.4
+langchain-xai==0.2.5
     # via -r requirements.in
-langsmith==0.4.8
+langsmith==0.4.10
     # via langchain-core
-litellm==1.74.7
+levenshtein==0.27.1
+    # via python-levenshtein
+litellm==1.74.15.post1
     # via crewai
 markdown-it-py==3.0.0
     # via rich
@@ -245,7 +247,7 @@ matplotlib-inline==0.1.7
     # via ipython
 mdurl==0.1.2
     # via markdown-it-py
-mmh3==5.1.0
+mmh3==5.2.0
     # via chromadb
 mpmath==1.3.0
     # via sympy
@@ -255,7 +257,7 @@ multidict==6.6.3
     #   yarl
 networkx==3.5
     # via pyvis
-numpy==2.3.1
+numpy==2.3.2
     # via
     #   chromadb
     #   onnxruntime
@@ -265,7 +267,7 @@ oauthlib==3.3.1
     #   requests-oauthlib
 onnxruntime==1.22.1
     # via chromadb
-openai==1.97.0
+openai==1.98.0
     # via
     #   crewai
     #   instructor
@@ -273,7 +275,7 @@ openai==1.97.0
     #   litellm
 openpyxl==3.1.5
     # via crewai
-opentelemetry-api==1.35.0
+opentelemetry-api==1.36.0
     # via
     #   chromadb
     #   crewai
@@ -281,28 +283,28 @@ opentelemetry-api==1.35.0
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.35.0
+opentelemetry-exporter-otlp-proto-common==1.36.0
     # via
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-grpc==1.35.0
+opentelemetry-exporter-otlp-proto-grpc==1.36.0
     # via chromadb
-opentelemetry-exporter-otlp-proto-http==1.35.0
+opentelemetry-exporter-otlp-proto-http==1.36.0
     # via crewai
-opentelemetry-proto==1.35.0
+opentelemetry-proto==1.36.0
     # via
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.35.0
+opentelemetry-sdk==1.36.0
     # via
     #   chromadb
     #   crewai
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-semantic-conventions==0.56b0
+opentelemetry-semantic-conventions==0.57b0
     # via opentelemetry-sdk
-orjson==3.11.0
+orjson==3.11.1
     # via
     #   chromadb
     #   langsmith
@@ -360,7 +362,7 @@ pyasn1==0.6.1
     #   rsa
 pyasn1-modules==0.4.2
     # via google-auth
-pybase64==1.4.1
+pybase64==1.4.2
     # via chromadb
 pycparser==2.22
     # via cffi
@@ -409,6 +411,8 @@ python-dotenv==1.1.1
     #   litellm
     #   pydantic-settings
     #   uvicorn
+python-levenshtein==0.27.1
+    # via -r requirements.in
 pytz==2025.2
     # via -r requirements.in
 pyvis==0.3.2
@@ -420,13 +424,17 @@ pyyaml==6.0.2
     #   kubernetes
     #   langchain-core
     #   uvicorn
+rapidfuzz==3.13.0
+    # via
+    #   levenshtein
+    #   thefuzz
 redis==6.2.0
     # via -r requirements.in
 referencing==0.36.2
     # via
     #   jsonschema
     #   jsonschema-specifications
-regex==2024.11.6
+regex==2025.7.34
     # via
     #   crewai
     #   tiktoken
@@ -450,7 +458,7 @@ requests-oauthlib==2.0.0
     # via kubernetes
 requests-toolbelt==1.0.0
     # via langsmith
-rich==14.0.0
+rich==14.1.0
     # via
     #   chromadb
     #   instructor
@@ -487,11 +495,13 @@ tenacity==9.1.2
     #   chromadb
     #   instructor
     #   langchain-core
+thefuzz==0.22.1
+    # via -r requirements.in
 tiktoken==0.9.0
     # via
     #   langchain-openai
     #   litellm
-tokenizers==0.21.2
+tokenizers==0.21.4
     # via
     #   chromadb
     #   litellm
@@ -545,7 +555,7 @@ urllib3==2.5.0
     #   auth0-python
     #   kubernetes
     #   requests
-uv==0.8.0
+uv==0.8.4
     # via crewai
 uvicorn==0.35.0
     # via chromadb

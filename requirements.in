@@ -15,3 +15,5 @@ langchain-xai
 structlog
 langchain-google-genai
 supervisor
+thefuzz
+python-Levenshtein
