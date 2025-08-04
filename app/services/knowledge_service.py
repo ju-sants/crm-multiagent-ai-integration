@@ -24,6 +24,21 @@ class KnowledgeService:
         if self._rules is None:
             self.knowledge_base_path = knowledge_base_path
             self._load_rules()
+            self._topic_map = {
+                'company_info': ('company_info',),
+                'maintenance_policy': ('operational_procedures', 'maintenance'),
+                'scheduling_rules': ('operational_procedures', 'scheduling'),
+                'installation_policy': ('operational_procedures', 'installation'),
+                'product_compatibility': ('operational_procedures', 'compatibility'),
+                'regional_availability': ('operational_procedures', 'regional_service_rules'),
+                'sales_philosophy': ('communication', 'sales'),
+                'support_philosophy': ('communication', 'support'),
+                'technical_limitations': ('operational_procedures', 'technical_limitations'),
+                'blocker_installation_rules': ('operational_procedures', 'blocker_installation_rules'),
+                'customer_profile_scripts': ('customer_profiles_and_triggers',),
+                'list_all_products': ('products',),
+            }
+            self._plan_based_topics = {'pricing', 'faq', 'key_selling_points', 'objection_handling'}
 
     def _deep_merge(self, destination: Dict, source: Dict):
         """
@@ -120,190 +135,99 @@ class KnowledgeService:
         logger.warning(f"Nenhum plano correspondente encontrado para '{plan_name}' (melhor tentativa: '{best_match}', score: {score}).")
         return None
 
+    def _get_data_with_related_queries(self, *section_keys: str) -> Optional[Dict[str, Any]]:
+        """
+        Busca dados aninhados e agrega 'related_queries' de todos os níveis.
+        """
+        current_level = self._rules
+        all_queries = []
+
+        for key in section_keys:
+            if not isinstance(current_level, dict):
+                return {"error": f"Caminho inválido. '{key}' não pode ser acessado."}
+            
+            if 'related_queries' in current_level:
+                all_queries.extend(q for q in current_level['related_queries'] if q not in all_queries)
+
+            current_level = current_level.get(key)
+            if current_level is None:
+                return {"error": f"Seção '{key}' não encontrada no caminho '{'/'.join(section_keys)}'."}
+
+        if isinstance(current_level, dict) and 'related_queries' in current_level:
+            all_queries.extend(q for q in current_level['related_queries'] if q not in all_queries)
+        
+        # Adiciona queries globais de 'business_rules' se não for uma busca de produto
+        if 'products' not in section_keys:
+            general_queries = self._get_rule_section('sales_guidance').get('related_queries', [])
+            all_queries.extend(q for q in general_queries if q not in all_queries)
+
+        return {
+            "data": current_level,
+            "related_queries": all_queries
+        }
+
     def find_information(self, query: Dict[str, Any]) -> Any:
         """
-        Ponto de entrada principal para buscar informações com lógica de fallback de busca semântica.
-        Primeiro, tenta uma correspondência exata do tópico. Se falhar, usa a correspondência fuzzy
-        para encontrar o tópico mais provável e executa a consulta com ele.
+        Ponto de entrada dinâmico para buscar informações na base de conhecimento.
         """
         topic = query.get('topic')
         params = query.get('params', {})
-
-        search_functions = {
-            'list_all_products': self._search_list_all_products,
-            'pricing': self._search_pricing,
-            'installation_policy': self._search_installation_policy,
-            'product_compatibility': self._search_product_compatibility,
-            'contract_terms': self._search_contract_terms,
-            'regional_availability': self._search_regional_availability,
-            'get_sales_philosophy': self._search_sales_philosophy,
-            'get_support_philosophy': self._search_support_philosophy,
-            'get_company_info': self._search_company_info,
-            'maintenance_policy': self._search_maintenance_policy,
-            'technical_limitations': self._search_technical_limitations,
-            'blocker_installation_rules': self._search_blocker_installation_rules,
-            'application_features': self._search_application_features,
-            'faq': self._search_faq,
-            'key_selling_points': self._search_key_selling_points,
-            'objection_handling': self._search_objection_handling,
-            'customer_profile_scripts': self._search_customer_profiles,
-        }
-
-        # Tentativa de correspondência exata primeiro
-        search_function = search_functions.get(topic)
-        if search_function:
-            return search_function(params)
-
-        # Fallback para busca fuzzy se a correspondência exata falhar
-        valid_topics = list(search_functions.keys())
-        best_match, score = process.extractOne(topic, valid_topics)
-
-        # Executa a função correspondente se a pontuação de similaridade for alta o suficiente
-        if score > 80:  # Limiar de confiança ajustável
-            logger.info(f"KnowledgeService: Tópico original '{topic}' não encontrado. Usando a melhor correspondência '{best_match}' com pontuação {score}.")
-            return search_functions[best_match](params)
-        else:
-            return f"Erro: Tópico '{topic}' inválido e nenhuma correspondência suficientemente boa foi encontrada. Tópicos válidos: {valid_topics}"
-
-    # --- Funções de Busca (Refatoradas para retornar blocos de dados) ---
-    def _search_company_info(self, params: Dict[str, Any]) -> Dict:
-        return self._get_rule_section('company_info')
-
-    def _search_maintenance_policy(self, params: Dict[str, Any]) -> Dict:
-        return self._get_rule_section('operational_procedures').get('maintenance')
-
-    def _search_scheduling_rules(self, params: Dict[str, Any]) -> Dict:
-        return self._get_rule_section('operational_procedures').get('scheduling')
         
-    def _search_application_features(self, params: Dict[str, Any]) -> Dict:
-        """
-        Busca informações sobre as funcionalidades do aplicativo.
-        Pode retornar todas as features ou uma específica se o nome for fornecido.
-        """
-        app_features = self._get_rule_section('application_features')
-        feature_name = params.get('feature_name')
+        # Lógica de fallback com Fuzzy Matching
+        all_topics = list(self._topic_map.keys()) + list(self._plan_based_topics)
+        if topic not in all_topics:
+            best_match, score = process.extractOne(topic, all_topics)
+            if score > 80:
+                logger.info(f"Tópico '{topic}' não encontrado. Usando melhor correspondência: '{best_match}' (score: {score}).")
+                topic = best_match
+            else:
+                return f"Erro: Tópico '{topic}' inválido. Tópicos válidos: {all_topics}"
 
-        if feature_name:
-            # Busca por uma feature específica, ignorando maiúsculas/minúsculas e acentos
-            normalized_feature_name = feature_name.lower()
-            for key, value in app_features.items():
-                if normalized_feature_name in key.lower():
-                    return {key: value}
-            return {"error": f"Funcionalidade '{feature_name}' não encontrada."}
-        
-        # Se nenhum nome for fornecido, retorna a visão geral
-        return {"overview": app_features.get('overview')}
+        # --- Lógica de Roteamento ---
 
-    def _search_faq(self, params: Dict[str, Any]) -> Any:
-        plan_name = params.get('plan_name')
-        if not plan_name: return {"error": "Parâmetro 'plan_name' é obrigatório para buscar FAQ."}
-        for category in self._get_rule_section('products'):
-            for plan in category.get('plans', []):
-                if plan.get('name') == plan_name:
-                    return plan.get('faq', [])
-        return {"error": f"Plano '{plan_name}' não encontrado para busca de FAQ."}
-    
-    def _search_list_all_products(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Lista todos os produtos e injeta diretrizes de vendas estratégicas na resposta.
-        A resposta é um dicionário contendo a lista de produtos e as diretrizes de venda.
-        """
-        products_data = self._get_rule_section('products')
-        sales_guidance = self._get_rule_section('sales_guidance')
-        
-        product_list = []
-        for category in products_data:
-            for plan in category.get('plans', []):
-                product_list.append({
-                    "category": category.get('category'),
-                    "plan_name": plan.get('name'),
-                    "description": plan.get('type'),
-                    "sales_pitch": plan.get('sales_pitch'), # Adicionado pitch de vendas
-                    "pricing": plan.get('pricing'),
-                })
-        
-        return {
-            "sales_guidance": sales_guidance,
-            "products": product_list
-        }
+        # 1. Tópicos baseados em plano
+        if topic in self._plan_based_topics:
+            plan_name = params.get('plan_name')
+            if not plan_name:
+                return {"error": f"Parâmetro 'plan_name' é obrigatório para o tópico '{topic}'."}
+            plan = self._find_plan_by_name(plan_name)
+            if not plan:
+                return {"error": f"Plano '{plan_name}' não encontrado."}
+            
+            # Encontra o produto que contém o plano para construir o caminho
+            for product in self._get_rule_section('products'):
+                if any(p['name'] == plan['name'] for p in product.get('plans', [])):
+                    category_name = product.get('category', '').lower().replace(' ', '_')
+                    # Encontra o plano dentro da categoria para obter os dados corretos
+                    for p in product.get('plans', []):
+                        if p['name'] == plan['name']:
+                             path = ('products', category_name, 'plans', p['name'], topic)
+                             return self._get_data_with_related_queries(*path)
+            return {"error": f"Não foi possível encontrar a categoria para o plano '{plan_name}'."}
 
-    def _search_pricing(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        plan_name = params.get('plan_name')
-        if not plan_name: return {"error": "Parâmetro 'plan_name' é obrigatório."}
-        for category in self._get_rule_section('products'):
-            for plan in category.get('plans', []):
-                if plan.get('name') == plan_name:
-                    return plan.get('pricing')
-        return {"error": f"Plano '{plan_name}' não encontrado."}
+        # 2. Tópicos especiais com lógica customizada
+        if topic == 'contract_terms':
+            contract_id = params.get('contract_id', 'general_terms')
+            return self._get_data_with_related_queries('contracts', contract_id)
 
-    def _search_installation_policy(self, params: Dict[str, Any]) -> Optional[str]:
-        policy_data = self._get_rule_section('operational_procedures').get('installation', {}).get('location_policy', {})
-        vehicle_type = params.get('vehicle_type')
-        for exception in policy_data.get('exceptions', []):
-            if exception.get('vehicle_type') == vehicle_type:
-                return exception.get('policy')
-        return policy_data.get('default')
+        if topic == 'application_features':
+            feature_name = params.get('feature_name')
+            if feature_name:
+                # Tenta correspondência exata e depois parcial
+                app_features = self._get_rule_section('application_features')
+                for key in app_features.keys():
+                    if feature_name.lower() in key.lower():
+                        return self._get_data_with_related_queries('application_features', key)
+                return {"error": f"Funcionalidade '{feature_name}' não encontrada."}
+            return self._get_data_with_related_queries('application_features', 'overview')
 
-    def _search_product_compatibility(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        detail = params.get('detail', '').lower()
-        compatibility_rules = self._get_rule_section('operational_procedures').get('compatibility', {})
-        if 'john deere' in detail and 'piloto automático' in detail:
-            return compatibility_rules.get('john_deere_autopilot')
-        return {"is_compatible": True, "explanation": "Nenhuma incompatibilidade conhecida para este caso."}
-    
-    def _search_contract_terms(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        contract_id = params.get('contract_id')
-        if not contract_id: return {"error": "Parâmetro 'contract_id' é obrigatório."}
-        contractual_data = self._get_rule_section('legal_and_contractual')
-        response = contractual_data.get('general_terms', {})
-        specific_terms = contractual_data.get(f"{contract_id}_contract")
-        if specific_terms:
-            response.update(specific_terms)
-            return response
-        return {"error": f"Contrato com ID '{contract_id}' não encontrado."}
+        # 3. Tópicos mapeados diretamente
+        if topic in self._topic_map:
+            path = self._topic_map[topic]
+            return self._get_data_with_related_queries(*path)
 
-    def _search_regional_availability(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        location_info = params.get('location_info', {})
-        ddd = location_info.get('ddd')
-        regional_rules = self._get_rule_section('operational_procedures').get('regional_service_rules', {}).get('contact_origin_indicators', [])
-        for rule in regional_rules:
-            if ddd and f"DDD {ddd}" in rule.get('origin', ''):
-                return {"plan_availability": rule.get('plan_availability')}
-        return {"plan_availability": "Nenhuma restrição específica encontrada para esta localidade."}
+        return {"error": f"Lógica de busca para o tópico '{topic}' não implementada."}
 
-    def _search_sales_philosophy(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        return self._get_rule_section('communication_guidelines').get('sales')
-
-    def _search_support_philosophy(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        return self._get_rule_section('communication_guidelines').get('support')
-    
-    def _search_maintenance_policy(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        return self._get_rule_section('operational_procedures').get('maintenance')
-
-    def _search_technical_limitations(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        return self._get_rule_section('operational_procedures').get('technical_limitations')
-
-    def _search_blocker_installation_rules(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        return self._get_rule_section('operational_procedures').get('blocker_installation_rules')
-
-    def _search_application_features(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        return self._get_rule_section('application_features')
-
-    def _search_faq(self, params: Dict[str, Any]) -> Optional[List[Dict[str, str]]]:
-        plan_name = params.get('plan_name')
-        keyword = params.get('question_keyword', '').lower()
-        if not plan_name: return {"error": "Parâmetro 'plan_name' é obrigatório para buscar FAQ."}
-        
-        for category in self._get_rule_section('products'):
-            for plan in category.get('plans', []):
-                if plan.get('name') == plan_name:
-                    faqs = plan.get('faq', [])
-                    if not keyword: return faqs
-                    
-                    # Filtra por palavra-chave
-                    return [q for q in faqs if keyword in q.get('question', '').lower()]
-        
-        return {"error": f"Plano '{plan_name}' não encontrado para busca de FAQ."}
 
 
 # Inicialização Singleton
