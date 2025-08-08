@@ -58,7 +58,7 @@ def get_communication_agent(llm=None) -> Agent:
 def get_registration_agent() -> Agent:
     return Agent(
         config=agents_config['RegistrationDataCollectorAgent'],
-        llm=default_openai_llm,
+        llm=X_llm,
         verbose=True,
         allow_delegation=False
     )
