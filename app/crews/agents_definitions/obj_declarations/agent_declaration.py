@@ -102,3 +102,18 @@ def get_follow_up_agent() -> Agent:
         verbose=True,
         allow_delegation=False,
     )
+def get_purchase_confirmation_agent() -> Agent:
+    return Agent(
+        config=agents_config['PurchaseConfirmationAgent'],
+        llm=X_llm,
+        verbose=True,
+        allow_delegation=False,
+    )
+
+def get_verify_system_action_agent() -> Agent:
+    return Agent(
+        config=agents_config['VerifySystemActionAgent'],
+        llm=X_llm,
+        verbose=True,
+        allow_delegation=False,
+    )
