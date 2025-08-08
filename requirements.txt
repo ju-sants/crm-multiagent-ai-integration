@@ -58,7 +58,7 @@ charset-normalizer==3.4.2
     # via
     #   pdfminer-six
     #   requests
-chromadb==1.0.15
+chromadb==1.0.16
     # via crewai
 click==8.2.1
     # via
@@ -81,7 +81,7 @@ coloredlogs==15.0.1
     # via onnxruntime
 crewai==0.95.0
     # via -r requirements.in
-cryptography==45.0.5
+cryptography==45.0.6
     # via
     #   auth0-python
     #   pdfminer-six
@@ -97,7 +97,7 @@ docstring-parser==0.17.0
     # via instructor
 durationpy==0.10
     # via kubernetes
-elevenlabs==2.8.1
+elevenlabs==2.9.1
     # via -r requirements.in
 et-xmlfile==2.0.0
     # via openpyxl
@@ -148,7 +148,7 @@ h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
-hf-xet==1.1.5
+hf-xet==1.1.7
     # via huggingface-hub
 httpcore==1.0.9
     # via httpx
@@ -161,7 +161,7 @@ httpx==0.28.1
     #   langsmith
     #   litellm
     #   openai
-huggingface-hub==0.34.3
+huggingface-hub==0.34.4
     # via tokenizers
 humanfriendly==10.0
     # via coloredlogs
@@ -199,6 +199,8 @@ jiter==0.10.0
     #   openai
 json-repair==0.48.0
     # via crewai
+json5==0.12.0
+    # via -r requirements.in
 jsonpatch==1.33
     # via langchain-core
 jsonpickle==4.1.1
@@ -217,24 +219,24 @@ kombu==5.5.4
     # via celery
 kubernetes==33.1.0
     # via chromadb
-langchain-core==0.3.72
+langchain-core==0.3.74
     # via
     #   langchain-google-genai
     #   langchain-openai
     #   langchain-xai
-langchain-google-genai==2.1.8
+langchain-google-genai==2.1.9
     # via -r requirements.in
-langchain-openai==0.3.28
+langchain-openai==0.3.29
     # via
     #   -r requirements.in
     #   langchain-xai
 langchain-xai==0.2.5
     # via -r requirements.in
-langsmith==0.4.10
+langsmith==0.4.13
     # via langchain-core
 levenshtein==0.27.1
     # via python-levenshtein
-litellm==1.74.15.post1
+litellm==1.75.3
     # via crewai
 markdown-it-py==3.0.0
     # via rich
@@ -267,7 +269,7 @@ oauthlib==3.3.1
     #   requests-oauthlib
 onnxruntime==1.22.1
     # via chromadb
-openai==1.98.0
+openai==1.99.5
     # via
     #   crewai
     #   instructor
@@ -428,7 +430,7 @@ rapidfuzz==3.13.0
     # via
     #   levenshtein
     #   thefuzz
-redis==6.2.0
+redis==6.4.0
     # via -r requirements.in
 referencing==0.36.2
     # via
@@ -463,7 +465,7 @@ rich==14.1.0
     #   chromadb
     #   instructor
     #   typer
-rpds-py==0.26.0
+rpds-py==0.27.0
     # via
     #   jsonschema
     #   referencing
@@ -497,7 +499,7 @@ tenacity==9.1.2
     #   langchain-core
 thefuzz==0.22.1
     # via -r requirements.in
-tiktoken==0.9.0
+tiktoken==0.10.0
     # via
     #   langchain-openai
     #   litellm
@@ -555,7 +557,7 @@ urllib3==2.5.0
     #   auth0-python
     #   kubernetes
     #   requests
-uv==0.8.4
+uv==0.8.6
     # via crewai
 uvicorn==0.35.0
     # via chromadb

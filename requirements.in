@@ -17,3 +17,4 @@ langchain-google-genai
 supervisor
 thefuzz
 python-Levenshtein
+json5
