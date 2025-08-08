@@ -162,7 +162,6 @@ agent_state_mapping = {
         "entities_extracted",
     ],
     "StateSummarizerAgent": [
-        "metadata",
         "entities_extracted",
         "identified_topic",
         "user_sentiment_history",
