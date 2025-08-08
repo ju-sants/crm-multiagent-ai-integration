@@ -197,10 +197,11 @@ def process_message_task(self, contact_uuid):
         phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
         contact_name = contact_info.get("name", "")
 
-        state, is_new = state_manager.get_state(contact_uuid)
-        state.metadata.phone_number = phone_number
-        state.metadata.contact_name = contact_name
-        state_manager.save_state(contact_uuid, state)
+        with redis_client.lock(f"lock:state:{contact_uuid}", timeout=10):
+            state, is_new = state_manager.get_state(contact_uuid)
+            state.metadata.phone_number = phone_number
+            state.metadata.contact_name = contact_name
+            state_manager.save_state(contact_uuid, state)
 
         # Verify if theres another instance processing the strategy, waiting before routing agent can judge the strategy properly
         if redis_client.exists(f"doing_strategy:{contact_uuid}") or redis_client.exists(f"refining_strategy:{contact_uuid}"):
@@ -221,12 +222,14 @@ def process_message_task(self, contact_uuid):
             pre_routing_orchestrator.apply_async(args=[contact_uuid])
         
         else:
-            state_dict = state.model_dump()
-            state_dict['strategic_plan'] = default_strategic_plan
+            with redis_client.lock(f"lock:state:{contact_uuid}", timeout=10):
+                state, _ = state_manager.get_state(contact_uuid)
+                state_dict = state.model_dump()
+                state_dict['strategic_plan'] = default_strategic_plan
 
-            state = ConversationState(**{**state.model_dump(), **state_dict})
+                state = ConversationState(**{**state.model_dump(), **state_dict})
 
-            state_manager.save_state(contact_uuid, state)
+                state_manager.save_state(contact_uuid, state)
 
             communication_task.apply_async(args=[contact_uuid])
 
