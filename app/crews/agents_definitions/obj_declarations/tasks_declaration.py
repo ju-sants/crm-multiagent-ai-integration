@@ -72,3 +72,14 @@ def create_follow_up_task(agent: Agent) -> Task:
         config=tasks_config['follow_up_task'],
         agent=agent,
     )
+def create_purchase_confirmation_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['purchase_confirmation_task'],
+        agent=agent,
+    )
+
+def create_verify_system_action_task(agent: Agent) -> Task:
+    return Task(
+        config=tasks_config['verify_system_action_task'],
+        agent=agent,
+    )
