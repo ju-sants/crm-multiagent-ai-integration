@@ -62,18 +62,18 @@ flash_Google_llm_reason = LLM(
 )
 
 default_openai_llm = ChatOpenAI(
-    model="o4-mini-2025-04-16",
+    model="o3-mini-2025-01-31",
     api_key=settings.OPENAI_API_KEY,
 )
 
 decivise_openai_llm = ChatOpenAI(
-    model="o4-mini-2025-04-16",
+    model="o3-mini-2025-01-31",
     api_key=settings.OPENAI_API_KEY,
     temperature=0.1,
 )
 
 creative_openai_llm = ChatOpenAI(
-    model="o4-mini-2025-04-16",
+    model="o3-mini-2025-01-31",
     api_key=settings.OPENAI_API_KEY,
     temperature=0.9,
 )
