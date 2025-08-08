@@ -16,6 +16,7 @@ from app.core.logger import get_logger
 
 from app.config.settings import settings
 from app.patches.litellm_patch import apply_litellm_patch
+from app.patches.crewai_telemetry_patch import apply_crewai_telemetry_patch
 
 from app.services.celery_service import celery_app
 from app.services.state_manager_service import StateManagerService
@@ -41,6 +42,7 @@ CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
 IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
 apply_litellm_patch()
+apply_crewai_telemetry_patch()
 
 app: Flask = Flask(__name__)
 state_manager: StateManagerService = StateManagerService()
