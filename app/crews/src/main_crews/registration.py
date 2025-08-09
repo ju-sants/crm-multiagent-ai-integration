@@ -41,12 +41,22 @@ def registration_task(contact_id: str):
         # State Distillation
         conversation_state_distilled = distill_conversation_state(conversation_state_dict, "RegistrationDataCollectorAgent")
 
+        shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
+        longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
+        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
+        history_messages = "\n\n".join([
+            f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
+            for topic in longterm_history.get("topic_details", [])[-5:]
+        ])
+
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "conversation_state": json.dumps(conversation_state_distilled) if conversation_state_distilled else "{}",
             "client_message": "\n".join(last_processed_messages),
             "collected_data_so_far": user_data_so_far if user_data_so_far else "{}",
             "plan_details": plan_details if plan_details else "{}",
+            "longterm_history": history_messages,
+            "shorterm_history": shorterm_history
         }
 
         result = crew.kickoff(inputs=inputs)
