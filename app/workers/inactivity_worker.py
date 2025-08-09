@@ -48,7 +48,7 @@ def inactivity_worker_task():
             # Get the current backoff period
             current_backoff_minutes = BACKOFF_SCHEDULE[follow_up_level]
             
-            if datetime.now(timezone.utc) - last_message_timestamp > timedelta(minutes=current_backoff_minutes):
+            if datetime.now() - last_message_timestamp > timedelta(minutes=current_backoff_minutes):
                 logger.info(f"Contact {contact_id} is inactive beyond backoff level {follow_up_level}. Triggering follow-up task.")
                 
                 # Increment the follow-up level for the next check
