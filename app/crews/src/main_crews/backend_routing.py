@@ -49,10 +49,9 @@ def backend_routing_task(contact_id: str):
         while redis_client.get(f"refining_strategy:{contact_id}") or redis_client.get(f"doing_strategy:{contact_id}"):
             time.sleep(1)  # Wait for 1 second
             
-        logger.info(f"[{contact_id}] - Strategy development Completed. Routing to   : communication_task")
+        logger.info(f"[{contact_id}] - Strategy development Completed. Routing to: communication_task")
         next_task = communication_task.s(contact_id)
         
-
     # Default: Straight to Communication
     else:
         logger.info(f"[{contact_id}] - Plan is acceptable. Routing to: communication_task")
