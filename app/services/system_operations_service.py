@@ -22,6 +22,13 @@ class SystemOperationsService:
     def __init__(self):
         # As URLs base devem ser configuradas para fácil manutenção
         self.plataforma_api_base_url = "https://api.plataforma.app.br"
+        self.HEADERS = {
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 OPR/117.0.0.0",
+            "Origin": "https://globalsystem.plataforma.app.br",
+            "Referer": "https://globalsystem.plataforma.app.br/",
+            "x-token": settings.PLATAFORMA_X_TOKEN,
+        }
 
     def execute(self, action_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
