@@ -6,7 +6,7 @@ from app.crews.agents_definitions.obj_declarations.agent_declaration import get_
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_collect_registration_data_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
-from app.utils.funcs.funcs import parse_json_from_string
+from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
 from app.services.telegram_service import send_single_telegram_message
