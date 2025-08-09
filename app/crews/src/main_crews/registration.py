@@ -63,13 +63,17 @@ def registration_task(contact_id: str):
         response_json, updated_state_dict = parse_json_from_string(result.raw)
 
         if updated_state_dict:
-            if "entities_extracted" in updated_state_dict and updated_state_dict["entities_extracted"]:
-                state_json = state.model_dump()
-                state_json["entities_extracted"] += updated_state_dict["entities_extracted"]
 
-                state = ConversationState(**{**state.model_dump(), **state_json})
-        
-        state_manager.save_state(contact_id, state)
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+                state, _ = state_manager.get_state(contact_id)
+
+                if "entities_extracted" in updated_state_dict and updated_state_dict["entities_extracted"]:
+                    state_json = state.model_dump()
+                    state_json["entities_extracted"] += updated_state_dict["entities_extracted"]
+
+                    state = ConversationState(**{**state.model_dump(), **state_json})
+            
+                state_manager.save_state(contact_id, state)
 
         if response_json:
             redis_client.set(f"{contact_id}:user_data_so_far", json.dumps(response_json))
@@ -81,7 +85,20 @@ def registration_task(contact_id: str):
             elif response_json.get("next_message_to_send"):
                 send_callbell_message(contact_id=contact_id, phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
                 redis_client.set(f"{contact_id}:getting_data_from_user", "1")
-            
+
+            # After send message, update the state current turn number
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+                state, _ = state_manager.get_state(contact_id)
+                
+                state.metadata.current_turn_number += 1
+                state_manager.save_state(contact_id, state)
+
+            # Once we already taking user data to cadaster them, we can falsify this flag
+            if state.budget_accepted:
+                state.budget_accepted = False
+            if state.is_sales_final_step:
+                state.is_sales_final_step = False
+
             # Liberating the lock
             redis_client.delete(f'processing:{contact_id}')
             logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
