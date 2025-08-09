@@ -27,8 +27,8 @@ redis_client = get_redis()
 
 HISTORY_TOPIC_LIMIT = 10
 
-@celery_app.task(name='main_crews.pre_routing', bind=True)
-def pre_routing_orchestrator(self, contact_id: str):
+@celery_app.task(name='main_crews.pre_routing')
+def pre_routing_orchestrator(contact_id: str):
     """
     Orchestrates the parallel execution of context analysis and incremental
     strategy refinement, then routes to the next step.
