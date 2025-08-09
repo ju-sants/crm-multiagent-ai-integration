@@ -62,7 +62,6 @@ develop_strategy_task:
   expected_output: |
     {
       "task_output": {
-        "system_action_request": "<String em linguagem natural para ação de sistema ou null>",
         "conversation_blueprint": {
           "customer_context_summary": {
             "relevant_profile_insights": "<Análise concisa do perfil de longo prazo do cliente>",
@@ -467,12 +466,6 @@ summarize_state_task:
     </DADOS>
   expected_output: |
       {
-        "metadata": {
-          "contact_id": "<string>",
-          "current_turn_number": "<integer>",
-          "phone_number": "<string>",
-          "contact_name": "<string>"
-        },
         "entities_extracted": [
           {
             "entity": "<string: e.g., 'nome', 'veiculo_tipo'>",
@@ -556,12 +549,6 @@ enhance_profile_task:
             "pending_quests": ["<Array de objetivos maiores e não resolvidos, ex: 'Receber um orçamento de frota'>"],
             "information_gaps": ["<Array de informações que precisam ser coletadas, ex: 'Qual o problema exato no app?'>"]
           },
-          "strategic_playbook": {
-            "recommended_next_move": "A próxima ação mais inteligente e recomendada.",
-            "conversation_path": ["<Array de passos para guiar a conversa>"],
-            "potential_pitfalls": ["<Array de armadilhas a serem evitadas>"],
-            "golden_opportunities": ["<Array de oportunidades para encantar o cliente ou avançar na negociação>"]
-          }
         }
       }
 
