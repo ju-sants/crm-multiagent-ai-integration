@@ -66,6 +66,7 @@ def refine_strategy_task(contact_id: str):
             "operational_context": state.operational_context or "",
             "identified_topic": state.identified_topic or "",
             "timestamp": datetime.datetime.now(pytz.timezone("America/Sao_Paulo")).isoformat(),
+            "contact_id": contact_id,
             "turn": state.metadata.current_turn_number
         }
 
