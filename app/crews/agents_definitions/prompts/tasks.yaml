@@ -14,7 +14,7 @@ routing_task:
       - `shorterm_history`:
           {shorterm_history}
 
-
+      # MENSAGEM ATUAL DO CLIENTE
       - `client_message`: 
           {client_message}
     </INPUT_DATA>
