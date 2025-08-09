@@ -21,8 +21,8 @@ redis_client = get_redis()
 
 HISTORY_TOPIC_LIMIT = 10
 
-@celery_app.task(name='main_crews.strategy', bind=True)
-def strategy_task(self, contact_id: str):
+@celery_app.task(name='main_crews.strategy')
+def strategy_task(contact_id: str):
     """
     Second task in the state machine chain. Loads state, runs strategy,
     and passes contact_id to the next task.
