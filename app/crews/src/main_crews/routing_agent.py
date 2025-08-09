@@ -63,6 +63,8 @@ def pre_routing_orchestrator(contact_id: str):
     if strategy_agent_task:
         strategy_agent_task.apply_async()
 
+    verify_system_action_task.apply_async(args=[contact_id,])
+
     workflow = chain(_run_routing_agent_crew.si(contact_id), backend_routing_task.si(contact_id))
     workflow.apply_async()
 
