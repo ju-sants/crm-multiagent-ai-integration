@@ -12,13 +12,8 @@ routing_task:
       6.  **Format Output:** Construct the final JSON output according to the `expected_output` schema.
     </INSTRUCTIONS>
 
-    <SYSTEM_ACTIONS_CATALOG>
-      - **Client/Financial:** Search clients in the database (to get precious information), get a client's vehicles, get financial history.
-      - **Vehicle Reports:** Search vehicles in the database (to get precious information), get vehicle details, get position history, get trip/event reports, get geofences.
-      - **Vehicle Commands:** Send a reset command to a tracker, this action reboots it and aim to solve communication issues.
-    </SYSTEM_ACTIONS_CATALOG>
-
-    INPUT_DATA>
+    <INPUT_DATA>
+      # ESTADO DA CONVERSA E HISTÓRICO
       - `conversation_state`: 
           {conversation_state} 
       - `longterm_history`: 
@@ -58,6 +53,13 @@ develop_strategy_task:
     </SYSTEM_ACTIONS_CATALOG>
 
     <DADOS>
+      # DADOS BASE
+      - `timestamp`: {timestamp}
+      - `turn`: {turn}
+      - `contact_id`: {contact_id}
+      - `operational_context`: {operational_context}
+      
+      # ESTADO DA CONVERSA, HISTÓRICO E PERFIL
       - `conversation_state`: 
           {conversation_state}
       - `profile_customer_task_output`: 
@@ -68,8 +70,10 @@ develop_strategy_task:
           {longterm_history}
       - `shorterm_history`: 
           {shorterm_history}
-      - `turn`: {turn}
-      - `timestamp`: {timestamp}
+
+      # MENSAGEM ATUAL DO CLIENTE
+      - `client_message`: {client_message}
+
     </DADOS>
   expected_output: |
     {
@@ -130,22 +134,30 @@ refine_strategy_task:
     </INSTRUCOES>
 
     <DADOS>
+      # DADOS BASE
+      - `turn`: {turn}
+      - `timestamp`: {timestamp}
+      - `identified_topic`: {identified_topic}
+      - `contact_id`: {contact_id}
+      - `operational_context`: {operational_context}
+
+      # OPERAÇÕES DE SISTEMA - (Consultas feitas no sistema Global System)
       - `last_system_operation`:
           {last_system_operation}
+
+      # ESTADO DA CONVERSA
       - `conversation_state`:
           {conversation_state}
       - `profile_customer_task_output`:
           {profile_customer_task_output}
-      - `operational_context`: {operational_context}
+      
+      # HISTÓRICO
       - `longterm_history`:
           {longterm_history}
       - `shorterm_history`:
           {shorterm_history}
 
-      - `turn`: {turn}
-      - `timestamp`: {timestamp}
-      - `identified_topic`: {identified_topic}
-
+      # MENSAGEM ATUAL DO CLIENTE
       - `client_message`: {client_message}
 
     </DADOS>
@@ -205,17 +217,24 @@ execute_system_operations_task:
     </INSTRUCOES>
 
     <DADOS>
+      # AÇÃO PRINCIPAL E CONTEXTO
       - `action_requested`: {action_requested}
+      - `customer_name`: {customer_name}
+
+      # ESTADO E PERFIL
       - `conversation_state`: 
           {conversation_state}
       - `customer_profile`: 
           {customer_profile}
+
+      # HISTÓRICO
       - `longterm_history`: 
           {longterm_history}
       - `shorterm_history`: 
           {shorterm_history}
+          
+      # MENSAGEM ATUAL DO CLIENTE
       - `client_message`: {client_message}
-      - `customer_name`: {customer_name}
     </DADOS>  
   expected_output: |
       {
@@ -243,33 +262,34 @@ communication_task:
     </INSTRUCOES>
 
     <DADOS>
-      - `strategic_plan`: 
-          {strategic_plan}
-
-      - `disclosure_checklist`: 
-          {disclosure_checklist}
-
-      - `Operações de Sistema`: 
+      # DADOS BASE
+      - `timestamp`: {timestamp}
+      - `recently_sent_catalogs`: {recently_sent_catalogs}
+      
+      # OPERAÇÕES DE SISTEMA - (Consultas feitas no sistema Global System)
+      - `last_system_operation`: 
           {last_system_operation}
-
+      
+      # ESTADO DA CONVERSA E PERFIL DO CLIENTE
       - `conversation_state`: 
           {conversation_state}
-          
       - `customer_profile`:
           {customer_profile}
 
-      HISTÓRICOS (NÃO REPITA MENSAGENS JÁ ENVIADAS, NÃO SE APRESENTE NOVAMENTE)
+      # HISTÓRICOS (NÃO REPITA MENSAGENS JÁ ENVIADAS, NÃO SE APRESENTE NOVAMENTE)
       - `longterm_history`:
           {longterm_history}
       - `shorterm_history`:
           {shorterm_history}
       
-      DEMAIS DADOS:
-      - `timestamp`: {timestamp}
-      - `recently_sent_catalogs`: 
-          {recently_sent_catalogs}
+      # PLANO ESTRATÉGICO E CHECKLIST JURÍDICO
+      - `strategic_plan`: 
+          {strategic_plan}
+      - `disclosure_checklist`: 
+          {disclosure_checklist}
 
-      - `client_message` (mensagem atual do cliente): 
+      # MENSAGEM ATUAL DO CLIENTE
+      - `client_message`: 
           {client_message}
       
     </DADOS>
@@ -322,15 +342,24 @@ collect_registration_data_task:
     </INSTRUCOES>
 
     <DADOS>
+      # CONTEXTO E ESTADO
       - `timestamp`: {timestamp}
       - `conversation_state`: 
             {conversation_state}
-      - `client_message`: 
-            {client_message}
       - `collected_data_so_far`: 
             {collected_data_so_far}
       - `plan_details`: 
             {plan_details}
+      
+      # HISTÓRICO
+      - `longterm_history`: 
+          {longterm_history}
+      - `shorterm_history`:
+          {shorterm_history}
+
+      # MENSAGEM ATUAL DO CLIENTE
+      - `client_message`: 
+            {client_message}
     </DADOS>
 
   expected_output: |
@@ -376,14 +405,17 @@ summarize_history_task:
     </INSTRUCTIONS>
 
     <DATA>
+      # CONTEXTO E HISTÓRICO
       - `contact_id`: 
           {contact_id}
       - `existing_summary`: 
           {existing_summary}
+      - `raw_history`: 
+          {raw_history}
+
+      # NOVAS MENSAGENS PARA PROCESSAR
       - `new_messages`: 
           {new_messages}
-      - `full_raw_history`: 
-          {full_raw_history}
     </DATA>
   expected_output: |
     {
@@ -410,14 +442,17 @@ clean_noisy_data_task:
     </INSTRUCTIONS>
 
     <DATA>
+      # CONTEXTO
       - `contact_id`: 
           {contact_id}
       - `topic_id`: 
           {topic_id}
+      - `full_raw_history`:  and the
+          {full_raw_history}
+
+      # TRECHO COM RUÍDO PARA LIMPAR
       - `raw_history_snippet`: 
           {raw_history_snippet}
-      - `full_raw_history`: 
-          {full_raw_history}
     </DATA>
   expected_output: |
     {
@@ -434,10 +469,15 @@ summarize_state_task:
     </INSTRUCOES>
 
     <DADOS>
+      # ESTADO E HISTÓRICO
       - `last_turn_state`: 
           {last_turn_state}
       - `longterm_history`: 
           {longterm_history}
+      - `shorterm_history`:
+          {shorterm_history}
+          
+      # MENSAGEM ATUAL DO CLIENTE
       - `client_message`: 
           {client_message}
     </DADOS>
@@ -494,9 +534,16 @@ enhance_profile_task:
     </INSTRUCOES>
 
     <DADOS>
-      - `longterm_history`: {longterm_history}
+      # HISTÓRICO E ESTADO
+      - `longterm_history`: 
+          {longterm_history}
+      - `shorterm_history`: 
+          {shorterm_history}
+
       - `last_turn_state`: {last_turn_state}
       - `existing_profile`: {existing_profile}
+      
+      # MENSAGEM ATUAL DO CLIENTE
       - `client_message`: {client_message}
     </DADOS>
 
@@ -544,11 +591,18 @@ follow_up_task:
     </INSTRUCTIONS>
 
     <INPUT_DATA>
+      # DADOS DE CONTEXTO
       - `contact_id`: {contact_id}
-      - `longterm_history`: {longterm_history}
-      - `customer_profile`: {customer_profile}
       - `now_timestamp`: {now_timestamp}
       - `last_message_timestamp`: {last_message_timestamp}
+
+      # HISTÓRICO E PERFIL
+      - `longterm_history`: 
+          {longterm_history}
+      - `shorterm_history`: 
+          {shorterm_history}
+
+      - `customer_profile`: {customer_profile}
     </INPUT_DATA>
   expected_output: |
     {
