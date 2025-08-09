@@ -25,7 +25,8 @@ class KnowledgeService:
             self.knowledge_base_path = knowledge_base_path
             self._load_rules()
             self._topic_map = {
-                'company_info': ('company_info',),
+                'application_features': ('application_features',),
+                'company_info': ('business_rules', 'company_info'),
                 'maintenance_policy': ('operational_procedures', 'maintenance'),
                 'scheduling_rules': ('operational_procedures', 'scheduling'),
                 'installation_policy': ('operational_procedures', 'installation'),
@@ -35,8 +36,10 @@ class KnowledgeService:
                 'support_philosophy': ('communication', 'support'),
                 'technical_limitations': ('operational_procedures', 'technical_limitations'),
                 'blocker_installation_rules': ('operational_procedures', 'blocker_installation_rules'),
-                'customer_profile_scripts': ('customer_profiles_and_triggers',),
+                'customer_profile_scripts': ('business_rules', 'customer_profiles_and_triggers'),
                 'list_all_products': ('products',),
+                'sales_guidance': ('business_rules', 'sales_guidance'),
+                'contract_terms': ('contracts',),
             }
             self._plan_based_topics = {'pricing', 'faq', 'key_selling_points', 'objection_handling'}
 
