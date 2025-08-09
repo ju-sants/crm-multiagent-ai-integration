@@ -86,9 +86,10 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
         response_json, updated_state_dict = parse_json_from_string(result_str)
 
         if updated_state_dict:
-            state = ConversationState(**{**state.model_dump(), **updated_state_dict})
-        
-        state_manager.save_state(contact_id, state)
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+                state, _ = state_manager.get_state(contact_id)
+                state = ConversationState(**{**state.model_dump(), **updated_state_dict})
+                state_manager.save_state(contact_id, state)
 
         send_message = False
         # --- Asynchronous Message Sending ---
