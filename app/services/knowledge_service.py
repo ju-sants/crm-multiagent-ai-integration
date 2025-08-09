@@ -188,36 +188,40 @@ class KnowledgeService:
             if not plan:
                 return {"error": f"Plano '{plan_name}' não encontrado."}
             
-            # Encontra o produto que contém o plano para construir o caminho
-            for product in self._get_rule_section('products'):
-                if any(p['name'] == plan['name'] for p in product.get('plans', [])):
-                    category_name = product.get('category', '').lower().replace(' ', '_')
-                    # Encontra o plano dentro da categoria para obter os dados corretos
-                    for p in product.get('plans', []):
-                        if p['name'] == plan['name']:
-                             path = ('products', category_name, 'plans', p['name'], topic)
-                             return self._get_data_with_related_queries(*path)
-            return {"error": f"Não foi possível encontrar a categoria para o plano '{plan_name}'."}
+            data = plan.get(topic)
+            if data is None:
+                return {"error": f"Tópico '{topic}' não encontrado para o plano '{plan_name}'."}
 
-        # 2. Tópicos especiais com lógica customizada
-        if topic == 'contract_terms':
-            contract_id = params.get('contract_id', 'general_terms')
-            return self._get_data_with_related_queries('contracts', contract_id)
+            return {
+                "data": data,
+                "related_queries": plan.get('related_queries', [])
+            }
 
-        if topic == 'application_features':
-            feature_name = params.get('feature_name')
-            if feature_name:
-                # Tenta correspondência exata e depois parcial
-                app_features = self._get_rule_section('application_features')
-                for key in app_features.keys():
-                    if feature_name.lower() in key.lower():
-                        return self._get_data_with_related_queries('application_features', key)
-                return {"error": f"Funcionalidade '{feature_name}' não encontrada."}
-            return self._get_data_with_related_queries('application_features', 'overview')
-
-        # 3. Tópicos mapeados diretamente
+        # 2. Tópicos mapeados
         if topic in self._topic_map:
-            path = self._topic_map[topic]
+            path = list(self._topic_map[topic])
+            
+            if topic == 'contract_terms':
+                contract_id = params.get('contract_id')
+                if contract_id:
+                    path.append(contract_id)
+            
+            elif topic == 'application_features':
+                feature_name = params.get('feature_name')
+                if feature_name:
+                    app_features = self._get_rule_section('application_features')
+                    if app_features:
+                        best_match, score = process.extractOne(feature_name, app_features.keys())
+                        if score > 80:
+                            path.append(best_match)
+                        else:
+                            return {"error": f"Funcionalidade '{feature_name}' não encontrada."}
+                    else:
+                        return {"error": "Seção 'application_features' não encontrada."}
+                else:
+                    # Se nenhum feature_name for fornecido, retorna a visão geral
+                    path.append('overview')
+            
             return self._get_data_with_related_queries(*path)
 
         return {"error": f"Lógica de busca para o tópico '{topic}' não implementada."}
