@@ -111,7 +111,6 @@ def _run_routing_agent_crew(contact_id: str):
         json_response = parse_json_from_string(result.raw, update=False)
 
         if json_response:
-            # Lock to prevent race conditions with the parallel refine_strategy task
             with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
                 current_state, _ = state_manager.get_state(contact_id)
                 updated_state = ConversationState(**{**current_state.model_dump(), **json_response})
