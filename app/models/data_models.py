@@ -74,6 +74,7 @@ class ConversationState(BaseModel):
     operational_context: Optional[str] = None
     user_sentiment_history: List[Dict[str, Any]] = []
     is_plan_acceptable: bool = False
+    is_sales_final_step: bool = False
     budget_accepted: bool = False
     pending_system_operation: Optional[str] = None
     qualification_tracker: List[QualificationItem] = []
