@@ -14,9 +14,9 @@ celery_app = Celery(
         'app.crews.src.main_crews.registration',
         'app.crews.src.main_crews.verify_system_action',
         'app.crews.src.main_crews.backend_routing',
-        'app.crews.src.enrichment_crew',
+        'app.crews.src.secondary_crews.enrichment_crew',
         'app.services.callbell_service',
-        'app.crews.src.main_crews.follow_up',
+        'app.crews.src.secondary_crews.follow_up',
         'app.workers.inactivity_worker',
         'main'
     ]
