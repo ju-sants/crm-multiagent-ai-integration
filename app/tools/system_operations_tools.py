@@ -1,5 +1,6 @@
 from langchain_core.tools import tool
 from typing import List, Dict, Any
+from pydantic import BaseModel, Field
 
 
 from app.services.system_operations_service import system_operations_service
@@ -7,7 +8,13 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-@tool("system_operations_tool")
+
+class SystemOperationsToolInput(BaseModel):
+    """Input for system_operations_tool."""
+    queries: List[Dict[str, Any]] = Field(..., description="A list of query dictionaries to be executed in a single batch. Each dictionary requires an 'action_type' key and an optional 'params' dictionary.")
+
+
+@tool("system_operations_tool", args_schema=SystemOperationsToolInput)
 def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
     """
     Executa operações de sistema. Para eficiência, utilize consultas em lote.
