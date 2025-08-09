@@ -61,6 +61,9 @@ def system_operations_task(contact_id: str):
             "customer_name": state.metadata.contact_name,
         }
 
+        # Set the flag
+        redis_client.set(f"doing_system_operations:{contact_id}", "true")
+        
         result = crew.kickoff(inputs=inputs)
         response_json = parse_json_from_string(result.raw, update=False)
 
