@@ -155,11 +155,6 @@ class KnowledgeService:
         if isinstance(current_level, dict) and 'related_queries' in current_level:
             all_queries.extend(q for q in current_level['related_queries'] if q not in all_queries)
         
-        # Adiciona queries globais de 'business_rules' se não for uma busca de produto
-        if 'products' not in section_keys:
-            general_queries = self._get_rule_section('sales_guidance').get('related_queries', [])
-            all_queries.extend(q for q in general_queries if q not in all_queries)
-
         return {
             "data": current_level,
             "related_queries": all_queries
