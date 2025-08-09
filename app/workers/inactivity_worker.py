@@ -15,17 +15,6 @@ LOCK_EXPIRATION_SECONDS = 60 * 10  # 10 minutes
 # Backoff schedule in minutes
 BACKOFF_SCHEDULE = [5, 60, 24 * 60, 3 * 24 * 60]  # 5m, 1h, 1d, 3d
 
-@celery_app.on_after_configure.connect
-def setup_periodic_tasks(sender, **kwargs):
-    """
-    Sets up the periodic task to run every 5 minutes.
-    """
-    sender.add_periodic_task(
-        crontab(minute='*/5'),
-        inactivity_worker_task.s(),
-        name='check_for_inactive_contacts'
-    )
-
 @celery_app.task(name='workers.inactivity_worker')
 def inactivity_worker_task():
     """

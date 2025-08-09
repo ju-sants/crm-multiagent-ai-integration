@@ -26,6 +26,13 @@ celery_app.control.purge()  # Clear any existing tasks
 
 # Enhanced configuration for connection resilience
 celery_app.conf.update(
+    # Beat Scheduler
+    beat_schedule={
+        'check_for_inactive_contacts': {
+            'task': 'workers.inactivity_worker',
+            'schedule': 300.0,  # Run every 5 minutes (300 seconds)
+        },
+    },
     broker_heartbeat=20,
     # Task tracking
     task_track_started=True,
