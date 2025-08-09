@@ -23,8 +23,8 @@ redis_client = get_redis()
 HISTORY_TOPIC_LIMIT = 10
 
 # --- Main Communication Task ---
-@celery_app.task(name='main_crews.communication', bind=True)
-def communication_task(self, contact_id: str, is_follow_up: bool = False):
+@celery_app.task(name='main_crews.communication')
+def communication_task(contact_id: str, is_follow_up: bool = False):
     """
     Third task in the state machine chain. Loads state, generates the final response,
     and dispatches messages to the user asynchronously.
