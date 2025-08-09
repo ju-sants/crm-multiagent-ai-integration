@@ -21,8 +21,8 @@ redis_client = get_redis()
 
 HISTORY_TOPIC_LIMIT =10
 
-@celery_app.task(name='main_crews.refine_strategy', bind=True)
-def refine_strategy_task(self, contact_id: str):
+@celery_app.task(name='main_crews.refine_strategy')
+def refine_strategy_task(contact_id: str):
     """
     A task that runs in parallel with context analysis to incrementally
     improve the strategic plan based on the latest client message.
