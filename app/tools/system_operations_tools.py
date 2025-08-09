@@ -22,29 +22,32 @@ def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
 
     CATÁLOGO DE OPERAÇÕES DE SISTEMA:
 
-    # --- Funções Técnicas (Ações Granulares) ---
+    # --- Workflows de Negócio (Ações Orquestradas) ---
+    - action_type: 'GET_VEHICLE_DETAILS', params: {'plate': '...', 'client_name': '...'}
+    - action_type: 'GET_VEHICLE_POSITIONS', params: {'plate': '...', 'client_name': '...', 'initial_date': 'YYYY-MM-DD', 'final_date': 'YYYY-MM-DD'}
+    - action_type: 'GET_VEHICLE_TRIPS_REPORT', params: {'plate': '...', 'client_name': '...', 'start_date': 'YYYY-MM-DD', 'end_date': 'YYYY-MM-DD'}
+    - action_type: 'GET_VEHICLE_EVENTS_REPORT', params: {'plate': '...', 'client_name': '...', 'start_date': 'YYYY-MM-DD', 'end_date': 'YYYY-MM-DD'}
+    - action_type: 'GET_VEHICLE_GEOFENCES', params: {'plate': '...', 'client_name': '...'}
+    - action_type: 'GET_CLIENT_VEHICLES', params: {'search_term': '...'}
+    - action_type: 'GET_PAYMENT_HISTORY', params: {'search_term': '...'}
+    - action_type: 'FIND_CLIENT_AND_GET_FINANCIALS', params: {'search_term': '...'}
+    - action_type: 'GET_VEHICLE_FULL_REPORT', params: {'plate': '...', 'client_name': '...'}
+    - action_type: 'SEND_TRACKER_RESET', params: {'plate': '...'}
+    - action_type: 'CALCULATE_DISPLACEMENT_COST', params: {'destination_city': '...', 'destination_state': '...'}
+
+    # --- Ações de Busca (Uso Restrito) ---
     - action_type: 'SEARCH_CLIENTS', params: {'search_term': '...'}
     - action_type: 'SEARCH_VEHICLES', params: {'search_term': '...'}
-    - action_type: 'GET_CLIENT_VEHICLES', params: {'client_id': '...'}
-    - action_type: 'GET_VEHICLE_DETAILS', params: {'vehicle_id': '...'}
-    - action_type: 'GET_VEHICLE_POSITIONS', params: {'vehicle_id': '...', 'initial_date': '...', 'final_date': '...'}
-    - action_type: 'GET_VEHICLE_TRIPS_REPORT', params: {'vehicle_id': '...', 'start_date': '...', 'end_date': '...'}
-    - action_type: 'GET_VEHICLE_EVENTS_REPORT', params: {'vehicle_id': '...', 'start_date': '...', 'end_date': '...'}
-    - action_type: 'GET_VEHICLE_GEOFENCES', params: {'vehicle_id': '...'}
-    - action_type: 'GET_VEHICLES_WITH_SIGNAL_FAIL', params: {}
-    - action_type: 'GET_PAYMENT_HISTORY', params: {'customer_id': '...'}
-
-    # --- Workflows de Negócio (Ações Orquestradas) ---
-    - action_type: 'WF_FIND_CLIENT_AND_GET_FINANCIALS', params: {'search_term': '...'}
-    - action_type: 'WF_GET_VEHICLE_FULL_REPORT', params: {'vehicle_id': '...'}
-    - action_type: 'WF_SEND_TRACKER_RESET', params: {'plate': '...'}
-    - action_type: 'WF_CALCULATE_DISPLACEMENT_COST', params: {'destination_city': '...', 'destination_state': '...'}
 
     Notas sobre parâmetros:
-    - Os parâmetros do tipo "search_term" podem ser qualquer informação relatada ao cliente/veículo que o sistema o encontrará, como nome, CPF, placa, etc.
-    - Os parâmetros do tipo ID podem ser obtidos utilizando uma ação de busca "SEARCH_*"
-    - Para relatórios use intervalos de data de até um dia atrás, pois o sistema backend pode falhar em intervalos longos, formato: YYYY-MM-DD HH:MM:SS.
+    - 'plate': Placa do veículo.
+    - 'client_name': Nome do cliente para desambiguação quando múltiplos veículos com a mesma placa são encontrados.
+    - 'search_term': Termo de busca para clientes (nome, CPF, etc.).
+    - As datas devem estar no formato YYYY-MM-DD. Para relatórios, use intervalos de até um dia.
 
+    Ex de input:
+        {"queries": [{"action_type": "FIND_CLIENT_AND_GET_FINANCIALS", "params": {"search_term": "JUAN"}}]}
+        
     Args:
         queries (List[Dict[str, Any]]): Uma lista de dicionários contendo as queries.
     """
