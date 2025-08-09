@@ -2,6 +2,7 @@ import requests
 import json
 from typing import Dict, Any, List
 import datetime
+from thefuzz import process
 
 from app.core.logger import get_logger
 from app.config.settings import settings 
@@ -64,13 +65,51 @@ class SystemOperationsService:
             logger.error(f"Erro ao executar a ação '{action_type}' com parâmetros {params}: {e}", exc_info=True)
             return {"status": "error", "error_message": str(e)}
 
-    # --- Implementações de Funções Técnicas ---
+    # --- Funções de Busca Internas (Helpers) ---
 
-    def _get_vehicle_details(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Busca detalhes de um veículo específico."""
-        vehicle_id = params.get("vehicle_id")
-        if not vehicle_id: raise ValueError("'vehicle_id' é obrigatório.")
+    def _find_vehicle_by_plate_and_client(self, plate: str, client_name: str) -> Dict[str, Any]:
+        """
+        Busca um veículo pela placa e usa o nome do cliente para desambiguação.
+        """
+        if not plate or not client_name:
+            raise ValueError("'plate' e 'client_name' são obrigatórios.")
+
+        vehicles = self._search_vehicles({"search_term": plate})
+        if not vehicles:
+            raise ValueError(f"Nenhum veículo encontrado com a placa '{plate}'.")
+
+        if len(vehicles) == 1:
+            return vehicles[0]
+        else:
+            name_clients = [v.get("owner", {}).get("name", "") for v in vehicles]
+            best_match, score = process.extractOne(client_name, name_clients)
+            logger.info(f"Múltiplos veículos encontrados para a placa '{plate}'. Melhor correspondência de cliente: '{best_match}' (Confiança: {score}).")
+            if score < 70: # Limiar de confiança para evitar falsos positivos
+                raise ValueError(f"Veículo com placa '{plate}' encontrado, mas o cliente '{client_name}' não parece corresponder a nenhum proprietário associado.")
+            
+            index = name_clients.index(best_match)
+            return vehicles[index]
+
+    def _find_client(self, search_term: str) -> Dict[str, Any]:
+        """
+        Busca um cliente e retorna o melhor resultado.
+        """
+        if not search_term:
+            raise ValueError("'search_term' é obrigatório.")
         
+        clients_found = self._search_clients({"search_term": search_term, "items_per_page": 5})
+        client_data = clients_found.get("data", [])
+        
+        if not client_data:
+            raise ValueError(f"Nenhum cliente encontrado para o termo de busca: '{search_term}'")
+        
+        # Por simplicidade, retorna o primeiro resultado, mas poderia ter lógica de desambiguação
+        return client_data[0]
+
+    # --- Implementações de Funções Técnicas (Expostas como Workflows) ---
+
+    def _get_vehicle_details_internal(self, vehicle_id: str) -> Dict[str, Any]:
+        """Busca detalhes de um veículo específico por ID (uso interno)."""
         url = f"{self.plataforma_api_base_url}/manager/vehicle/{vehicle_id}"
         headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN}
         response = requests.get(url, headers=headers, timeout=15)
