@@ -8,11 +8,11 @@ from app.config.llm_config import X_llm
 from app.tools.system_operations_tools import system_operations_tool
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_execute_system_operations_task
 from app.services.state_manager_service import StateManagerService
-from app.utils.funcs.funcs import parse_json_from_string
+from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
 from app.crews.src.main_crews.communication import communication_task
-from app.crews.src.enrichment_crew import trigger_post_processing
+from app.crews.src.secondary_crews.enrichment_crew import trigger_post_processing
 from app.utils.funcs.funcs import distill_conversation_state
 
 logger = get_logger(__name__)
