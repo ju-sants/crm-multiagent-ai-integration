@@ -36,6 +36,24 @@ def pre_routing_orchestrator(contact_id: str):
     logger.info(f"[{contact_id}] - Orchestrating parallel backend_routing tasks and refinement.")
     state, _ = state_manager.get_state(contact_id)
 
+    if state.pending_system_operation:
+        logger.info(f"[{contact_id}] - Continuing system operations flow. Routing to: system_operations_task")
+        with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+            
+            state, _ = state_manager.get_state(contact_id)
+            state.system_action_request = state.pending_system_operation
+            state_manager.save_state(contact_id, state)
+
+        system_operations_task.apply_async(args=[contact_id])
+
+        return contact_id
+
+    elif redis_client.get(f"{contact_id}:getting_data_from_user"):
+        logger.info(f"[{contact_id}] - Continuing registration flow. Routing to: registration_task")
+        registration_task.apply_async(args=[contact_id])
+        
+        return contact_id
+
     strategy_agent_task = None
     if state.strategic_plan and state.strategic_plan == default_strategic_plan:
         strategy_agent_task = strategy_task.s(contact_id)
