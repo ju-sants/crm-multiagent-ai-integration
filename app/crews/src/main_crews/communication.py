@@ -96,6 +96,7 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
         # --- Asynchronous Message Sending ---
         if response_json and response_json.get('messages_sequence'):
             phone_number = state.metadata.phone_number
+            logger.info(f"[{contact_id}] - Phone number retrieved from state: {phone_number}")
             if not phone_number:
                 logger.error(f"[{contact_id}] - Cannot send message, phone number is missing from state.")
                 return {"status": "error", "reason": "Missing phone number"}
