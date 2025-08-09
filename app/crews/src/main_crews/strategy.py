@@ -78,10 +78,13 @@ def strategy_task(contact_id: str):
         strategic_plan, updated_state_dict = parse_json_from_string(result.raw)
 
         if updated_state_dict:
-            updated_state_dict["strategic_plan"] = strategic_plan
-            state = ConversationState(**{**state.model_dump(), **updated_state_dict})
-        
-        state_manager.save_state(contact_id, state)
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+                updated_state_dict["strategic_plan"] = strategic_plan
+
+                state, _ = state_manager.get_state(contact_id)
+                state = ConversationState(**{**state.model_dump(), **updated_state_dict})
+            
+                state_manager.save_state(contact_id, state)
         
     except Exception as e:
         logger.error(f"[{contact_id}] - Error in strategy_task: {e}", exc_info=True)
