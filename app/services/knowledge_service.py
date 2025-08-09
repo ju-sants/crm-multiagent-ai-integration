@@ -155,7 +155,8 @@ class KnowledgeService:
         if isinstance(current_level, dict) and 'related_queries' in current_level:
             all_queries.extend(q for q in current_level['related_queries'] if q not in all_queries)
 
-        # retirando os related queries
+        # retirando os related queries de dentro dos dicionarios subsequentes
+        # e adicionando as queries a related_queries
         key_to_remove = "related_queries"
         def _remove_recursive(obj):
             if isinstance(obj, dict):
