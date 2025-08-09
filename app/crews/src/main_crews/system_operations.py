@@ -68,45 +68,57 @@ def system_operations_task(contact_id: str):
         response_json = parse_json_from_string(result.raw, update=False)
 
         if response_json:
-            redis_client.set(f"{contact_id}:last_system_operation_output", json.dumps(response_json))
-            if response_json.get("status") == "INSUFFICIENT_DATA":
-                # Pause the operation and wait for more user input
-                state.pending_system_operation = state.system_action_request
-                state.system_action_request = None
-                send_callbell_message(contact_id=contact_id, phone_number=state.metadata.phone_number, messages=[response_json.get("message_to_user", "")])
-
-                # Liberating the lock
-                redis_client.delete(f'processing:{contact_id}')
-                logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
-
-                redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
-
-                trigger_post_processing.apply_async(args=[contact_id])
-
-                # Cleaning up the messages
-                all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
-                messages_left = [m for m in all_messages if m not in last_processed_messages]
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
                 
-                pipe = redis_client.pipeline()
+                state, _ = state_manager.get_state(contact_id)
 
-                pipe.delete(f'contacts_messages:waiting:{contact_id}')
-                if messages_left:
-                    pipe.lpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+                redis_client.set(f"{contact_id}:last_system_operation_output", json.dumps(response_json))
+                if response_json.get("status") == "INSUFFICIENT_DATA":
+                    # Pause the operation and wait for more user input
+                    state.pending_system_operation = str(state.system_action_request)[:]
+                    state.system_action_request = None
+                    send_callbell_message(contact_id=contact_id, phone_number=state.metadata.phone_number, messages=[response_json.get("message_to_user", "")])
 
-                pipe.execute()
+                    state.metadata.current_turn_number += 1
 
-            else:
-                # The operation is complete, clear all related flags
-                state.system_operation_status = "COMPLETED"
-                state.pending_system_operation = None
-                state.system_action_request = None
-                if state.strategic_plan and "system_action_request" in state.strategic_plan:
-                    del state.strategic_plan["system_action_request"]
+                    # Liberating the lock
+                    redis_client.delete(f'processing:{contact_id}')
+                    logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
 
-                communication_task.apply_async(contact_id)
+                    redis_client.set(f"{contact_id}:last_processed_messages", '\n'.join(last_processed_messages))
 
-        
-        state_manager.save_state(contact_id, state)
+                    trigger_post_processing.apply_async(args=[contact_id])
+
+                    # Cleaning up the messages
+                    all_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+                    messages_left = [m for m in all_messages if m not in last_processed_messages]
+                    
+                    pipe = redis_client.pipeline()
+
+                    pipe.delete(f'contacts_messages:waiting:{contact_id}')
+                    if messages_left:
+                        pipe.lpush(f'contacts_messages:waiting:{contact_id}', *messages_left)
+                    
+                    # Deletando a FLAG
+                    pipe.delete(f"doing_system_operations:{contact_id}")
+
+                    pipe.execute()
+
+                else:
+                    # The operation is complete, clear all related flags
+                    state.system_operation_status = "COMPLETED"
+                    state.pending_system_operation = None
+                    state.system_action_request = None
+                    if state.strategic_plan and "system_action_request" in state.strategic_plan:
+                        del state.strategic_plan["system_action_request"]
+
+                    communication_task.apply_async(args=[contact_id])
+
+                state_manager.save_state(contact_id, state)
+
+        # Deletando a FLAG
+        redis_client.delete(f"doing_system_operations:{contact_id}")
+
         return contact_id
     except Exception as e:
         logger.error(f"[{contact_id}] - Error in system_operations_task: {e}", exc_info=True)
