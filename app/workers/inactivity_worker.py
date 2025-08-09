@@ -1,11 +1,9 @@
-import time
-from celery.schedules import crontab
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from app.core.logger import get_logger
 from app.services.celery_service import celery_app
 from app.services.redis_service import get_redis
-from app.crews.src.main_crews.follow_up import follow_up_task
+from app.crews.src.secondary_crews.follow_up import follow_up_task
 
 logger = get_logger(__name__)
 redis_client = get_redis()
