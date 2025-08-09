@@ -76,12 +76,9 @@ def refine_strategy_task(contact_id: str):
         refined_plan, updated_state_dict = parse_json_from_string(result.raw)
 
         if updated_state_dict and refined_plan:
-            # Lock the state to prevent race conditions with routing_agent
             with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
-                # Re-fetch state to get latest version
                 current_state, _ = state_manager.get_state(contact_id)
                 
-                # Merge the refined plan and any other updates
                 updated_state_dict["strategic_plan"] = refined_plan
                 final_state = ConversationState(**{**current_state.model_dump(), **updated_state_dict})
                 
