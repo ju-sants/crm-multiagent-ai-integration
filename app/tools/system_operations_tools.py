@@ -53,11 +53,25 @@ def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
     """
     logger.info(f"Received queries: {queries}")
 
-    # pre check
-    if not isinstance(queries, list):
-        return {"status": "error", "error_message": "O input deve ser uma lista de dicionários de query."}
-    
-    if not all(isinstance(query, dict) for query in queries):
+    # Definição dos parâmetros obrigatórios para cada ação
+    required_params = {
+        'SEARCH_CLIENTS': ['search_term'],
+        'SEARCH_VEHICLES': ['search_term'],
+        'GET_CLIENT_VEHICLES': ['search_term'],
+        'GET_VEHICLE_DETAILS': ['plate', 'client_name'],
+        'GET_VEHICLE_POSITIONS': ['plate', 'client_name', 'initial_date', 'final_date'],
+        'GET_VEHICLE_TRIPS_REPORT': ['plate', 'client_name', 'start_date', 'end_date'],
+        'GET_VEHICLE_EVENTS_REPORT': ['plate', 'client_name', 'start_date', 'end_date'],
+        'GET_VEHICLE_GEOFENCES': ['plate', 'client_name'],
+        'GET_PAYMENT_HISTORY': ['search_term'],
+        'FIND_CLIENT_AND_GET_FINANCIALS': ['search_term'],
+        'GET_VEHICLE_FULL_REPORT': ['plate', 'client_name'],
+        'SEND_TRACKER_RESET': ['plate'],
+        'CALCULATE_DISPLACEMENT_COST': ['destination_city', 'destination_state'],
+    }
+
+    # Validação estrutural do input
+    if not isinstance(queries, list) or not all(isinstance(q, dict) for q in queries):
         return {"status": "error", "error_message": "O input deve ser uma lista de dicionários de query."}
     
     if not all(query.get("action_type") for query in queries):
