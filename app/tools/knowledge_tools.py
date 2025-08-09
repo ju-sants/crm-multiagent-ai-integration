@@ -101,11 +101,9 @@ class DrillDownTopicToolInput(BaseModel):
     contact_id: str = Field(..., description="The unique ID of the contact, essential for locating the correct history.")
     topic_id: str = Field(..., description="The specific ID of the topic you need to drill down into for more details.")
 
-@tool("drill_down_topic_tool", args_schema=DrillDownTopicToolInput, description="Use this tool to get the full, detailed context for a specific topic of conversation that has already been summarized. This provides deeper insights than the high-level summary.")
+@tool("drill_down_topic_tool", args_schema=DrillDownTopicToolInput)
 def drill_down_topic_tool(contact_id: str, topic_id: str) -> str:
-    """
-    Fetches detailed information for a specific conversation topic from Redis.
-    """
+    """Use this tool to get the full, detailed context for a specific topic of conversation that has already been summarized. This provides deeper insights than the high-level summary."""
     logger.info(f"[{contact_id}] - Executing drill_down_topic_tool for topic: {topic_id}")
     try:
         details_key = f"history:topic_details:{contact_id}:{topic_id}"
