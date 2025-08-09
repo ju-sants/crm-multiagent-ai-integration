@@ -123,7 +123,9 @@ class StateManagerService:
         new_state.user_sentiment_history = old_dict.get("user_sentiment_history", [])
         
         # Handle nested communication_preference
-        if "prefers_audio" in old_dict:
+        if "communication_preference" in old_dict:
             new_state.prefers_audio = old_dict["communication_preference"].get("prefers_audio", False)
+        elif "prefers_audio" in old_dict:
+            new_state.prefers_audio = old_dict.get("prefers_audio", False)
 
         return new_state
