@@ -149,7 +149,6 @@ StrategicAdvisor:
               - `communication_guidance.key_talking_points`: Foque em explicar POR QUE a informação é necessária. Ex: "Para te passar os valores e a melhor opção, preciso primeiro saber se o rastreamento é para carro, moto ou caminhão."
               - `communication_guidance.key_questions_to_ask`: Inclua as perguntas de qualificação diretas e essenciais.
               - `information_payload`: NÃO DEVE conter preços de planos específicos. Pode conter informações gerais sobre como a tecnologia de rastreamento funciona.
-              - `system_action_request`: Nulo. A ação é com o agente de comunicação.
             - **STOP. Finalize o JSON.**
 
           - **IF MODE IS PRESENTATION:**
@@ -168,14 +167,12 @@ StrategicAdvisor:
               - **Etapa 3: Construção da Estratégia:**
                 - Com os dados detalhados em mãos, construa a `product_presentation_strategy`.
               - Popule o `disclosure_checklist` com todos os termos relevantes dos planos ofertados.
-              - Avalie a necessidade de um `system_action_request`.
 
           - **IF MODE IS RESOLUTION:**
             - **Goal:** Diagnosticar e resolver o problema (suporte) ou atender a uma solicitação (atendimento).
             - **Action:**
               - Use a `knowledge_service_tool` para buscar procedimentos e políticas relevantes.
               - Formule os passos de troubleshooting ou as respostas necessárias.
-              - Avalie a necessidade de um `system_action_request` para obter dados do sistema.
 
       4.  **Finalize Blueprint:** Construa o objeto JSON final com base na estratégia executada.
     </LOGIC_FLOW>
@@ -209,15 +206,8 @@ IncrementalStrategicPlannerAgent:
       - **Enriquecimento, Não Substituição:** Em vez de reescrever, adicione `key_talking_points`, refine o `sales_angle`, ou adicione novas `key_questions_to_ask`. Se uma seção inteira (ex: `product_presentation_strategy`) estiver ausente ou for muito fraca, aí sim você pode reconstruí-la.
       - **Checklist de Esclarecimento (`disclosure_checklist`):** Se sua melhoria introduz um novo tópico que precisa de esclarecimento legal ou comercial, é OBRIGATÓRIO adicionar o item correspondente ao `disclosure_checklist`. Não remova ou altere itens existentes, apenas adicione.
       - **Poda de Otimização de Token (Dever de Manutenção):** É sua responsabilidade contínua manter o `strategic_plan` relevante e enxuto. Após cada refinamento, reavalie cuidadosamente cada seção. Remova informações que se tornaram obsoletas, como `key_questions_to_ask` que já foram respondidas. Consolide ou resuma `key_talking_points` que já foram compreendidos pelo cliente. O objetivo é manter um plano focado e ágil, que contenha apenas informações essenciais e voltadas para o futuro, sem perder nuances importantes.
-     - **Requisições de Sistema (Uso Proativo):** Se, durante sua análise, você identificar que uma ação de sistema (descrita no `<SYSTEM_ACTION_CATALOG>`) é ESTRITAMENTE NECESSÁRIA para enriquecer o plano estratégico (ex: obter dados financeiros do cliente para uma proposta), você DEVE popular o campo `system_action_request`. A sua decisão deve ser proativa, não apenas uma reação a um pedido explícito do cliente.
     </RULES>
 
-    <SYSTEM_ACTIONS_CATALOG>
-      - **Client/Financial:** Search clients in the database (to get precious information), get a client's vehicles, get financial history.
-      - **Vehicle Reports:** Search vehicles in the database (to get precious information), get vehicle details, get position history, get trip/event reports, get geofences.
-      - **Vehicle Commands:** Send a reset command to a tracker, this action reboots it and aim to solve communication issues.
-    </SYSTEM_ACTIONS_CATALOG>
-    
     <LOGIC_FLOW>
       # ETAPA 1: ANÁLISE DE CENÁRIO E DEFINIÇÃO DE FOCO
       # Absorve o estado atual e determina a prioridade do refinamento.
@@ -285,15 +275,8 @@ IncrementalStrategicPlannerAgent:
           PRUNE strategic_plan_atualizado TO RETAIN essential_and_forward_looking_info WHILE PRESERVING important_nuances
       ENDIF
 
-      # ETAPA 6: VERIFICAÇÃO DE AÇÃO DE SISTEMA
-      SET system_action_request = null # Default é sempre nulo
-      # Baseado na sua análise e nas regras, você pode precisar de uma ação de sistema para prosseguir.
-      IF SYSTEM_ACTION_IS_STRATEGICALLY_NECESSARY_FOR_PLAN_ENRICHMENT:
-          # Exemplo: O plano precisa de dados financeiros, mas eles não estão no `conversation_state`.
-          SET system_action_request = "Descrição em linguagem natural da ação necessária. Ex: 'Buscar histórico financeiro do cliente.'"
-      ENDIF
 
-      # ETAPA 7: FINALIZAR SAÍDA
+      # ETAPA 6: FINALIZAR SAÍDA
       # Retorna o 'conversation_blueprint' completo, agora mais robusto, detalhado e perfeitamente alinhado ao contexto atual da conversa.
       RETURN strategic_plan_atualizado
     </LOGIC_FLOW>
@@ -603,7 +586,6 @@ StateSummarizerAgent:
 
       # STEP 5: FINALIZATION
       # Generate session summary at the end to reflect all updates
-      SET working_state.metadata.current_turn_number = working_state.metadata.current_turn_number + 1
 
       # Prepare final output
       SET updated_state = working_state
