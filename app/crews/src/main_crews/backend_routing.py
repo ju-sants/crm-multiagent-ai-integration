@@ -25,6 +25,12 @@ def backend_routing_task(contact_id: str):
     # Determine the next step based on the state
     next_task = None
 
+    # Se RoutingAgent nos informa que estamos num estágio de venda e a venda ainda não está aceita no sistema, acionamos o agente verificador
+    if state.is_sales_final_step and not state.budget_accepted:
+        purchase_confirmation_task(contact_id)
+
+        state, _ = state_manager.get_state(contact_id)
+
     # Priority 1: Budget has been explicitly accepted by the user.
     if state.budget_accepted:
         logger.info(f"[{contact_id}] - Budget accepted flag is TRUE. Routing to: registration_task")
