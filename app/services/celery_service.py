@@ -12,6 +12,7 @@ celery_app = Celery(
         'app.crews.src.main_crews.communication',
         'app.crews.src.main_crews.system_operations',
         'app.crews.src.main_crews.registration',
+        'app.crews.src.main_crews.verify_system_action',
         'app.crews.src.main_crews.backend_routing',
         'app.crews.src.enrichment_crew',
         'app.services.callbell_service',
