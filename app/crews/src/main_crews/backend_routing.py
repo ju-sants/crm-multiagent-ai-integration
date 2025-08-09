@@ -64,6 +64,12 @@ def backend_routing_task(contact_id: str):
             time.sleep(1)  # Wait for 1 second
 
     if next_task:
+        
+        state, _ = state_manager.get_state(contact_id)
+        if state.pending_system_operation:
+            logger.info(f"[{contact_id}] - Theres a pending system operation in progress... skipping.")
+            return contact_id
+        
         next_task.apply_async()
 
     return contact_id
