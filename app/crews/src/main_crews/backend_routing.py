@@ -57,6 +57,12 @@ def backend_routing_task(contact_id: str):
         logger.info(f"[{contact_id}] - Plan is acceptable. Routing to: communication_task")
         next_task = communication_task.s(contact_id)
 
+    if redis_client.get(f"doing_system_operations:{contact_id}"):
+        logger.info(f"[{contact_id}] - Esperando a operação de sistema acabar")
+        # Espera qualquer operação de sistema terminar antes de iniciar a próxima task
+        while redis_client.get(f"doing_system_operations:{contact_id}"):
+            time.sleep(1)  # Wait for 1 second
+
     if next_task:
         next_task.apply_async()
 
