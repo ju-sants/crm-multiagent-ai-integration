@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import time
 
 from app.services.celery_service import celery_app
-from app.crews.src.enrichment_crew import trigger_post_processing
+from app.crews.src.secondary_crews.enrichment_crew import trigger_post_processing
 from app.core.logger import get_logger
 from app.crews.agents_definitions.obj_declarations.agent_declaration import get_communication_agent
 from app.config.llm_config import X_llm
@@ -12,7 +12,7 @@ from app.tools.knowledge_tools import drill_down_topic_tool
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_communication_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
-from app.utils.funcs.funcs import parse_json_from_string
+from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.utils.funcs.funcs import distill_conversation_state
 
