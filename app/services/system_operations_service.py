@@ -35,21 +35,21 @@ class SystemOperationsService:
         Roteador principal que chama a função ou o workflow apropriado com base no action_type.
         """
         action_map = {
-            # --- Funções Técnicas ---
+            # --- Funções Técnicas (Mantidas para uso interno se necessário) ---
+            "SEARCH_CLIENTS": self._search_clients,
+            "SEARCH_VEHICLES": self._search_vehicles,
+            
+            # --- Workflows Abstraídos ---
             "GET_VEHICLE_DETAILS": self._get_vehicle_details,
             "GET_VEHICLE_POSITIONS": self._get_vehicle_positions,
             "GET_PAYMENT_HISTORY": self._get_payment_history,
-            "SEARCH_CLIENTS": self._search_clients,
-            "SEARCH_VEHICLES": self._search_vehicles,
             "GET_CLIENT_VEHICLES": self._get_client_vehicles,
             "GET_VEHICLE_TRIPS_REPORT": self._get_vehicle_trips_report,
             "GET_VEHICLE_EVENTS_REPORT": self._get_vehicle_events_report,
             "GET_VEHICLE_GEOFENCES": self._get_vehicle_geofences,
-            
-            # --- Workflows ---
-            "WF_GET_VEHICLE_FULL_REPORT": self._wf_get_vehicle_full_report,
-            "WF_SEND_TRACKER_RESET": self._wf_send_tracker_reset_command,
-            "WF_FIND_CLIENT_AND_GET_FINANCIALS": self._wf_find_client_and_get_financials
+            "GET_VEHICLE_FULL_REPORT": self._get_vehicle_full_report,
+            "SEND_TRACKER_RESET": self._send_tracker_reset_command,
+            "FIND_CLIENT_AND_GET_FINANCIALS": self._find_client_and_get_financials
         }
 
         action_function = action_map.get(action_type)
