@@ -92,6 +92,7 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
                 state_manager.save_state(contact_id, state)
 
         send_message = False
+        phone_number = None
         # --- Asynchronous Message Sending ---
         if response_json and response_json.get('messages_sequence'):
             phone_number = state.metadata.phone_number
