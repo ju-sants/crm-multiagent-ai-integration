@@ -20,11 +20,10 @@ routing_task:
     </INPUT_DATA>
   expected_output: |
     {
-      "action": "PROCEED_WITH_EXISTING_PLAN | INITIATE_NEW_STRATEGIC_PLAN",
       "is_plan_acceptable": <boolean>,
-      "operational_context": "BUDGET | BUDGET_ACCEPTED | CUSTOMER_SERVICE | SUPPORT",
-      "budget_accepted": <boolean>,
-      "system_action_request": "<Natural language request for system action>" | null,
+      "is_sales_final_step": <boolean>,
+      "action": "PROCEED_WITH_EXISTING_PLAN | INITIATE_NEW_STRATEGIC_PLAN",
+      "operational_context": "BUDGET | CUSTOMER_SERVICE | SUPPORT",
       "identified_topic": "<A short, descriptive topic name for the conversation>",
       "prefers_audio": <boolean>,
     }
