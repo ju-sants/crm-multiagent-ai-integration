@@ -50,8 +50,6 @@ develop_strategy_task:
           {conversation_state}
       - `profile_customer_task_output`: 
           {profile_customer_task_output}
-      - `client_message`: {client_message}
-      - `operational_context`: {operational_context}
       - `longterm_history`: 
           {longterm_history}
       - `shorterm_history`: 
