@@ -11,7 +11,7 @@ from app.tools.knowledge_tools import knowledge_service_tool, drill_down_topic_t
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_refine_strategy_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
-from app.utils.funcs.funcs import parse_json_from_string
+from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.utils.funcs.funcs import distill_conversation_state
 
