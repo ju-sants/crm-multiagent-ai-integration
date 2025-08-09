@@ -266,6 +266,13 @@ def send_message(phone_number, messages, plan_names, contact_id):
                 if message:
                     send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[message])
 
+            
+        # After send message, update the state current turn number
+        with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+            state, _ = state_manager.get_state(contact_id)
+            state.metadata.current_turn_number += 1
+            state_manager.save_state(contact_id, state)
+
     except Exception as e:
         logger.error(f'[{contact_id}] - Erro ao enviar mensagens para Callbell: {e}')
 
