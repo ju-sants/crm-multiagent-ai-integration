@@ -38,12 +38,6 @@ develop_strategy_task:
       5.  **Gerar Saída:** Formate sua resposta final como um único objeto JSON, seguindo o `expected_output`. A saída deve ser em Português do Brasil.
     </INSTRUCOES>
 
-    <SYSTEM_ACTIONS_CATALOG>
-      - **Client/Financial:** Search clients in the database (to get precious information), get a client's vehicles, get financial history.
-      - **Vehicle Reports:** Search vehicles in the database (to get precious information), get vehicle details, get position history, get trip/event reports, get geofences.
-      - **Vehicle Commands:** Send a reset command to a tracker, this action reboots it and aim to solve communication issues.
-    </SYSTEM_ACTIONS_CATALOG>
-
     <DADOS>
       # DADOS BASE
       - `timestamp`: {timestamp}
