@@ -117,182 +117,113 @@ class SystemOperationsService:
 
         return response.json()
 
-    def _get_vehicle_positions(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Busca o histórico de posições de um veículo.
-        Adaptação da função get_vehicle_positions.
-        """
-        required_params = ["vehicle_id", "initial_date", "final_date"]
-        if not all(p in params for p in required_params):
-            raise ValueError(f"Parâmetros obrigatórios ausentes. Necessário: {', '.join(required_params)}")
+    def _get_vehicle_positions_internal(self, vehicle_id: str, initial_date: str, final_date: str, **kwargs) -> List[Dict[str, Any]]:
+        """Busca o histórico de posições de um veículo por ID (uso interno)."""
+        url = f"{self.plataforma_api_base_url}/report/{vehicle_id}/positions"
 
-        url = f"{self.plataforma_api_base_url}/report/{params['vehicle_id']}/positions"
         request_params = {
-            "initial_date": params['initial_date'],
-            "final_date": params['final_date'],
-            "ignition_state": params.get("ignition_state", 2),
-            "speed_above": params.get("speed_above", 0)
+            "initial_date": initial_date,
+            "final_date": final_date,
+            "ignition_state": kwargs.get("ignition_state", 2),
+            "speed_above": kwargs.get("speed_above", 0)
         }
-        headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN}
 
-        logger.info(f"SERVICE: Buscando posições com parâmetros: {request_params}")
-        response = requests.get(url, headers=headers, params=request_params, timeout=30)
+        response = requests.get(url, headers=self.HEADERS, params=request_params, timeout=30)
         response.raise_for_status()
-        return response.json()
 
-    def _get_payment_history(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Busca o histórico de boletos de um cliente no Gerencianet.
-        """
-        customer_id = params.get("customer_id")
-        if not customer_id: raise ValueError("'customer_id' é obrigatório.")
+        return response.json().get("positions", [])
 
-        last_months = params.get("last_months", 36)
-        include_nfe = params.get("include_nfe_history", 1)
-        include_receipt = params.get("include_receipt_history", 1)
-        
+    def _get_payment_history_internal(self, customer_id: str, **kwargs) -> Dict[str, Any]:
+        """Busca o histórico de boletos de um cliente por ID (uso interno)."""
         url = f"{self.plataforma_api_base_url}/gerencianet/payment/history/{customer_id}"
-        headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN}
+
         request_params = {
-            "last_months": last_months,
-            "include_nfe_history": include_nfe,
-            "include_receipt_history": include_receipt
+            "last_months": kwargs.get("last_months", 36),
+            "include_nfe_history": kwargs.get("include_nfe_history", 1),
+            "include_receipt_history": kwargs.get("include_receipt_history", 1)
         }
-        
-        logger.info(f"SERVICE: Buscando histórico financeiro para customer_id: {customer_id}")
-        response = requests.get(url, headers=headers, params=request_params, timeout=20)
+
+        response = requests.get(url, headers=self.HEADERS, params=request_params, timeout=20)
         response.raise_for_status()
+
         return response.json()
 
     def _search_clients(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Busca e pagina clientes na plataforma principal.
-        Adaptação da função get_client_data.
-        """
+        """Busca e pagina clientes na plataforma principal."""
         url = f"{self.plataforma_api_base_url}/manager/users"
-        headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN}
-        
+
         request_params = {
-            'include_managers': 1,
-            'items_per_page': params.get('items_per_page', 50),
-            'paginate': 1,
-            'current_page': params.get('page', 1),
+            'include_managers': 1, 'items_per_page': params.get('items_per_page', 50),
+            'paginate': 1, 'current_page': params.get('page', 1),
             'all': params.get('search_term', ''),
             'active': params.get('active_filter'),
             'financial_alert': params.get('financial_alert_filter')
         }
 
         request_params = {k: v for k, v in request_params.items() if v is not None}
-        
-        logger.info(f"SERVICE: Buscando clientes com parâmetros: {request_params}")
-        response = requests.get(url, headers=headers, params=request_params, timeout=20)
+
+        response = requests.get(url, headers=self.HEADERS, params=request_params, timeout=20)
         response.raise_for_status()
+
         return response.json()
 
-    def _get_client_vehicles(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Busca a lista de veículos associados a um ID de cliente específico.
-        Adaptação da função get_vehicles.
-        """
-        client_id = params.get('client_id')
-        if not client_id: raise ValueError("'client_id' é obrigatório.")
-
+    def _get_client_vehicles_internal(self, client_id: str) -> List[Dict[str, Any]]:
+        """Busca a lista de veículos associados a um ID de cliente (uso interno)."""
         url = f"{self.plataforma_api_base_url}/manager/user/{client_id}/vehicles"
-        headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN}
-        
-        logger.info(f"SERVICE: Buscando veículos para o client_id: {client_id}")
-        response = requests.get(url, headers=headers, timeout=15)
+
+        response = requests.get(url, headers=self.HEADERS, timeout=15)
         response.raise_for_status()
+
         return response.json()
 
-    def _get_vehicle_trips_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Busca o relatório de viagens (percursos/trilhas) de um veículo.
-        Adaptação da função get_vehicle_trips.
-        """
-        vehicle_id = params.get("vehicle_id")
-        if not vehicle_id: raise ValueError("'vehicle_id' é obrigatório.")
-        
+    def _get_vehicle_trips_report_internal(self, vehicle_id: str, start_date: str, end_date: str, **kwargs) -> Dict[str, Any]:
+        """Busca o relatório de viagens de um veículo por ID (uso interno)."""
         url = f"{self.plataforma_api_base_url}/report/vehicle/{vehicle_id}/trips/v2"
-        headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN}
+
         request_params = {
-            "from": params.get("start_date"),
-            "to": params.get("end_date"),
-            "include_positions": params.get("include_positions", 0)
+            "from": start_date, "to": end_date,
+            "include_positions": kwargs.get("include_positions", 0)
         }
-
-        logger.info(f"SERVICE: Buscando relatório de viagens para vehicle_id: {vehicle_id}")
-        response = requests.get(url, headers=headers, params=request_params, timeout=30)
+        
+        response = requests.get(url, headers=self.HEADERS, params=request_params, timeout=30)
         response.raise_for_status()
+
         return response.json()
 
-    def _get_vehicle_events_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Busca o relatório de eventos e alertas (ignição, cercas, etc.).
-        Adaptação da função sisras_events_report.
-        """
-        vehicle_id = params.get("vehicle_id")
-        if not vehicle_id: raise ValueError("'vehicle_id' é obrigatório.")
-
+    def _get_vehicle_events_report_internal(self, vehicle_id: str, start_date: str, end_date: str) -> Dict[str, Any]:
+        """Busca o relatório de eventos de um veículo por ID (uso interno)."""
         url = f"{self.plataforma_api_base_url}/sisras/web/events/report"
-        headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN, "Content-Type": "application/json"}
-        payload = {
-            "vehicleId": vehicle_id,
-            "initialDate": params.get("start_date"),
-            "finalDate": params.get("end_date")
-        }
+        
+        payload = {"vehicleId": vehicle_id, "initialDate": start_date, "finalDate": end_date}
 
-        logger.info(f"SERVICE: Buscando relatório de eventos para vehicle_id: {vehicle_id}")
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response = requests.post(url, json=payload, headers=self.HEADERS, timeout=30)
         response.raise_for_status()
+
         return response.json()
 
-    def _get_vehicle_geofences(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Busca todas as cercas eletrônicas de um veículo.
-        Adaptação da integração de busca de geofences.
-        """
-        vehicle_id = params.get("vehicle_id")
-        if not vehicle_id: raise ValueError("'vehicle_id' é obrigatório.")
-
+    def _get_vehicle_geofences_internal(self, vehicle_id: str) -> List[Dict[str, Any]]:
+        """Busca todas as cercas eletrônicas de um veículo por ID (uso interno)."""
         url = f"{self.plataforma_api_base_url}/vehicle/{vehicle_id}/geofences"
-        headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN}
-        
-        logger.info(f"SERVICE: Buscando cercas eletrônicas para vehicle_id: {vehicle_id}")
-        response = requests.get(url, headers=headers, timeout=20)
-        response.raise_for_status()
-        return response.json()
-    
-    def _get_vehicle_data_by_plate(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Busca detalhes de um veículo com base em sua placa.
-        Adaptação da função get_vehicle_details.
-        """
-        plate = params.get("plate")
-        if not plate: raise ValueError("'plate' é obrigatório.")
 
-        plate = plate.replace(" ", "").upper().strip()
-        plate = plate.replace("-", " ")
-        
-        search_result = self._search_vehicles({"search_term": plate})
+        response = requests.get(url, headers=self.HEADERS, timeout=20)
+        response.raise_for_status()
+
+        return response.json()
+
+    def _get_vehicle_data_by_plate(self, plate: str) -> Dict[str, Any]:
+        """Busca dados de um veículo pela placa (uso interno)."""
+        plate_clean = plate.replace(" ", "").upper().strip().replace("-", " ")
+        search_result = self._search_vehicles({"search_term": plate_clean})
+
         if not search_result:
             raise ValueError(f"Nenhum veículo encontrado com a placa {plate}.")
         
         return search_result
 
-    def _search_vehicles(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _search_vehicles(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Obter TODOS os veículos cadastrados, paginado e por pesquisa"""
 
-        # --- Configurações da API ---
-        API_URL = "https://api.plataforma.app.br/manager/vehicles"
-        # Token e headers baseados no geofence_deleter.py e informações fornecidas
-        HEADERS = {
-            "Accept": "application/json, text/plain, */*",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 OPR/117.0.0.0",
-            "Origin": "https://globalsystem.plataforma.app.br",
-            "Referer": "https://globalsystem.plataforma.app.br/",
-            "x-token": settings.PLATAFORMA_X_TOKEN,
-        }
+        API_URL = f"{self.plataforma_api_base_url}/manager/vehicles"
 
         items_per_page = params.get('items_per_page')
         current_page = params.get('current_page')
@@ -309,10 +240,9 @@ class SystemOperationsService:
         if search_term:
             PARAMS['all'] = search_term
 
-        # --- Botão para Buscar Dados ---
         try:
-            response = requests.get(API_URL, headers=HEADERS, params=PARAMS, timeout=60)
-            response.raise_for_status() # Lança exceção para status HTTP 4xx/5xx
+            response = requests.get(API_URL, headers=self.HEADERS, params=PARAMS, timeout=60)
+            response.raise_for_status()
             data = response.json()
 
             data_v = data.get('data', [])
@@ -371,7 +301,7 @@ class SystemOperationsService:
             payload["assigned_user"] = user_to_assign
             
         try:
-            response = requests.patch(url, json=payload, headers=headers)
+            response = requests.patch(url, json=payload, headers=self.HEADERS)
             response.raise_for_status()
 
             response_json = response.json()
