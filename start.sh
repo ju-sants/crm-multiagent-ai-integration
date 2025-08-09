@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Configurações de otimização de recursos
+export CELERY_OPTIMIZATION=fair
+export C_FORCE_ROOT=1
+export OTEL_SDK_DISABLED=true
+export OTEL_PYTHON_DISABLED=true
+
 # Função para cleanup quando o script receber SIGTERM
 cleanup() {
     echo "Recebendo sinal de parada..."
@@ -13,22 +19,44 @@ trap cleanup SIGTERM SIGINT
 
 echo "Iniciando aplicação..."
 
-# Iniciar Celery Worker em background
+# Reduzir workers para economizar recursos
+WORKERS=${WORKERS:-2}
+CELERY_CONCURRENCY=${CELERY_CONCURRENCY:-2}
+
+# Iniciar Celery Worker em background com configurações otimizadas
 echo "Iniciando Celery Worker..."
-celery -A app.services.celery_service.celery_app worker --loglevel=INFO &
+celery -A app.services.celery_service.celery_app worker \
+    --loglevel=INFO \
+    --concurrency=$CELERY_CONCURRENCY \
+    --without-gossip \
+    --without-mingle \
+    --pool=solo \
+    &
 celery_worker_pid=$!
+
+# Aguardar worker iniciar
+sleep 3
 
 # Iniciar Celery Beat em background  
 echo "Iniciando Celery Beat..."
-celery -A app.services.celery_service.celery_app beat --loglevel=INFO &
+celery -A app.services.celery_service.celery_app beat \
+    --loglevel=INFO \
+    --pidfile=/tmp/celerybeat.pid \
+    &
 celery_beat_pid=$!
 
-# Aguardar um pouco para os serviços do Celery iniciarem
-sleep 5
+# Aguardar beat iniciar
+sleep 3
 
-# Iniciar Gunicorn em background
+# Iniciar Gunicorn em background com menos workers
 echo "Iniciando Gunicorn..."
-gunicorn -b 0.0.0.0:$PORT main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 300 &
+gunicorn -b 0.0.0.0:$PORT main:app \
+    --workers $WORKERS \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --timeout 300 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    &
 gunicorn_pid=$!
 
 echo "Todos os processos iniciados:"
