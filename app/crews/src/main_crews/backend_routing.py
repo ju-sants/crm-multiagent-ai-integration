@@ -8,6 +8,7 @@ from app.services.redis_service import get_redis
 from app.crews.src.main_crews.communication import communication_task
 from app.crews.src.main_crews.system_operations import system_operations_task
 from app.crews.src.main_crews.registration import registration_task
+from app.crews.src.main_crews.purchase_confirmation import purchase_confirmation_task
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
