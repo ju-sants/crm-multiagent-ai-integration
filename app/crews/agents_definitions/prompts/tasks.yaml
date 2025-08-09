@@ -1,15 +1,8 @@
 routing_task:
   description: |
     <INSTRUCTIONS>
-      1.  **Analyze Inputs:** Review the provided `{{conversation_state}}` and `{{client_message}}`.
-      2.  **Execute Logic:** Apply the `<LOGIC_FLOW>` and `<RULES>` defined in your backstory to determine the output values.
-      3.  **Handle System Actions:** If the client requests a system action AND `is_plan_acceptable` is true, populate the `system_action_request` field with a natural language description of the required action. Otherwise, leave it null.
-          -   **Condition:** ONLY if `is_plan_acceptable` is true AND the user's intent is an OBVIOUS request for one of the capabilities listed below, populate `system_action_request`.
-          -   **Content:** The request must be a clear, natural language description of the action needed.
-          -   **Default:** In all other cases, `system_action_request` MUST be `null`.
-      4.  **Determine Budget Status:** If the client gives a clear and direct signal of accepting a budget, set `budget_accepted` to true. Otherwise, set it to false.
-      5.  **Determine Audio Preference:** Evaluate the `client_message` to check for an audio preference, setting `prefers_audio` to true if one is detected.
-      6.  **Format Output:** Construct the final JSON output according to the `expected_output` schema.
+      1.  **Executar Lógica Principal:** Siga rigorosamente o `<LOGIC_FLOW>` e as `<RULES>` definidos em seu `backstory`.
+      2.  **Analisar Inputs:** Utilize os dados fornecidos na seção `<DADOS>` para sua análise.
     </INSTRUCTIONS>
 
     <INPUT_DATA>
