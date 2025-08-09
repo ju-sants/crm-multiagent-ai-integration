@@ -67,6 +67,7 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
         disclosure_checklist = conversation_state_distilled.pop("disclosure_checklist", None)
 
         inputs = {
+            "contact_id": contact_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "strategic_plan": json.dumps(strategic_plan),
             "last_system_operation": system_op_output if system_op_output else "{}",
