@@ -341,96 +341,117 @@ class SystemOperationsService:
             logger.error(f"Erro ao decodificar JSON da resposta da API: {json_err}")
             logger.info(f"Conteúdo da resposta: {response.text if 'response' in locals() else 'Não disponível'}")
             return {"fatal_error": "Erro desconhecido ao atribuir usuário.", "error_details": str(e), "response_text": response.text}
-    
-
-
 
     # --- Implementação de Workflows de Negócio ---
 
-    def _wf_get_vehicle_full_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_vehicle_details(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """WORKFLOW: Busca detalhes de um veículo específico usando placa e nome do cliente."""
+        vehicle = self._find_vehicle_by_plate_and_client(params.get("plate"), params.get("client_name"))
+        return self._get_vehicle_details_internal(vehicle.get("id"))
+
+    def _get_vehicle_positions(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """WORKFLOW: Busca o histórico de posições de um veículo."""
+        vehicle = self._find_vehicle_by_plate_and_client(params.get("plate"), params.get("client_name"))
+        return self._get_vehicle_positions_internal(
+            vehicle.get("id"),
+            params.get("initial_date"),
+            params.get("final_date")
+        )
+
+    def _get_vehicle_trips_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """WORKFLOW: Busca o relatório de viagens de um veículo."""
+        vehicle = self._find_vehicle_by_plate_and_client(params.get("plate"), params.get("client_name"))
+        return self._get_vehicle_trips_report_internal(
+            vehicle.get("id"),
+            params.get("start_date"),
+            params.get("end_date")
+        )
+
+    def _get_vehicle_events_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """WORKFLOW: Busca o relatório de eventos e alertas de um veículo."""
+        vehicle = self._find_vehicle_by_plate_and_client(params.get("plate"), params.get("client_name"))
+        return self._get_vehicle_events_report_internal(
+            vehicle.get("id"),
+            params.get("start_date"),
+            params.get("end_date")
+        )
+
+    def _get_vehicle_geofences(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """WORKFLOW: Busca todas as cercas eletrônicas de um veículo."""
+        vehicle = self._find_vehicle_by_plate_and_client(params.get("plate"), params.get("client_name"))
+        return self._get_vehicle_geofences_internal(vehicle.get("id"))
+    
+    def _get_client_vehicles(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """WORKFLOW: Busca a lista de veículos de um cliente."""
+        client = self._find_client(params.get("search_term"))
+        return self._get_client_vehicles_internal(client.get("id"))
+
+    def _get_payment_history(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """WORKFLOW: Busca o histórico financeiro de um cliente."""
+        client = self._find_client(params.get("search_term"))
+        return self._get_payment_history_internal(client.get("id"))
+
+    def _get_vehicle_full_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         WORKFLOW: Orquestra múltiplas chamadas para montar um relatório completo do veículo.
-        Obtém detalhes do veículo e seu histórico de posições recente em uma única ação.
         """
-        vehicle_id = params.get("vehicle_id")
-        if not vehicle_id: raise ValueError("'vehicle_id' é obrigatório para este workflow.")
+        vehicle = self._find_vehicle_by_plate_and_client(params.get("plate"), params.get("client_name"))
+        vehicle_id = vehicle.get("id")
 
         logger.info(f"SERVICE WORKFLOW: Iniciando relatório completo para vehicle_id: {vehicle_id}")
 
-        # 1. Primeira chamada de API: Obter detalhes do veículo
-        details = self._get_vehicle_details({"vehicle_id": vehicle_id})
+        details = self._get_vehicle_details_internal(vehicle_id)
         
-        # 2. Segunda chamada de API: Obter posições dos últimos 2 dias
         today = datetime.date.today()
-        seven_days_ago = today - datetime.timedelta(days=2)
-        positions_params = {
-            "vehicle_id": vehicle_id,
-            "initial_date": seven_days_ago.strftime("%Y-%m-%d"),
-            "final_date": today.strftime("%Y-%m-%d")
-        }
-        recent_positions = self._get_vehicle_positions(positions_params)
+        days_ago = today - datetime.timedelta(days=2)
+        
+        recent_positions = self._get_vehicle_positions_internal(
+            vehicle_id,
+            days_ago.strftime("%Y-%m-%d"),
+            today.strftime("%Y-%m-%d")
+        )
 
-        # 3. Consolida os resultados em um único objeto de resposta
         full_report = {
             "vehicle_details": details,
-            "recent_position_history": recent_positions
+            "recent_position_history": recent_positions[:20] if recent_positions else []
         }
 
         return full_report
 
-    def _wf_send_tracker_reset_command(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _send_tracker_reset_command(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         WORKFLOW: Executa o processo completo de envio de um comando de reset para um rastreador.
-        Abstrai a complexidade de múltiplos sistemas (Eseye, SMSBarato, resets de rede).
         """
         plate = params.get("plate")
         if not plate: raise ValueError("'plate' é obrigatório para este workflow.")
 
-        # ETAPA 1: Obter os dados do veículo/rastreador usando a placa (função placeholder)
-        vehicles_data = self._get_vehicle_data_by_plate({"plate": plate})
+        vehicles_data = self._get_vehicle_data_by_plate(plate)
         if not vehicles_data:
             return {"status": "error", "message": f"Veículo com placa {plate} não encontrado."}
         
         results = []
         for v in vehicles_data:
-            vehicle_data = self._get_vehicle_details({"vehicle_id": v["id"]})
+            vehicle_data = self._get_vehicle_details_internal(v["id"])
             result = process_reset_sending(vehicle_data)
             results.append(result)
         
-        return results
+        return {"results": results}
 
-    def _wf_find_client_and_get_financials(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _find_client_and_get_financials(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        WORKFLOW: Encontra um cliente pelo nome ou documento e retorna seu
-        histórico financeiro completo.
+        WORKFLOW: Encontra um cliente pelo termo de busca e retorna seu histórico financeiro.
         """
-        search_term = params.get("nome_cliente")
+        search_term = params.get("search_term")
+        client = self._find_client(search_term)
         
-        if not search_term: raise ValueError("'nome_cliente' é obrigatório.")
-
-        logger.info(f"SERVICE WORKFLOW: Iniciando busca de cliente e histórico financeiro para: {search_term}")
-
-        # 1. Primeira chamada de API: Buscar pelo cliente
-        clients_found = self._search_clients({"search_term": search_term, "items_per_page": 1})
+        financial_history = self._get_payment_history_internal(client.get("id"))
         
-        client_data = clients_found.get("data", [])
-        if not client_data:
-            raise ValueError(f"Nenhum cliente encontrado para o termo de busca: '{search_term}'")
-        
-        payload = []
-        for customer in client_data:
-            customer_id = customer.get("id")
-            
-            # 2. Segunda chamada de API: Obter o histórico financeiro com o ID encontrado
-            financial_history = self._get_payment_history({"customer_id": customer_id})
-            payload.append({
-                "customer_details": customer,
-                "financial_history": financial_history
-            })
-
-        return payload
+        return {
+            "customer_details": client,
+            "financial_history": financial_history
+        }
     
-    def _wf_calculate_displacement_cost(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _calculate_displacement_cost(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         WORKFLOW: Calcula o custo de deslocamento com base em dados fornecidos.
         """
