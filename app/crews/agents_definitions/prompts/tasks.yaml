@@ -579,3 +579,53 @@ follow_up_task:
     {
       "send_follow_up": <boolean>
     }
+
+purchase_confirmation_task:
+  description: |
+    <INSTRUCTIONS>
+      1.  **Analyze Inputs:** Review the provided `{{client_message}}`, `{{longterm_history}}` and `{{shorterm_history}} .
+      2.  **Execute Logic:** Apply the `<LOGIC_FLOW>` and `<RULES>` defined in your backstory to determine if the client has accepted the budget.
+      3.  **Format Output:** Construct the final JSON output according to the `expected_output` schema.
+    </INSTRUCTIONS>
+
+    <INPUT_DATA>
+      # HISTÓRICO
+        - `longterm_history`: 
+            {longterm_history}
+        - `shorterm_history`: 
+            {shorterm_history}
+
+        - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "budget_accepted": <boolean>
+    }
+
+verify_system_action_task:
+  description: |
+    <INSTRUCTIONS>
+      1.  **Analyze Inputs:** Review all provided context, including `{{client_message}}`, `{{longterm_history}}`, `{{shorterm_history}}`, and crucially, the `{{history_of_system_actions}}`.
+      2.  **Execute Logic:** Apply the `<LOGIC_FLOW>` and `<RULES>` defined in your backstory to infer if a system action is needed and has not been recently performed.
+      3.  **Format Output:** Construct the final JSON output. It must either be `null` or match the `expected_output` schema precisely.
+    </INSTRUCTIONS>
+
+    <INPUT_DATA>
+      - `longterm_history`:
+          {longterm_history}
+      - `shorterm_history`:
+          {shorterm_history}
+
+          
+      - `client_message`: {client_message}
+
+      
+      - `history_of_system_actions`: {history_of_system_actions}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "system_action_request": {
+        "natural_language_request": "<A clear, natural language description of the overall goal for the SystemOperationsAgent>",
+        "queries": ["<An array of specific queries from the SYSTEM_ACTIONS_CATALOG>"]
+      } | null
+    }
