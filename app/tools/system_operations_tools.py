@@ -73,10 +73,25 @@ def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
     # Validação estrutural do input
     if not isinstance(queries, list) or not all(isinstance(q, dict) for q in queries):
         return {"status": "error", "error_message": "O input deve ser uma lista de dicionários de query."}
-    
-    if not all(query.get("action_type") for query in queries):
-        return {"status": "error", "error_message": "Todas as queries devem ter um campo 'action_type'."}
-    
+
+    # Validação de cada query individualmente
+    for query in queries:
+        action_type = query.get("action_type")
+        params = query.get("params", {})
+
+        if not action_type:
+            return {"status": "error", "error_message": "Todas as queries devem ter um campo 'action_type'."}
+
+        # Validar parâmetros obrigatórios
+        if action_type in required_params:
+            for param in required_params[action_type]:
+                if param not in params or params[param] is None:
+                    return {
+                        "status": "error",
+                        "error_message": f"Parâmetro obrigatório '{param}' ausente ou nulo para a ação '{action_type}'."
+                    }
+
+    # Execução das queries se todas forem válidas
     results = {}
     for query in queries:
         action_type = query.get("action_type", "")
