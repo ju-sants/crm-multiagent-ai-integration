@@ -111,9 +111,10 @@ class SystemOperationsService:
     def _get_vehicle_details_internal(self, vehicle_id: str) -> Dict[str, Any]:
         """Busca detalhes de um veículo específico por ID (uso interno)."""
         url = f"{self.plataforma_api_base_url}/manager/vehicle/{vehicle_id}"
-        headers = {"X-TOKEN": settings.PLATAFORMA_X_TOKEN}
-        response = requests.get(url, headers=headers, timeout=15)
+
+        response = requests.get(url, headers=self.HEADERS, timeout=15)
         response.raise_for_status()
+
         return response.json()
 
     def _get_vehicle_positions(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
