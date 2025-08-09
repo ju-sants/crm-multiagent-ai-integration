@@ -94,10 +94,9 @@ def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
     # Execução das queries se todas forem válidas
     results = {}
     for query in queries:
-        action_type = query.get("action_type", "")
+        action_type = query["action_type"]
         params = query.get("params", {})
         result = system_operations_service.execute(action_type, params)
-        
         results[action_type] = result
     
     return results
