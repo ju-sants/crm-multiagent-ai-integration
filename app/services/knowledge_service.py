@@ -72,11 +72,7 @@ class KnowledgeService:
                     with open(full_path, 'r', encoding='utf-8') as file:
                         data = yaml.safe_load(file)
                         if data:
-                            # O arquivo 'business_rules.yaml' é especial; seu conteúdo é mesclado na raiz.
-                            if filename_no_ext == 'business_rules':
-                                self._deep_merge(self._rules, data)
-                            else:
-                                self._rules[filename_no_ext] = data
+                            self._rules[filename_no_ext] = data
             
             # Processa a pasta de produtos separadamente para criar uma lista de produtos
             products_path = os.path.join(self.knowledge_base_path, 'products')
