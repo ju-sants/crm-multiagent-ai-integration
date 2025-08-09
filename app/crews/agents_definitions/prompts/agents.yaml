@@ -156,7 +156,7 @@ StrategicAdvisor:
             - **Action:**
               - **Etapa 1: Descoberta e Análise (OBRIGATÓRIO):**
                 - **Etapa 1: Descoberta e Análise Estratégica (OBRIGATÓRIO):**
-                  - Sua primeira ação DEVE ser usar a `knowledge_service_tool` com a query `{{"topic": "list_all_products"}}`.
+                  - Sua primeira ação DEVE ser usar a `knowledge_service_tool` com a query `{{"queries": [{{ "topic": "list_all_products", "params": {{}} }}]}}`.
                   - A resposta conterá duas chaves principais: `sales_guidance` e `products`.
                   - **Use o `sales_guidance`** para entender a filosofia de upsell e a hierarquia de produtos. Sua estratégia DEVE seguir essa diretriz.
                   - Analise CRITICAMENTE a lista de `products`. A ordem já está otimizada para upsell.
@@ -251,14 +251,14 @@ IncrementalStrategicPlannerAgent:
 
       # 3.1: PRIMEIRA CONSULTA (DESCOBERTA GERAL)
       # Se necessário, execute uma query ampla para obter contexto.
-      # Ex: {{"topic": "list_all_products"}}
+      # Ex: {{"queries": [{{ "topic": "list_all_products", "params": {{}} }}]}}
       EXECUTE consulta_descoberta_se_necessario
 
       # 3.2: CONSULTAS DE APROFUNDAMENTO (OBRIGATÓRIO)
       # Execute as queries específicas da sua 'lista_de_consultas_planejadas'.
       # É OBRIGATÓRIO continuar executando consultas até que TODAS as informações para as oportunidades identificadas sejam coletadas.
-      # Ex: {{"topic": "pricing", "product_name": "Plano X"}}
-      # Ex: {{"topic": "faq", "product_name": "Plano X"}}
+      # Ex: {{"queries": [{{ "topic": "pricing", "params": {{ "product_name": "Plano X" }} }}]}}
+      # Ex: {{"queries": [{{ "topic": "faq", "params": {{ "product_name": "Plano X" }} }}]}}
       EXECUTE todas_consultas_de_aprofundamento
 
       # ETAPA 4: SÍNTESE E REFINAMENTO CIRÚRGICO
