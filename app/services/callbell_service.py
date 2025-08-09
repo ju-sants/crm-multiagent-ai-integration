@@ -47,7 +47,7 @@ def send_callbell_message(contact_id, phone_number: str, messages: str = None, t
             response = requests.post(url, json=payload, headers=headers)
 
             now = datetime.now()
-            redis_client.set(f"history:last_timestamp:to_follow_up{contact_id}", now.isoformat())
+            redis_client.set(f"history:last_timestamp:to_follow_up:{contact_id}", now.isoformat())
             
             statuses.append(response.status_code)
         else:
@@ -75,7 +75,7 @@ def send_callbell_message(contact_id, phone_number: str, messages: str = None, t
                 response = requests.post(url, json=payload, headers=headers)
                 
                 now = datetime.now()
-                redis_client.set(f"history:last_timestamp:to_follow_up{contact_id}", now.isoformat())
+                redis_client.set(f"history:last_timestamp:to_follow_up:{contact_id}", now.isoformat())
 
                 statuses.append(response.status_code)
             
