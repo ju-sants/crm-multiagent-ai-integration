@@ -38,25 +38,7 @@ def backend_routing_task(contact_id: str):
         redis_client.set(f"{contact_id}:getting_data_from_user", "1") # Set flag to initiate registration
         next_task = registration_task.s(contact_id)
 
-    # Priority 2: Is there a pending operation waiting for user input?
-    elif state.pending_system_operation:
-        logger.info(f"[{contact_id}] - Resuming pending system operation. Routing to: system_operations_task")
-        # Restore the original request so the agent knows what it was trying to do
-        state.system_action_request = state.pending_system_operation
-        state_manager.save_state(contact_id, state) # Save state before dispatching
-        next_task = system_operations_task.s(contact_id)
-
-    # Priority 3: A new system operation has been requested
-    elif state.system_action_request:
-        logger.info(f"[{contact_id}] - New system action requested. Routing to: system_operations_task")
-        next_task = system_operations_task.s(contact_id)
-
-    # Priority 4: Already in the middle of registration
-    elif redis_client.get(f"{contact_id}:getting_data_from_user"):
-        logger.info(f"[{contact_id}] - Continuing registration flow. Routing to: registration_task")
-        next_task = registration_task.s(contact_id)
-
-    # Priority 5: Wait for Strategy (if needed) -> Communication
+    # Priority 3: Wait for Strategy (if needed) -> Communication
     elif not state.is_plan_acceptable:
 
         if redis_client.get(f"refining_strategy:{contact_id}"):
