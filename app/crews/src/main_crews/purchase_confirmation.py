@@ -38,7 +38,7 @@ def purchase_confirmation_task(contact_id: str):
         }
 
         result = crew.kickoff(inputs=inputs)
-        parsed_result = parse_json_from_string(result.raw)
+        parsed_result = parse_json_from_string(result.raw, update=False)
 
         if parsed_result and parsed_result.get("budget_accepted") is True:
             with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
