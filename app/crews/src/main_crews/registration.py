@@ -4,11 +4,11 @@ from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.crews.agents_definitions.obj_declarations.agent_declaration import get_registration_agent
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_collect_registration_data_task
+from app.crews.src.secondary_crews.enrichment_crew import trigger_post_processing
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
-from app.services.callbell_service import send_callbell_message
 from app.services.telegram_service import send_single_telegram_message
 from app.utils.funcs.funcs import distill_conversation_state
 
@@ -35,8 +35,6 @@ def registration_task(contact_id: str):
         plan_details = redis_client.get(f"{contact_id}:plan_details")
 
         last_processed_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
-
-        conversation_state_dict = state.model_dump()
 
         # State Distillation
         conversation_state_distilled = distill_conversation_state(state, "RegistrationDataCollectorAgent")
@@ -79,19 +77,20 @@ def registration_task(contact_id: str):
             redis_client.set(f"{contact_id}:user_data_so_far", json.dumps(response_json))
             
             if response_json.get("status") == 'COLLECTION_COMPLETE':
-                send_callbell_message(contact_id=contact_id, phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
+                response_json["messages_sequence"] = response_json.get("next_message_to_send", "")
+
+                if state.metadata.phone_number:
+                    trigger_post_processing.apply_async(args=[contact_id, True, response_json, state.metadata.phone_number])
+
                 send_single_telegram_message(result, '-4854533163')
                 redis_client.delete(f"{contact_id}:getting_data_from_user")
-            elif response_json.get("next_message_to_send"):
-                send_callbell_message(contact_id=contact_id, phone_number=state.metadata.phone_number, messages=[response_json["next_message_to_send"]])
-                redis_client.set(f"{contact_id}:getting_data_from_user", "1")
 
-            # After send message, update the state current turn number
-            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
-                state, _ = state_manager.get_state(contact_id)
-                
-                state.metadata.current_turn_number += 1
-                state_manager.save_state(contact_id, state)
+            elif response_json.get("next_message_to_send"):
+                if state.metadata.phone_number:
+                    response_json["messages_sequence"] = response_json.get("next_message_to_send", "")
+                    trigger_post_processing.apply_async(args=[contact_id, True, response_json, state.metadata.phone_number])
+
+                redis_client.set(f"{contact_id}:getting_data_from_user", "1")
 
             # Once we already taking user data to cadaster them, we can falsify this flag
             if state.budget_accepted:
