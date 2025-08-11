@@ -1,11 +1,3 @@
-#!/bin/bash
-
-# Configurações de otimização de recursos
-export CELERY_OPTIMIZATION=fair
-export C_FORCE_ROOT=1
-export OTEL_SDK_DISABLED=true
-export OTEL_PYTHON_DISABLED=true
-
 # Função para cleanup quando o script receber SIGTERM
 cleanup() {
     echo "Recebendo sinal de parada..."
@@ -18,10 +10,6 @@ cleanup() {
 trap cleanup SIGTERM SIGINT
 
 echo "Iniciando aplicação..."
-
-# Reduzir workers para economizar recursos
-WORKERS=${WORKERS:-2}
-CELERY_CONCURRENCY=${CELERY_CONCURRENCY:-2}
 
 # Iniciar Celery Worker em background com configurações otimizadas
 echo "Iniciando Celery Worker..."
@@ -48,8 +36,6 @@ echo "Iniciando Gunicorn..."
 gunicorn -b 0.0.0.0:$PORT main:app \
     --workers $WORKERS \
     --timeout 300 \
-    --max-requests 1000 \
-    --max-requests-jitter 50 \
     &
 gunicorn_pid=$!
 
