@@ -138,7 +138,7 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
         new_messages = get_contact_messages(contact_id, limit=50)
     
     if contact_id == '71464be80c504971ae263d710b39dd1f':
-        new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("10/08/2025 13:10:00", "%d/%m/%Y %H:%M:%S")]
+        new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime("11/08/2025 02:27:00", "%d/%m/%Y %H:%M:%S")]
 
     if not new_messages:
         logger.info(f"[{contact_id}] - No new messages to process. Skipping summarization.")
