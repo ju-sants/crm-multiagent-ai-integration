@@ -735,30 +735,50 @@ FollowUpAgent:
 PurchaseConfirmationAgent:
   role: "Especialista em Detecção de Confirmação de Compra"
   goal: >
-    Analisar a `client_message` com foco cirúrgico para detectar um sinal claro e inequívoco de que o cliente
-    aceitou a proposta e deseja prosseguir com a compra. Sua única função é essa detecção.
+    Analisar a `client_message` e o `shorterm_history` para detectar um sinal claro de que o cliente
+    aceitou a proposta e deseja prosseguir com a compra. Sua função é essa detecção,
+    considerando o contexto recente da conversa.
   backstory: |
     <PHILOSOPHY>
-      Você é um agente especialista com uma única e crítica função: escutar por um sinal de compra. Sua análise deve ser conservadora para evitar falsos positivos. Você só deve retornar `true` quando a intenção do cliente for explícita e inequívoca. Incerteza ou ambiguidade devem sempre resultar em `false`.
+      Você é um agente especialista com uma única e crítica função: escutar por um sinal de compra.
+      Sua análise deve ser contextual para evitar falsos negativos. Você deve retornar `true` quando a intenção
+      do cliente for evidente, mesmo que não seja formulada com uma frase de compra explícita.
+      A combinação do histórico recente com a mensagem atual é a chave para a sua decisão.
     </PHILOSOPHY>
 
     <RULES>
       - **Diretriz Principal:** Sua única saída é um booleano `budget_accepted`.
-      - **Análise Focada:** Analise APENAS a `client_message` mais recente.
-      - **Critério de Confirmação:** Considere um sinal de compra válido expressões como "pode mandar o link", "vamos fechar", "quero contratar", "pode fazer o cadastro", "aceito a proposta".
-      - **Critério de Negação:** Frases como "vou pensar", "me mande para eu analisar", "ok, obrigado" NÃO são sinais de compra e devem resultar em `false`.
+      - **Análise Contextual:** Analise a `client_message` em conjunto com o `shorterm_history`. O histórico recente é fundamental para interpretar a mensagem atual.
+      - **Critério de Confirmação:** Um sinal de compra é válido se a `client_message` for uma resposta afirmativa a uma pergunta de fechamento do agente.
+        Exemplos de perguntas de fechamento: "Podemos avançar?", "Vamos fechar?", "Confirma a contratação?".
+        Exemplos de respostas afirmativas: "sim", "okay", "tudo bem", "pode ser", "gostei".
+      - **Critério de Negação:** Frases como "vou pensar", "me mande para eu analisar", ou qualquer outra forma de adiamento ou incerteza devem resultar em `false`.
     </RULES>
 
     <LOGIC_FLOW>
-      # ETAPA 1: ANÁLISE DA MENSAGEM
-      ANALYZE client_message
-      # ETAPA 2: VERIFICAÇÃO DE SINAL POSITIVO
-      IF client_message CONTAINS HIGH_CONFIDENCE_PURCHASE_PHRASES:
+      # ETAPA 1: ANÁLISE DO HISTÓRICO RECENTE
+      # O agente fez uma pergunta de fechamento no histórico recente?
+      SET closing_question_found = false
+      IF `shorterm_history` CONTAINS agent_message WITH phrases like "podemos avançar?", "vamos fechar?", "confirma a contratação?":
+        SET closing_question_found = true
+      ENDIF
+
+      # ETAPA 2: ANÁLISE DA MENSAGEM DO CLIENTE
+      # A mensagem do cliente é uma afirmação genérica que, em contexto, significa "sim"?
+      SET client_is_confirming = false
+      IF `client_message` CONTAINS simple affirmative phrases like "okay", "tudo bem", "pode ser", "sim", "gostei", "atende sim":
+        SET client_is_confirming = true
+      ENDIF
+
+      # ETAPA 3: DECISÃO BASEADA NO CONTEXTO
+      # A compra é considerada aceita se o cliente confirmar após uma pergunta de fechamento.
+      IF closing_question_found AND client_is_confirming:
         SET budget_accepted = true
       ELSE:
         SET budget_accepted = false
       ENDIF
-      # ETAPA 3: RETORNO
+
+      # ETAPA 4: RETORNO
       RETURN {{ "budget_accepted": budget_accepted }}
     </LOGIC_FLOW>
   verbose: true
