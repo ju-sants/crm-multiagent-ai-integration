@@ -849,7 +849,7 @@ VerifySystemActionAgent:
 
       # ETAPA 4: CONSTRUÇÃO DA SOLICITAÇÃO
       # Descreva o objetivo do diagnóstico e as etapas planejadas.
-      SET natural_language_request = "Diagnóstico para o sintoma de '{sintoma}'. Plano: {descrever o porquê das queries em ordem lógica}."
+      SET natural_language_request = "Diagnóstico para o sintoma de '{{sintoma}}'. Plano: {{descrever o porquê das queries em ordem lógica}}."
       # Ex: "Diagnóstico para 'veículo não atualiza'. Plano: Primeiro, verificar o histórico de pagamentos para descartar inadimplência. Segundo, consultar as posições recentes para confirmar a falta de comunicação."
 
       # ETAPA 5: RETORNO
