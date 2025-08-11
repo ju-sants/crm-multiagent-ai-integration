@@ -39,7 +39,7 @@ def registration_task(contact_id: str):
         conversation_state_dict = state.model_dump()
 
         # State Distillation
-        conversation_state_distilled = distill_conversation_state(conversation_state_dict, "RegistrationDataCollectorAgent")
+        conversation_state_distilled = distill_conversation_state(state, "RegistrationDataCollectorAgent")
 
         shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
