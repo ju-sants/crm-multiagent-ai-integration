@@ -55,19 +55,20 @@ logger: BoundLogger = get_logger(__name__)
 
 # exit()
 redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
-
+redis_client.set("follow_up_level:71464be80c504971ae263d710b39dd1f", 0)
+# redis_client.delete(f"71464be80c504971ae263d710b39dd1f:system_actions_history")
 # print(redis_client.hgetall("71464be80c504971ae263d710b39dd1f:attachments"))
 # exit()
-# redis_client.rpop("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
+redis_client.rpop("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
 # redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
-# redis_client.rpush("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", """Boa tarde""")
+# redis_client.rpush("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", """região doq""")
 
-# print(redis_client.lrange("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 0, -1))
-# redis_client.flushdb()
+print(redis_client.lrange("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 0, -1))
 
 # print(json.dumps(state_manager.get_state("71464be80c504971ae263d710b39dd1f").strategic_plan, indent=4))
-# state = state_manager.get_state("71464be80c504971ae263d710b39dd1f")
+# state, _ = state_manager.get_state("71464be80c504971ae263d710b39dd1f")
 # print(json.dumps(state.model_dump(), indent=4))
+# exit()
 # for dc in state.disclosure_checklist:
 #     dc.status = 'pending'
 

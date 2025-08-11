@@ -48,11 +48,11 @@ celery_beat_pid=$!
 # Aguardar beat iniciar
 sleep 3
 
-# Iniciar Gunicorn em background com menos workers
+# Iniciar Gunicorn em background com WSGI worker (correto para Flask)
 echo "Iniciando Gunicorn..."
 gunicorn -b 0.0.0.0:$PORT main:app \
     --workers $WORKERS \
-    --worker-class uvicorn.workers.UvicornWorker \
+    --worker-class sync \
     --timeout 300 \
     --max-requests 1000 \
     --max-requests-jitter 50 \
