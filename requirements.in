@@ -18,3 +18,5 @@ supervisor
 thefuzz
 python-Levenshtein
 json5
+fastapi
+fastapi

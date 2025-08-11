@@ -18,6 +18,7 @@ anyio==4.10.0
     # via
     #   httpx
     #   openai
+    #   starlette
     #   watchfiles
 appdirs==1.4.4
     # via crewai
@@ -54,7 +55,7 @@ certifi==2025.8.3
     #   requests
 cffi==1.17.1
     # via cryptography
-charset-normalizer==3.4.2
+charset-normalizer==3.4.3
     # via
     #   pdfminer-six
     #   requests
@@ -97,12 +98,14 @@ docstring-parser==0.17.0
     # via instructor
 durationpy==0.10
     # via kubernetes
-elevenlabs==2.9.1
+elevenlabs==2.9.2
     # via -r requirements.in
 et-xmlfile==2.0.0
     # via openpyxl
 executing==2.2.0
     # via stack-data
+fastapi==0.116.1
+    # via -r requirements.in
 filelock==3.18.0
     # via huggingface-hub
 filetype==1.2.0
@@ -197,7 +200,7 @@ jiter==0.10.0
     # via
     #   instructor
     #   openai
-json-repair==0.48.0
+json-repair==0.49.0
     # via crewai
 json5==0.12.0
     # via -r requirements.in
@@ -236,7 +239,7 @@ langsmith==0.4.13
     # via langchain-core
 levenshtein==0.27.1
     # via python-levenshtein
-litellm==1.75.3
+litellm==1.75.5.post1
     # via crewai
 markdown-it-py==3.0.0
     # via rich
@@ -269,7 +272,7 @@ oauthlib==3.3.1
     #   requests-oauthlib
 onnxruntime==1.22.1
     # via chromadb
-openai==1.99.5
+openai==1.99.6
     # via
     #   crewai
     #   instructor
@@ -374,6 +377,7 @@ pydantic==2.11.7
     #   chromadb
     #   crewai
     #   elevenlabs
+    #   fastapi
     #   instructor
     #   langchain-core
     #   langchain-google-genai
@@ -486,6 +490,8 @@ sniffio==1.3.1
     #   openai
 stack-data==0.6.3
     # via ipython
+starlette==0.47.2
+    # via fastapi
 structlog==25.4.0
     # via -r requirements.in
 supervisor==4.2.5
@@ -499,7 +505,7 @@ tenacity==9.1.2
     #   langchain-core
 thefuzz==0.22.1
     # via -r requirements.in
-tiktoken==0.10.0
+tiktoken==0.11.0
     # via
     #   langchain-openai
     #   litellm
@@ -530,6 +536,7 @@ typing-extensions==4.14.1
     #   anyio
     #   chromadb
     #   elevenlabs
+    #   fastapi
     #   huggingface-hub
     #   ipython
     #   langchain-core
@@ -542,6 +549,7 @@ typing-extensions==4.14.1
     #   pydantic
     #   pydantic-core
     #   referencing
+    #   starlette
     #   typer
     #   typing-inspection
 typing-inspection==0.4.1
@@ -557,7 +565,7 @@ urllib3==2.5.0
     #   auth0-python
     #   kubernetes
     #   requests
-uv==0.8.6
+uv==0.8.8
     # via crewai
 uvicorn==0.35.0
     # via chromadb

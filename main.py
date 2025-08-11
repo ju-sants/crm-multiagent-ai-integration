@@ -50,7 +50,7 @@ redis_client: redis.Redis = get_redis()
 client_description: ImageDescriptionAPI = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
 logger: BoundLogger = get_logger(__name__)
 
-# redis_client.flushdb()
+redis_client.flushdb()
 # get_redis(db=1).flushdb() # Clear the second database
 
 # exit()
