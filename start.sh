@@ -19,10 +19,6 @@ trap cleanup SIGTERM SIGINT
 
 echo "Iniciando aplicação..."
 
-# Reduzir workers para economizar recursos
-WORKERS=${WORKERS:-2}
-CELERY_CONCURRENCY=${CELERY_CONCURRENCY:-2}
-
 # Iniciar Celery Worker em background com configurações otimizadas
 echo "Iniciando Celery Worker..."
 celery -A app.services.celery_service.celery_app worker \
@@ -30,7 +26,6 @@ celery -A app.services.celery_service.celery_app worker \
     --concurrency=$CELERY_CONCURRENCY \
     --without-gossip \
     --without-mingle \
-    --pool=solo \
     &
 celery_worker_pid=$!
 
@@ -52,7 +47,6 @@ sleep 3
 echo "Iniciando Gunicorn..."
 gunicorn -b 0.0.0.0:$PORT main:app \
     --workers $WORKERS \
-    --worker-class sync \
     --timeout 300 \
     --max-requests 1000 \
     --max-requests-jitter 50 \
