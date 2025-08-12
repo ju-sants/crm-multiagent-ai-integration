@@ -56,9 +56,6 @@ def inactivity_worker_task():
                 
                 follow_up_task.apply_async(args=[contact_id])
             
-            else:
-                logger.info(f"Contato ainda no intervalo ativo, skipping...")
-
     finally:
         # Release the lock
         redis_client.delete(lock_key)
