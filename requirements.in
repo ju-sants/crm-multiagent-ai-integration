@@ -20,3 +20,5 @@ python-Levenshtein
 json5
 fastapi
 fastapi
+sentence_transformers
+sentence_transformers
