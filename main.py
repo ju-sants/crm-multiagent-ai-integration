@@ -320,6 +320,8 @@ def receive_message():
         if contact_info.get("team", {}).get("uuid") == "d468731afdba45c3a3a65895e4b08a5a":
             # Salvando o timestamp da última mensagem recebida
             redis_client.set(f"history:last_timestamp:to_follow_up:{contact_info['uuid']}", str(datetime.now().isoformat()))
+            redis_client.delete(f"follow_up_level:{contact_info['uuid']}")  # Reset follow-up level on new message
+            logger.info(f"Webhook: Received message from contact {contact_info['uuid']}. Processing...")
             
             # Roteamento
             process_incoming_message(payload)
