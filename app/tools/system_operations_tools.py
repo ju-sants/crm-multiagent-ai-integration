@@ -43,7 +43,7 @@ def system_operations_tool(queries: List[Dict[str, Any]]) -> dict:
     - 'plate': Placa do veículo.
     - 'client_name': Nome do cliente para desambiguação quando múltiplos veículos com a mesma placa são encontrados.
     - 'search_term': Termo de busca para clientes (nome, CPF, etc.).
-    - As datas devem estar no formato YYYY-MM-DD. Para relatórios, use intervalos de até um dia.
+    - As datas devem estar no formato YYYY-MM-DD. Para relatórios, use intervalos de até um dia. NÃO PEÇA DATAS AO CLIENTE.
 
     Ex de input:
         {"queries": [{"action_type": "FIND_CLIENT_AND_GET_FINANCIALS", "params": {"search_term": "JUAN"}}]}
