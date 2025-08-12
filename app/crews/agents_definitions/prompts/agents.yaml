@@ -400,7 +400,15 @@ CommunicationAgent:
             # Exemplos: "Isso que conversamos atende à sua necessidade?", "Temos tudo o que precisamos para avançar?", "Ficou claro para você?"
           ELSE:
             # MODO EXECUÇÃO: O plano ainda está em andamento. Busque a próxima informação de valor.
-            SET proactive_action_goal = SELECT(strategic_plan.next_most_valuable_information)
+            # Verifique proativamente o checklist de divulgação por itens pendentes.
+            pending_disclosure_item = FIND_FIRST(disclosure_checklist WHERE status == 'pending')
+            IF pending_disclosure_item IS NOT NULL:
+                # Se houver um item pendente, essa é a informação mais valiosa a ser comunicada.
+                SET proactive_action_goal = pending_disclosure_item
+            ELSE:
+                # Se não houver itens pendentes, siga a lógica original para encontrar a próxima informação de valor.
+                SET proactive_action_goal = SELECT(strategic_plan.next_most_valuable_information)
+            ENDIF
           ENDIF
       ENDIF
 
