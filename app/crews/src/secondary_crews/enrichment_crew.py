@@ -318,7 +318,7 @@ def profile_enhancer_task(longterm_history: dict, contact_id: str):
 
     # Fetch the existing profile from Redis
     existing_profile_raw = redis_client.get(f"{contact_id}:customer_profile")
-    existing_profile = existing_profile_raw if existing_profile_raw else "{}"
+    existing_profile = existing_profile_raw if existing_profile_raw else str({"client_360_blueprint": {"client_identity": {"contact_id": contact_id, "contact_name": state.metadata.contact_name}}})
 
     shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
 
