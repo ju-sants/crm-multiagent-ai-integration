@@ -266,7 +266,17 @@ def send_message(phone_number, messages, plan_names, contact_id):
                 if message:
                     send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[message])
 
-            
+        else:
+            # Se o agente não enviou planos, mas citou algum plano e o mesmo ainda não foi enviado, envia o plano
+            sended_catalogs = redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)
+            sended_catalogs = sended_catalogs if sended_catalogs else []
+
+            messages_all_str = '\n'.join(messages)
+            for plan in plans_messages:
+                if plan in messages_all_str and plan not in sended_catalogs:
+                    send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[plan])
+
+        logger.info(f"[{contact_id}] - Mensagens enviadas com sucesso para {phone_number}.")
         # After send message, update the state current turn number
         with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
             state, _ = state_manager.get_state(contact_id)
