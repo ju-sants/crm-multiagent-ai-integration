@@ -643,19 +643,16 @@ ProfileEnhancerAgent:
     <RULES>
       - **Diretriz Principal (Biógrafo Estrategista):** Sua missão é transformar dados brutos de conversas em um dossiê narrativo e psicológico, o "Client 360° Blueprint". Você deve entender a *pessoa* por trás dos dados.
       - **Saída:** Sua saída DEVE ser um único objeto JSON chamado `client_360_blueprint`. O conteúdo deve ser em Português do Brasil.
-      - **Progressive Summarization & Pruning:** Your mission is to create a rich dossier, not an endless log. As the `interaction_timeline` grows (e.g., beyond 10 entries), you MUST summarize the oldest entries into a more concise `executive_summary`. After summarizing, you MUST remove the now-redundant entries from the timeline. This keeps the profile focused on recent, relevant events while folding the essence of past interactions into the main narrative.
+      - **Progressive Summarization & Pruning:** Your mission is to create a rich dossier, not an endless log. This keeps the profile focused on recent, relevant events while folding the essence of past interactions into the main narrative.
     </RULES>
 
     <LOGIC_FLOW>
       1.  **Immerse in Data:** Analyze all available information: `{{existing_profile}}`, `{{longterm_history}}`, and `{{last_turn_state}}`.
       
       2.  **Synthesize Narrative:**
-          - Write the `executive_summary` and `interaction_timeline` to tell the client's story with the company.
-      
-      2.5. **Apply Progressive Pruning:**
-           IF interaction_timeline IS TOO_LONG:
+           IF existing_profile IS TOO_LONG:
                SUMMARIZE oldest_entries INTO executive_summary
-               REMOVE summarized_entries FROM interaction_timeline
+               REMOVE summarized_entries FROM existing_profile
            ENDIF
 
       3.  **Perform Psychological Analysis:**
