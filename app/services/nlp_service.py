@@ -1,4 +1,4 @@
-from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer
 from functools import lru_cache
 
 @lru_cache(maxsize=1)
