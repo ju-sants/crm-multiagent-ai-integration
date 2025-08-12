@@ -340,11 +340,7 @@ def profile_enhancer_task(longterm_history: dict, contact_id: str):
 
     if output:
         profile_key = f"{contact_id}:customer_profile"
-
-        master_profile = output.get('master_profile')
-
-        if master_profile:
-            redis_client.set(profile_key, json.dumps(master_profile))
+        redis_client.set(profile_key, json.dumps(output))
 
     # Cleaning up last messages
     redis_client.delete(f"{contact_id}:last_processed_messages")
