@@ -23,6 +23,7 @@ from app.services.state_manager_service import StateManagerService
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
+from app.services.nlp_service import carregar_modelo_semantico
 
 from app.crews.src.main_crews.routing_agent import pre_routing_orchestrator
 from app.crews.src.main_crews.communication import communication_task
@@ -43,6 +44,9 @@ IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
 apply_litellm_patch()
 apply_crewai_telemetry_patch()
+
+# Pre carregamento do modelo semântico
+carregar_modelo_semantico()
 
 app: Flask = Flask(__name__)
 state_manager: StateManagerService = StateManagerService()
