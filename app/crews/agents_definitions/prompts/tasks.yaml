@@ -533,12 +533,6 @@ enhance_profile_task:
             "phone_number": "<string>",
             "communication_style": "Ex: Prefere texto, direto ao ponto, usa mensagens curtas."
           },
-          "the_story_so_far": {
-            "executive_summary": "Resumo narrativo da jornada do cliente com a empresa, destacando pontos de virada e estado atual.",
-            "interaction_timeline": [
-              { "date": "<string: YYYY-MM-DD>", "event": "Evento crucial da interação." }
-            ]
-          },
           "clients_mindset": {
             "primary_motivations": ["<Array de motivações inferidas, ex: 'Eficiência operacional', 'Segurança dos ativos'>"],
             "known_frustrations": ["<Array de frustrações conhecidas, ex: 'Aplicativos que não funcionam'>"],
