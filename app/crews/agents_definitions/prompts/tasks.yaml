@@ -202,7 +202,7 @@ execute_system_operations_task:
     <DADOS>
       # AÇÃO PRINCIPAL E CONTEXTO
       - `action_requested`: {action_requested}
-      - `customer_name`: {customer_name}
+      - `contact_name`: {contact_name}
 
       # ESTADO E PERFIL
       - `conversation_state`: 

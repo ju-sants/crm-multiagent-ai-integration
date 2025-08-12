@@ -58,7 +58,7 @@ def system_operations_task(contact_id: str):
             "longterm_history": longterm_history,
             "shorterm_history": str(shorterm_history),
             "client_message": "\n".join(last_processed_messages),
-            "customer_name": state.metadata.contact_name,
+            "contact_name": state.metadata.contact_name,
         }
 
         # Set the flag
