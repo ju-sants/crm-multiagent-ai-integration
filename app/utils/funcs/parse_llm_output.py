@@ -3,10 +3,14 @@ import json5
 import re
 import ast
 import logging
+from sentence_transformers import util
+
+from app.services.nlp_service import carregar_modelo_semantico
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+modelo_semantico = carregar_modelo_semantico()
 def _extrair_bloco_json(texto_bruto: str) -> str:
     """
     Helper para extrair de forma inteligente o bloco JSON de uma string.
@@ -141,3 +145,34 @@ def limpar_tiques_verbais(mensagem: str) -> str:
         return mensagem_limpa[0].upper() + mensagem_limpa[1:]
     
     return ""
+
+def limpar_com_rede_de_seguranca(mensagem_original: str) -> str:
+    """
+    Limpa a mensagem original removendo tiques verbais e avaliando a taxa de remoção.
+    Se a limpeza não for significativa, retorna a mensagem original.
+    """
+    mensagem_limpa = limpar_tiques_verbais(mensagem_original)
+
+    if not mensagem_limpa or mensagem_limpa == mensagem_original:
+        return mensagem_original
+    
+    len_original = len(mensagem_original)
+    len_removido = len_original - len(mensagem_limpa)
+    taxa_remocao = len_removido / len_original
+
+    limiar_base = 0.80
+    fator_tolerancia = 0.45 
+    
+    # O limiar dinâmico diminui conforme a taxa de remoção aumenta.
+    limiar_dinamico = limiar_base - (taxa_remocao * fator_tolerancia)
+    
+    limiar_dinamico = max(limiar_dinamico, 0.35) 
+    
+    embedding_original = modelo_semantico.encode(mensagem_original, convert_to_tensor=True)
+    embedding_limpo = modelo_semantico.encode(mensagem_limpa, convert_to_tensor=True)
+    similaridade = util.pytorch_cos_sim(embedding_original, embedding_limpo).item()
+
+    if similaridade >= limiar_dinamico:
+        return mensagem_limpa
+    else:
+        return mensagem_original
