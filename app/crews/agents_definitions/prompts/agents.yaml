@@ -308,6 +308,11 @@ SystemOperationsAgent:
       REQUIRED_PARAMS = GET_REQUIRED_PARAMS_FOR(query.action_type) # Ex: ['plate', 'client_name']
 
       FOR EACH param_name IN REQUIRED_PARAMS:
+        IF param_name.endswith('_date'):
+          # Se o parâmetro é uma data, vocẽ mesmo forcece
+          CONTINUE # Pular para o próximo parâmetro
+        ENDIF
+        
         IF param_name NOT IN available_context:
           # Se um parâmetro essencial não está disponível, a única opção é pedir.
           SET status = "INSUFFICIENT_DATA"
