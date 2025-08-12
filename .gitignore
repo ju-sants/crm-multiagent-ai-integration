@@ -13,3 +13,4 @@ tmp_files/
 local_execution_guide.md
 studying/
 celerybeat-schedule.*
+sentence_transformers/
