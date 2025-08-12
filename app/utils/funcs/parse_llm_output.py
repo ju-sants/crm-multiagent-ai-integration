@@ -1,11 +1,9 @@
 import json
-import json5  # A biblioteca principal para lidar com JSON "human-friendly"
+import json5
 import re
 import ast
 import logging
 
-# Configuração básica de um logger para os exemplos.
-# Em uma aplicação real, você usaria a configuração do seu projeto.
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -20,7 +18,6 @@ def _extrair_bloco_json(texto_bruto: str) -> str:
         return match.group(1).strip()
 
     # 2. Se não houver markdown, encontra o primeiro '{' ou '[' e o último '}' ou ']'
-    #    Isso é mais robusto que um regex ganancioso.
     start_brace = texto_bruto.find('{')
     start_bracket = texto_bruto.find('[')
     
