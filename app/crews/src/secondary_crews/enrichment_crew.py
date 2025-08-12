@@ -140,7 +140,7 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
     if contact_id == '71464be80c504971ae263d710b39dd1f':
         date_limit = redis_client.get("date_limit:dev")
         if not date_limit:
-            date_limit = "12/08/2025 11:58:00"
+            date_limit = "11/08/2025 11:58:00"
 
         new_messages = [msg for msg in new_messages if datetime.strptime(msg.get("createdAt"), "%Y-%m-%dT%H:%M:%SZ") > datetime.strptime(date_limit, "%d/%m/%Y %H:%M:%S")]
 
