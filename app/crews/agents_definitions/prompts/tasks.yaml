@@ -530,6 +530,8 @@ enhance_profile_task:
           "client_identity": {
             "contact_id": "<string>",
             "contact_name": "<string>",
+            "client_name": "<string>",
+            "client_type": "<string: 'individual' or 'business'>",
             "phone_number": "<string>",
             "communication_style": "Ex: Prefere texto, direto ao ponto, usa mensagens curtas."
           },
