@@ -15,6 +15,7 @@ from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.utils.funcs.funcs import distill_conversation_state
+from app.utils.funcs.parse_llm_output import limpar_com_rede_de_seguranca
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
@@ -115,6 +116,11 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
             pipe.rpush(f"contacts_messages:waiting:{contact_id}", *messages_left)
 
         pipe.execute()
+        messages_sequence = response_json.get('messages_sequence', [])
+        if messages_sequence:
+            # Aplicando nova limpeza que retira tiques verbais e avalia a taxa de similaridade semântica
+            messages_sequence[0] = limpar_com_rede_de_seguranca(messages_sequence[0])
+            response_json['messages_sequence'] = messages_sequence
 
         # 2. Trigger enrichment pipeline (now self-sufficient) and send_message if needed
         trigger_post_processing.apply_async(args=[contact_id, send_message, response_json, phone_number])
