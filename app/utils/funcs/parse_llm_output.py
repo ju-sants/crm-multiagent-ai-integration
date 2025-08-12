@@ -113,3 +113,34 @@ def parse_json_from_string(
         return task_output, updated_state
     else:
         return json_response
+    
+
+def limpar_tiques_verbais(mensagem: str) -> str:
+    """
+    Remove frases de preenchimento e tiques verbais do início de uma mensagem.
+    Args:
+        mensagem: O texto original gerado pelo LLM.
+
+    Returns:
+        A mensagem limpa, pronta para ser enviada.
+    """
+    padroes_iniciais = [
+        "Ótimo", "Otimo", "Excelente", "Perfeito", "Maravilha", "Maravilhoso",
+        "Que bom", "Que ótimo", "Que otimo", "Que maravilha",
+        "Certo", "Correto", "Entendi", "Compreendi", "Claro", "Beleza"
+    ]
+
+    regex_padroes = "|".join(padroes_iniciais)
+
+    expressao_completa = re.compile(
+        fr"^(?:{regex_padroes})\b.*?[!\.\?]\s*",
+        re.IGNORECASE | re.DOTALL
+    )
+
+    mensagem_limpa = re.sub(expressao_completa, "", mensagem)
+
+    # Garante que a primeira letra da nova frase seja maiúscula
+    if mensagem_limpa:
+        return mensagem_limpa[0].upper() + mensagem_limpa[1:]
+    
+    return ""
