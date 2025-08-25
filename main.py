@@ -1,6 +1,5 @@
 from flask import Flask, jsonify, request
 import json
-import requests
 
 from datetime import datetime, timedelta
 from structlog.stdlib import BoundLogger
@@ -38,8 +37,6 @@ def on_worker_ready(sender, **kwargs):
 def on_worker_shutdown(sender, **kwargs):
     get_logger(__name__).warning(f"Celery: Worker {getattr(sender, 'hostname', 'unknown')} is shutting down.")
 
-CALLBELL_API_KEY = settings.CALLBELL_API_KEY
-CALLBELL_API_BASE_URL = "https://api.callbell.eu/v1"
 IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
 apply_litellm_patch()
@@ -53,67 +50,6 @@ state_manager: StateManagerService = StateManagerService()
 redis_client: redis.Redis = get_redis()
 client_description: ImageDescriptionAPI = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
 logger: BoundLogger = get_logger(__name__)
-
-# redis_client.flushdb()
-# get_redis(db=1).flushdb() # Clear the second database
-
-# exit()
-redis_client.delete("processing:71464be80c504971ae263d710b39dd1f")
-redis_client.set("follow_up_level:71464be80c504971ae263d710b39dd1f", 0)
-# redis_client.delete(f"71464be80c504971ae263d710b39dd1f:system_actions_history")
-# print(redis_client.hgetall("71464be80c504971ae263d710b39dd1f:attachments"))
-# exit()
-redis_client.rpop("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
-# redis_client.delete("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f")
-# redis_client.rpush("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", """região doq""")
-
-print(redis_client.lrange("contacts_messages:waiting:71464be80c504971ae263d710b39dd1f", 0, -1))
-
-# print(json.dumps(state_manager.get_state("71464be80c504971ae263d710b39dd1f").strategic_plan, indent=4))
-# state, _ = state_manager.get_state("71464be80c504971ae263d710b39dd1f")
-# print(json.dumps(state.model_dump(), indent=4))
-# exit()
-# for dc in state.disclosure_checklist:
-#     dc.status = 'pending'
-
-# state_manager.save_state("71464be80c504971ae263d710b39dd1f", state)
-# exit()
-# state.strategic_plan = None
-# state_manager.save_state("71464be80c504971ae263d710b39dd1f", state)
-
-def get_callbell_headers():
-    """Retorna os headers padrão para as requisições Callbell."""
-    return {
-        'Authorization': f'Bearer {settings.CALLBELL_API_KEY}',
-        'Content-Type': 'application/json',
-    }
-
-def send_callbell_message(phone_number, text):
-    """Envia uma mensagem de texto simples via Callbell."""
-    url = f"{CALLBELL_API_BASE_URL}/messages/send"
-    payload = {
-        'to': phone_number,
-        'from': 'whatsapp',
-        'type': 'text',
-        'content': {'text': text},
-    }
-    logger.info(f"Enviando mensagem simples para {phone_number}: {text}")
-    try:
-        response = requests.post(url, headers=get_callbell_headers(), json=payload)
-        response.raise_for_status()
-        logger.info(f"Mensagem simples enviada com sucesso para {phone_number}.")
-        return True
-    
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Erro ao enviar mensagem simples para {phone_number}: {e}")
-        logger.error(f"Payload enviado: {json.dumps(payload)}")
-        logger.error(f"Resposta recebida (se houver): {e.response.status_code if e.response else 'N/A'} - {e.response.text if e.response else 'N/A'}")
-        return False
-    
-    except Exception as e:
-        logger.error(f"Erro inesperado ao processar envio de mensagem simples para {phone_number}: {e}")
-        return False
-
 
 @celery_app.task(name='io.process_audio_attachment')
 def process_audio_attachment_task(contact_uuid, url):
@@ -244,9 +180,6 @@ def process_message_task(self, contact_uuid):
     except Exception as e:
         logger.error(f"[{contact_uuid}] - CRITICAL ERROR at the start of the state machine: {e}", exc_info=True)
     
-
-
-                        
 def process_incoming_message(payload):
     """
     Handles the initial processing of an incoming message webhook.
