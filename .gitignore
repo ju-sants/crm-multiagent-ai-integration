@@ -9,5 +9,5 @@ __pycache__/
 tests/
 app.log
 tmp_files/
-studying/
+info/
 sentence_transformers/
