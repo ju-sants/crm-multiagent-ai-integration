@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from app.core.logger import get_logger
 from app.services.celery_service import celery_app
 from app.services.redis_service import get_redis
+from app.services.callbell_service import get_contact_details
 from app.crews.src.secondary_crews.follow_up import follow_up_task
 
 logger = get_logger(__name__)
@@ -31,6 +32,21 @@ def inactivity_worker_task():
         contact_ids = redis_client.smembers("contacts")
 
         for contact_id in contact_ids:
+            contact_details = get_contact_details()
+            if not contact_details:
+                logger.info(f"Não foi possível resgatar detalhes do contato para contact_uuid={contact_id}")
+                continue
+
+            if not isinstance(contact_details, dict):
+                logger.info(f"Detalhes de contato não estão no formato esperado para para contact_uuid={contact_id}")
+                continue
+
+            team = contact_details.get('team', {}).get("uuid", "")
+
+            if not team == "d468731afdba45c3a3a65895e4b08a5a":
+                logger.info(f"O contato contact_uuid={contact_id}, não faz mais parte do time IA- Atendimento no Callbell.")
+                continue
+
             follow_up_level_key = f"follow_up_level:{contact_id}"
             follow_up_level = int(redis_client.get(follow_up_level_key) or 0)
 
