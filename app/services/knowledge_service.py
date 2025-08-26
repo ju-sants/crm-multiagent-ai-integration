@@ -26,6 +26,7 @@ class KnowledgeService:
             self._load_rules()
             self._topic_map = {
                 'application_features': ('application_features',),
+                'get_web_access_features': ('web_access_features',),
                 'company_info': ('business_rules', 'company_info'),
                 'maintenance_policy': ('operational_procedures', 'maintenance'),
                 'scheduling_rules': ('operational_procedures', 'scheduling'),
