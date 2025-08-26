@@ -48,6 +48,7 @@ def knowledge_service_tool(queries: List[Dict[str, Any]]) -> str:
 
         # OUTRAS INFORMAÇÕES
         - **'application_features'**: Para detalhes e funcionalidades do aplicativo.
+        - **'get_web_access_features'**: Para detalhes e funcionalidades do acesso via web.
 
         # INFORMAÇÕES IMPORTANTES
          - **Compatibilidade de planos**:
