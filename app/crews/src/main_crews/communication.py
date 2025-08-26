@@ -116,10 +116,18 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
             pipe.rpush(f"contacts_messages:waiting:{contact_id}", *messages_left)
 
         pipe.execute()
+        
         messages_sequence = response_json.get('messages_sequence', [])
         if messages_sequence:
             # Aplicando nova limpeza que retira tiques verbais e avalia a taxa de similaridade semântica
-            messages_sequence[0] = limpar_com_rede_de_seguranca(messages_sequence[0])
+            message_to_clean = messages_sequence[0]
+            message_cleaned = limpar_com_rede_de_seguranca(message_to_clean)
+            if message_cleaned == message_to_clean:
+                message_to_clean = "\n".join(messages_sequence[:2])
+                messages_sequence[0] = limpar_com_rede_de_seguranca(message_to_clean)
+            else:
+                messages_sequence[0] = message_cleaned
+                
             response_json['messages_sequence'] = messages_sequence
 
         # 2. Trigger enrichment pipeline (now self-sufficient) and send_message if needed
