@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     REDIS_DB_MAIN: int = 0
 
     # SITES PASSWORDS
+    ESEYE_BASE_URL: str = "..."
+
     SMS_BARATO_PASSWORD: str = '...'
     SMS_BARATO_USER: str = '...'
     
@@ -41,11 +43,14 @@ class Settings(BaseSettings):
     VS_LOGIN: str = "..."
     VS_SENHA: str = "..."
 
+    VIVO_HOST: str = "..."
     VIVO_KEY_PASSWORD: str = "..."
 
+    VEYE_BASE_URL: str = "..."
     VEYE_LOGIN: str = "..."
     VEYE_PASSWORD: str = "..."
 
+    LINK_BASE_URL: str = "..."
     LINK_LOGIN: str = "..."
     LINK_PASSWORD: str = "..."
     
