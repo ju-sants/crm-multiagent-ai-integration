@@ -45,5 +45,8 @@ class Settings(BaseSettings):
 
     VEYE_LOGIN: str = "..."
     VEYE_PASSWORD: str = "..."
+
+    LINK_LOGIN: str = "..."
+    LINK_PASSWORD: str = "..."
     
 settings = Settings()
