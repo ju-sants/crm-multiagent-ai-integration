@@ -1,0 +1,37 @@
+overview: "Acesso via web que armazena informações detalhadas dos veículos por até um ano, oferecendo ferramentas avançadas para monitoramento e gestão de frotas."
+interface_principal:
+  - "Visão geral e rápida da frota."
+  - "Relatório de Quilometragem: Gera relatório com a quilometragem total rodada por todas as placas da frota em um período, incluindo placa, marca, modelo e total de km."
+  - "Relatório de Eventos: Permite criar relatórios personalizados para monitorar eventos específicos como saídas de cercas, ignição, e modo de hibernação."
+  - "Monitoramento de Falhas: Destaca placas que estão há mais de 4 dias sem atualizar a posição ou paradas, indicando possíveis falhas de sinal."
+acesso_individual_por_placa:
+  - "Ferramentas de monitoramento detalhadas com histórico de trajetos de até um ano."
+  - "Visualização em Tempo Real: Acompanhamento da rota do veículo em movimento."
+  - "Histórico de Posições: Visualização das últimas 30 posições no mapa, cercas eletrônicas cadastradas e rotas percorridas em um período de até um ano com filtros de data e hora."
+relatorios_detalhados:
+  relatorio_de_posicoes:
+    - "Fornece informações detalhadas sobre cada posição do veículo: média e maior velocidade, tempo de ignição ligada/desligada, tempo ocioso, total de posições, distância percorrida (hodômetro), endereço, coordenadas, data, hora, status da ignição e bateria."
+    - "Filtros: Permite filtrar por status da ignição, velocidade e horários específicos."
+    - "Exportação: Disponível em PDF e Excel."
+  relatorio_de_percurso:
+    - "Oferece informações detalhadas sobre cada viagem: posição e endereço de início/fim, duração, distância total e maior velocidade."
+    - "Resumo Geral: Soma a duração total, km rodado e picos de velocidade de todas as viagens."
+    - "Origem dos Dados: Escolha entre antena GSM ou SATELITAL."
+    - "Definição de Percurso: Inicia com a primeira posição de ignição ligada e termina com a ignição desligada."
+    - "Exportação: Disponível em PDF e Excel."
+  relatorio_de_eventos_e_alertas:
+    - "Lista todos os eventos e alertas: ignição ligada/desligada, entrada/saída de cerca, excesso de velocidade, entrada/saída de locais de interesse, ativação/desativação do bloqueio, remoção da bateria."
+    - "Detalhes do Evento: Informa data, horário e endereço correspondente."
+    - "Exportação: Disponível em PDF e Excel."
+funcoes_de_gestao:
+  cercas_eletronicas:
+    - "Criação de cercas virtuais individuais por placa."
+    - "Configurações: Horários de funcionamento, limite de velocidade dentro da cerca, alertas de entrada/saída."
+  horario_de_funcionamento:
+    - "Configuração do uso de cada veículo."
+    - "Define um limite de velocidade geral para a placa com notificações."
+    - "Estabelece os dias da semana e horários permitidos para circulação, com notificações para uso fora do período."
+related_queries:
+  - topic: "get_application_features"
+    params: {}
+    description: "Consultar as funcionalidades do aplicativo móvel."
