@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 
 
-def send_callbell_message(contact_id, phone_number: str, messages: str = None, type: str = None, audio_url: str = None) -> Dict[str, Any]:
+def send_callbell_message(contact_id, phone_number: str, messages: list = None, type: str = None, audio_url: str = None) -> Dict[str, Any]:
         """Envia uma mensagem via Callbell."""
         
         statuses = []
@@ -193,7 +193,7 @@ def create_conversation_note(uuid: str, note_text: str) -> bool:
         return False
     
 @celery_app.task(name='io.send_message')
-def send_message(phone_number, messages, plan_names, contact_id):
+def send_message(phone_number: str, messages: list, plan_names: list, contact_id: str):
     try:
         from app.utils.static import plans_messages
         
