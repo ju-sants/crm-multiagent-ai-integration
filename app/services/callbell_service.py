@@ -304,3 +304,35 @@ def send_message(phone_number: str, messages: list, plan_names: list, contact_id
     finally:
         redis_client.delete(f"processing:{contact_id}")
         logger.info(f'[{contact_id}] - Lock "processing:{contact_id}" LIBERADO no Redis.')
+
+
+def get_contact_details(contact_uuid):
+    """Busca detalhes do contato, incluindo o assignedUser."""
+    if not contact_uuid:
+        return None
+    url = f"https://api.callbell.eu/v1/contacts/{contact_uuid}"
+
+    headers = {
+        'Authorization': f'Bearer {settings.CALLBELL_API_KEY}',
+        'Content-Type': 'application/json',
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Ajuste para lidar com diferentes formatos de resposta
+        contact_list = data.get("contact") if isinstance(data.get("contact"), list) else [data.get("contact")]
+        if contact_list and contact_list[0]:
+             return contact_list[0]
+        else:
+             logger.warning(f"Detalhes não encontrados ou formato inesperado para o contato UUID: {contact_uuid}")
+             return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao buscar detalhes do contato {contact_uuid}: {e}")
+        logger.error(f"Resposta recebida (se houver): {e.response.text if e.response else 'N/A'}")
+        return None
+    except Exception as e:
+        logger.error(f"Erro inesperado ao processar resposta de get_contact_details para {contact_uuid}: {e}")
+        return None
