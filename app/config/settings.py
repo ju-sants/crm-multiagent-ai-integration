@@ -37,4 +37,8 @@ class Settings(BaseSettings):
     SMS_BARATO_PASSWORD: str = '...'
     SMS_BARATO_USER: str = '...'
     
+    VS_COMPANY: str = "..."
+    VS_LOGIN: str = "..."
+    VS_SENHA: str = "..."
+    
 settings = Settings()
