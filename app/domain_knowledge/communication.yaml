@@ -97,3 +97,6 @@ support:
     - topic: "get_support_philosophy"
       params: {}
       description: "Revisar a filosofia de suporte."
+    - topic: "get_web_access_features"
+      params: {}
+      description: "Conhecer as funcionalidades do acesso via web para melhor auxiliar o cliente."

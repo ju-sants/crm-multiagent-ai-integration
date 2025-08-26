@@ -46,3 +46,6 @@ related_queries:
   - topic: "get_support_philosophy"
     params: {}
     description: "Consultar as diretrizes de suporte ao cliente."
+  - topic: "get_web_access_features"
+    params: {}
+    description: "Consultar as funcionalidades do acesso via web."
