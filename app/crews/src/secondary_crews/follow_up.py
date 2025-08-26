@@ -5,13 +5,16 @@ from app.core.logger import get_logger
 from app.services.celery_service import celery_app
 from app.services.redis_service import get_redis
 from app.crews.src.main_crews.communication import communication_task
+from app.crews.src.main_crews.registration import registration_task
 from app.crews.agents_definitions.obj_declarations.agent_declaration import get_follow_up_agent
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_follow_up_task
 from app.utils.funcs.parse_llm_output import parse_json_from_string
+from app.services.state_manager_service import StateManagerService
 
 logger = get_logger(__name__)
 redis_client = get_redis()
-
+state_manager = StateManagerService()
+# --- Follow-up Task ---
 @celery_app.task(name='main_crews.follow_up')
 def follow_up_task(contact_id: str):
     """
@@ -48,8 +51,14 @@ def follow_up_task(contact_id: str):
     output = parse_json_from_string(result.raw, update=False)
 
     if output and output.get("send_follow_up") is True:
-        logger.info(f"[{contact_id}] - Follow-up approved. Triggering communication crew.")
-        communication_task.apply_async(args=[contact_id], kwargs={'is_follow_up': True})
+        logger.info(f"[{contact_id}] - Follow-up approved. Triggering primer crews.")
+        state, _ = state_manager.get_state(contact_id)
+
+        if state.budget_accepted and redis_client.get(f"{contact_id}:getting_data_from_user"):
+            logger.info(f"[{contact_id}] - Budget accepted, proceeding with registration task.")
+            registration_task.apply_async(args=[contact_id])
+        else:
+            communication_task.apply_async(args=[contact_id], kwargs={'is_follow_up': True})
     else:
         logger.info(f"[{contact_id}] - Follow-up not recommended at this time.")
 
