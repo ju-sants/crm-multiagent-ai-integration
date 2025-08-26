@@ -263,7 +263,7 @@ def send_message(phone_number, messages, plan_names, contact_id):
 
         if plan_names:
             for plan_name in plan_names:
-                message = plans_messages.get(plan_name, [])
+                message = plans_messages.get(plan_name, "")
                 if message:
                     send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[message])
                 else:
@@ -271,7 +271,7 @@ def send_message(phone_number, messages, plan_names, contact_id):
                     # Tenta encontrar uma mensagem similar usando fuzzy matching
                     similar_plan = process.extractOne(plan_name, plans_messages.keys(), score_cutoff=80)
                     if similar_plan:
-                        similar_message = plans_messages.get(similar_plan[0], [])
+                        similar_message = plans_messages.get(similar_plan[0], "")
                         if similar_message:
                             send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[similar_message])
                         else:
