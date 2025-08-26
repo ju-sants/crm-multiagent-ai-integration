@@ -40,5 +40,7 @@ class Settings(BaseSettings):
     VS_COMPANY: str = "..."
     VS_LOGIN: str = "..."
     VS_SENHA: str = "..."
+
+    VIVO_KEY_PASSWORD: str = "..."
     
 settings = Settings()
