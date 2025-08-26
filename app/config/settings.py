@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     # SITES PASSWORDS
     ESEYE_BASE_URL: str = "..."
 
+    SMS_BARATO_URL: str = "..."
     SMS_BARATO_PASSWORD: str = '...'
     SMS_BARATO_USER: str = '...'
     
