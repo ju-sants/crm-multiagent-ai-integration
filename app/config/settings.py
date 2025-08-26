@@ -42,5 +42,8 @@ class Settings(BaseSettings):
     VS_SENHA: str = "..."
 
     VIVO_KEY_PASSWORD: str = "..."
+
+    VEYE_LOGIN: str = "..."
+    VEYE_PASSWORD: str = "..."
     
 settings = Settings()
