@@ -3,6 +3,7 @@ from time import sleep
 from datetime import datetime
 import requests
 import json
+from thefuzz import process
 
 from app.config.settings import settings
 from app.core.logger import get_logger
@@ -265,6 +266,16 @@ def send_message(phone_number, messages, plan_names, contact_id):
                 message = plans_messages.get(plan_name, [])
                 if message:
                     send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[message])
+                else:
+                    logger.info(f"[{contact_id}] - Mensagem não encontrada para o plano: {plan_name}. Tentando encontrar uma similar.")
+                    # Tenta encontrar uma mensagem similar usando fuzzy matching
+                    similar_plan = process.extractOne(plan_name, plans_messages.keys(), score_cutoff=80)
+                    if similar_plan:
+                        similar_message = plans_messages.get(similar_plan[0], [])
+                        if similar_message:
+                            send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[similar_message])
+                        else:
+                            logger.info(f"[{contact_id}] - Mensagem similar encontrada, mas não possui conteúdo: {similar_plan[0]}.")
 
         else:
             # Se o agente não enviou planos, mas citou algum plano e o mesmo ainda não foi enviado, envia o plano
