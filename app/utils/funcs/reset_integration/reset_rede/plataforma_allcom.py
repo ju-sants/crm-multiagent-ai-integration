@@ -1,6 +1,8 @@
 import requests
 import logging
 
+from app.config.settings import settings
+
 def obter_token_acesso(auth_url=f"{settings.ALLCOM_BASE_URL}/oauth-portal/access-token", session=None, logger=None):
     """
     Executa a criação de um token de acesso (login).

@@ -2,6 +2,8 @@ import requests
 import json
 import logging
 
+from app.config.settings import settings
+
 def parse_services_to_msisdn_keys(json_data, logger):
     """
     Parses the input JSON data, transforming pipe-separated service strings

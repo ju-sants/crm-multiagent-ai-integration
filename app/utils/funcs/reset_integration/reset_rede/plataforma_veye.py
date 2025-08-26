@@ -2,6 +2,7 @@ import requests
 import json
 import logging
 
+from app.config.settings import settings
 
 BASE_URL = settings.VEYE_BASE_URL
 

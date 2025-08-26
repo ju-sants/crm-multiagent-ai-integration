@@ -5,6 +5,8 @@ import logging
 import os
 import dotenv
 
+from app.config.settings import settings
+
 # --- Configuração ---
 BASE_URL = settings.ESEYE_BASE_URL
 

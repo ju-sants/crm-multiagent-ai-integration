@@ -2,6 +2,8 @@ import time
 import requests
 import logging
 
+from app.config.settings import settings
+
 def main(session, recipient, logger):
     """Realiza login na LSM (TNSi) e busca todos os dados dos SIMs/dispositivos."""
     logger.info("[LSM] Iniciando busca de dados.")

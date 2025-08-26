@@ -5,6 +5,8 @@ import dotenv
 import os
 import logging
 
+from app.config.settings import settings
+
 dotenv.load_dotenv()
 
 # --- Constantes ---
