@@ -1,9 +1,7 @@
 import requests
 import json
-import logging
 from urllib.parse import urljoin
 from base64 import b64encode
-import logging
 
 from app.core.logger import get_logger
 from app.config.settings import settings
