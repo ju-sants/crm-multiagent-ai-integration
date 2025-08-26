@@ -54,5 +54,10 @@ class Settings(BaseSettings):
     LINK_BASE_URL: str = "..."
     LINK_LOGIN: str = "..."
     LINK_PASSWORD: str = "..."
-    
+
+    ALLCOM_BASE_URL: str = "..."
+    ALLCOM_TOKEN: str = "..."
+    ALLCOM_USER: str = "..."
+    ALLCOM_PASSWORD: str = "..."
+
 settings = Settings()
