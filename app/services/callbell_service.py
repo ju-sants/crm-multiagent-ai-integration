@@ -285,7 +285,7 @@ def send_message(phone_number: str, messages: list, plan_names: list, contact_id
             messages_all_str = '\n'.join(messages)
             for plan in plans_messages:
                 if plan in messages_all_str and plan not in sended_catalogs:
-                    send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[plan])
+                    send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[plans_messages[plan]])
 
         logger.info(f"[{contact_id}] - Mensagens enviadas com sucesso para {phone_number}.")
         # After send message, update the state current turn number
