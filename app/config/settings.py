@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = '...'
     REDIS_DB_MAIN: int = 0
-    
+
+    # SITES PASSWORDS
+    SMS_BARATO_PASSWORD: str = '...'
+    SMS_BARATO_USER: str = '...'
     
 settings = Settings()
