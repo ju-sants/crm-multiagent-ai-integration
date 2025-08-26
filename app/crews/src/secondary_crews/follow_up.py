@@ -31,13 +31,17 @@ def follow_up_task(contact_id: str):
     customer_profile = redis_client.get(f"{contact_id}:customer_profile")
     shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
 
+    last_timestamp = redis_client.get(f"history:last_timestamp:to_follow_up:{contact_id}")
+
+    redis_client.set(f"processed_follow_up_timestamp:{contact_id}", last_timestamp)
+
     inputs = {
         "contact_id": contact_id,
         "longterm_history": str(longterm_history),
         "shorterm_history": str(shorterm_history),
         "customer_profile": str(customer_profile),
         "now_timestamp": datetime.now(timezone.utc).isoformat(),
-        "last_message_timestamp": redis_client.get(f"history:last_timestamp:to_follow_up:{contact_id}")
+        "last_message_timestamp": last_timestamp
     }
 
     result = crew.kickoff(inputs=inputs)
