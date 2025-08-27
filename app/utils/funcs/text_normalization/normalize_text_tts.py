@@ -598,29 +598,6 @@ def normalize_numbers_for_tts(text: str) -> str:
     text = re.sub(decimal_pattern, replace_decimal, text)
     
     return text
-
-def normalize_symbols_for_tts(text: str) -> str:
-    symbols_to_words = {
-        '+': 'mais',
-        '*': 'vezes',
-        '/': 'dividido por',
-        '=': 'igual a',
-        '(': 'abre parênteses',
-        ')': 'fecha parênteses',
-    }
-    
-    # Para cada símbolo (exceto hífen)
-    for symbol, word in symbols_to_words.items():
-        text = text.replace(symbol, f' {word} ')
-    
-    # Substitui hífen por "menos" apenas quando entre dígitos (contexto matemático)
-    text = re.sub(r'(?<=\d)\s*-\s*(?=\d)', ' menos ', text)
-    
-    # Preserva o hífen em outros contextos, como "Luís Eduardo Magalhães - BA"
-    text = re.sub(r'(?<=\s)-(?=\s)', ' ', text)
-    
-    return text
-
 def normalize_words_for_tts(text: str) -> str:
     text = re.sub(r'wi[\s\-_.]*fi', 'wifi', text, flags=re.IGNORECASE)
     text = re.sub(r'\bapp\b', 'aplicativo', text, flags=re.IGNORECASE)
@@ -629,9 +606,6 @@ def normalize_words_for_tts(text: str) -> str:
         text = text.replace(key, value)
 
     return text
-
-def normalize_bar_for_tts(text: str) -> str:
-    return re.sub(r'\b\w+\/\w+\b', lambda m: m.group().replace('/', ' e '), text)
 
 def apply_normalizations(text: str) -> str:
     """
@@ -647,7 +621,5 @@ def apply_normalizations(text: str) -> str:
     
     # 2. Símbolos e palavras
     text = normalize_words_for_tts(text)
-    text = normalize_symbols_for_tts(text)
-    text = normalize_bar_for_tts(text)
 
     return text
