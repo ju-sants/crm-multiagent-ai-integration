@@ -32,7 +32,7 @@ def inactivity_worker_task():
         contact_ids = redis_client.smembers("contacts")
 
         for contact_id in contact_ids:
-            contact_details = get_contact_details()
+            contact_details = get_contact_details(contact_id)
             if not contact_details:
                 logger.info(f"Não foi possível resgatar detalhes do contato para contact_uuid={contact_id}")
                 continue
