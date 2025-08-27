@@ -287,6 +287,11 @@ def send_message(phone_number: str, messages: list, plan_names: list, contact_id
                 if plan in messages_all_str and plan not in sended_catalogs:
                     send_callbell_message(contact_id=contact_id, phone_number=phone_number, messages=[plans_messages[plan]])
 
+                    if plan in ("Plano Rastreamento Moto Básico", "Plano Rastreamento + Proteção Total PGS"):
+                        redis_client.rpush(f"{contact_id}:sended_catalogs", "Plano Rastreamento Moto Básico", "Plano Rastreamento + Proteção Total PGS")
+                    else:
+                        redis_client.rpush(f"{contact_id}:sended_catalogs", plan)
+
         logger.info(f"[{contact_id}] - Mensagens enviadas com sucesso para {phone_number}.")
         # After send message, update the state current turn number
         with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
@@ -299,6 +304,12 @@ def send_message(phone_number: str, messages: list, plan_names: list, contact_id
 
     else:
         if plan_names:
+            if any('Plano Rastreamento + Proteção Total PGS' in plan_names or 'Plano Rastreamento Moto Básico' in plan_names):
+                plan_names.append("Plano Rastreamento Moto Básico")
+                plan_names.append("Plano Rastreamento + Proteção Total PGS")
+
+                plan_names = list(set(plan_names))
+                
             redis_client.rpush(f"{contact_id}:sended_catalogs", *plan_names)
 
     finally:
