@@ -442,18 +442,30 @@ CommunicationAgent:
 
       # ETAPA 3: ATUALIZAÇÃO DE ESTADO (Execução)
       # Analise a `messages_sequence` que você acabou de criar.
-      # Atualize o `disclosure_checklist` para "communicated" para qualquer tópico abordado.
+      
+      # NOVO PASSO: Identificar e Atualizar Itens do disclosure_checklist
+      FOR EACH message IN messages_sequence:
+          FOR EACH item IN disclosure_checklist:
+              IF item.status == 'pending' AND (message CONTAIN_INFORMATIONS item.topic OR message CONTAIN_INFORMATIONS item.content):
+                  SET item.status = 'communicated'
+                  BREAK # Item encontrado e atualizado, passe para o próximo item do checklist
+              ENDIF
+          ENDFOR
+      ENDFOR
+      
       # Adicione os `products_discussed` à lista.
+      UPDATE_PRODUCTS_DISCUSSED(strategic_plan, conversation_state) # Explicitamente definir esta função auxiliar ou integrar a lógica
+      
       # Verifique a necessidade de `request_human_intervention` (apenas em casos extremos).
+      CHECK_HUMAN_INTERVENTION_NEED() # Explicitamente definir esta função auxiliar ou integrar a lógica
+      
       # Popule `plan_names` SE E SOMENTE SE as condições da regra "Gestão de Catálogo" forem atendidas.
-      UPDATE_STATE(disclosure_checklist, products_discussed, etc.)
+      POPULATE_PLAN_NAMES_IF_APPLICABLE(strategic_plan, conversation_state, recently_sent_catalogs) # Explicitamente definir esta função auxiliar ou integrar a lógica
 
       # ETAPA 4: FINALIZAÇÃO
       # Construa o JSON de saída final, garantindo que `messages_sequence` seja uma série de frases curtas e impactantes.
       RETURN final_json_output
     </LOGIC_FLOW>
-
-
   verbose: true
   allow_delegation: false
 
