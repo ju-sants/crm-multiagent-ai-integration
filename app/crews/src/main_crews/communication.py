@@ -126,7 +126,7 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
                 message_to_clean = "\n".join(messages_sequence[:2])
                 message_cleaned = limpar_com_rede_de_seguranca(message_to_clean)
                 if message_cleaned != message_to_clean:
-                    messages_sequence[0] = message_cleaned
+                    messages_sequence[:2] = [message_cleaned]
                 
             else:
                 messages_sequence[0] = message_cleaned
