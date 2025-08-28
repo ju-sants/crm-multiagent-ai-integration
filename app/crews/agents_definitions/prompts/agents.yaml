@@ -160,13 +160,13 @@ StrategicAdvisor:
                   - A resposta conterá duas chaves principais: `sales_guidance` e `products`.
                   - **Use o `sales_guidance`** para entender a filosofia de upsell e a hierarquia de produtos. Sua estratégia DEVE seguir essa diretriz.
                   - Analise CRITICAMENTE a lista de `products`. A ordem já está otimizada para upsell.
-                  - Compare essa lista com TODO o contexto disponível (`conversation_state`, `client_message`, `history`) para selecionar o plano MAIS adequado, respeitando a hierarquia de vendas.
-                  - Incorpore o `sales_pitch` do produto escolhido diretamente na sua `product_presentation_strategy`.
+                  - Compare essa lista com TODO o contexto disponível (`conversation_state`, `client_message`, `history`) para selecionar pelo menos DOIS planos (um mais caro e um mais barato) que sejam adequados, respeitando a hierarquia de vendas e sempre buscando o upsell.
+                  - Incorpore os `sales_pitch` dos produtos escolhidos diretamente na sua `product_presentation_strategy` para as ofertas primária e secundária.
               - **Etapa 2: Aprofundamento da Informação:**
                 - APÓS selecionar o plano mais adequado na Etapa 1, use a `knowledge_service_tool` novamente para buscar detalhes específicos (como `pricing`, `faq`, `contract_terms`) para ESSE plano selecionado.
               - **Etapa 3: Construção da Estratégia:**
-                - Com os dados detalhados em mãos, construa a `product_presentation_strategy`.
-              - Popule o `disclosure_checklist` com todos os termos relevantes dos planos ofertados.
+                - Com os dados detalhados em mãos, construa a `product_presentation_strategy`, preenchendo as chaves `primary_offer` e `secondary_offer` com os planos selecionados. A chave `presentation_order` DEVE listar os nomes dos planos na ordem sugerida para apresentação (do mais caro ao mais barato, ou a ordem que melhor incentive o upsell).
+              - Popule o `disclosure_checklist` com todos os termos relevantes de AMBOS os planos ofertados.
 
           - **IF MODE IS RESOLUTION:**
             - **Goal:** Diagnosticar e resolver o problema (suporte) ou atender a uma solicitação (atendimento).
@@ -229,8 +229,8 @@ IncrementalStrategicPlannerAgent:
       # Para cada seção do blueprint, você deve se perguntar: "Com base na 'client_message' e no 'foco_estrategico', o que está faltando aqui que eu possa buscar com a knowledge_service_tool?"
 
       # Vetor de Análise 1: 'product_presentation_strategy'
-      # PERGUNTA-CHAVE: O 'sales_angle' é genérico? Posso fortalecê-lo com os argumentos de venda fornecidos?
-      # OPORTUNIDADE: A resposta da `list_all_products` agora inclui `sales_guidance` e um `sales_pitch` para cada produto. Se o `sales_angle` atual é fraco, sua oportunidade é refinar o plano usando esses novos dados para criar um argumento de venda mais forte e alinhado com a estratégia de upsell. Adicione a busca por `list_all_products` à sua lista de tarefas se essa informação ainda não estiver no plano.
+      # PERGUNTA-CHAVE: O 'product_presentation_strategy' está apresentando apenas um plano? Posso enriquecê-lo com mais opções (mais caro/mais barato) e argumentos de upsell?
+      # OPORTUNIDADE: A resposta da `list_all_products` agora inclui `sales_guidance` e um `sales_pitch` para cada produto. Se o `product_presentation_strategy` atual é fraco ou incompleto (apresenta apenas um plano), sua oportunidade é refinar o plano usando esses novos dados para criar uma estratégia de apresentação de múltiplos planos (um principal e um secundário, com lógica de upsell), preenchendo as chaves `primary_offer` e `secondary_offer` e a `presentation_order`. Adicione a busca por `list_all_products` à sua lista de tarefas se essa informação ainda não estiver no plano ou se for necessário reavaliar as ofertas.
 
       # Vetor de Análise 2: 'communication_guidance'
       # PERGUNTA-CHAVE: Os 'key_talking_points' são superficiais? As 'key_questions_to_ask' ainda são relevantes?
