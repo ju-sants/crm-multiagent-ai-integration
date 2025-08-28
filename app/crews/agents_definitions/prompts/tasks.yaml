@@ -68,15 +68,17 @@ develop_strategy_task:
             "insights_from_current_session": "<Análise da sessão atual e da última mensagem do cliente>"
           },
           "product_presentation_strategy": {
-            "presentation_order": ["<Array ordenado de nomes de planos a apresentar>"],
-            "primary_offer": {
-              "plan_name": "<Nome do plano principal>",
-              "sales_angle": "<Estratégia de venda e argumentos para a oferta principal>"
-            },
-            "secondary_offer": {
-              "plan_name": "<Nome do plano secundário>",
-              "sales_angle": "<Estratégia de venda para a oferta secundária>"
-            }
+            "presentation_order": ["<Array ordenado de nomes de planos a apresentar, ex: ['Plano Mais Caro', 'Plano Mais Barato']>"],
+            "offers": [
+              {
+                "plan_name": "<Nome do plano>",
+                "sales_angle": "<Estratégia de venda e argumentos para esta oferta>"
+              },
+              {
+                "plan_name": "<Nome do plano>",
+                "sales_angle": "<Estratégia de venda e argumentos para esta oferta>"
+              }
+            ]
           },
           "communication_guidance": {
             "tone_and_style": "<Tom e estilo recomendados para a comunicação>",
@@ -154,15 +156,17 @@ refine_strategy_task:
             "insights_from_current_session": "<Análise da sessão atual e da última mensagem do cliente>"
           },
           "product_presentation_strategy": {
-            "presentation_order": ["<Array ordenado de nomes de planos a apresentar>"],
-            "primary_offer": {
-              "plan_name": "<Nome do plano principal>",
-              "sales_angle": "<Estratégia de venda e argumentos para a oferta principal>"
-            },
-            "secondary_offer": {
-              "plan_name": "<Nome do plano secundário>",
-              "sales_angle": "<Estratégia de venda para a oferta secundária>"
-            }
+            "presentation_order": ["<Array ordenado de nomes de planos a apresentar, ex: ['Plano Mais Caro', 'Plano Mais Barato']>"],
+            "offers": [
+              {
+                "plan_name": "<Nome do plano>",
+                "sales_angle": "<Estratégia de venda e argumentos para esta oferta>"
+              },
+              {
+                "plan_name": "<Nome do plano>",
+                "sales_angle": "<Estratégia de venda e argumentos para esta oferta>"
+              }
+            ]
           },
           "communication_guidance": {
             "tone_and_style": "<Tom e estilo recomendados para a comunicação>",
