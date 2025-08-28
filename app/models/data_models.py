@@ -7,6 +7,7 @@ class StateMetadata(BaseModel):
     current_turn_number: int = 0
     phone_number: Optional[str] = None
     contact_name: Optional[str] = None
+    extracted_name: Optional[str] = None
 class EntityItem(BaseModel):
     entity: str
     value: Any
