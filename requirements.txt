@@ -59,7 +59,7 @@ charset-normalizer==3.4.3
     # via
     #   pdfminer-six
     #   requests
-chromadb==1.0.16
+chromadb==1.0.20
     # via crewai
 click==8.2.1
     # via
@@ -98,7 +98,7 @@ docstring-parser==0.17.0
     # via instructor
 durationpy==0.10
     # via kubernetes
-elevenlabs==2.9.2
+elevenlabs==2.12.1
     # via -r requirements.in
 et-xmlfile==2.0.0
     # via openpyxl
@@ -106,14 +106,14 @@ executing==2.2.0
     # via stack-data
 fastapi==0.116.1
     # via -r requirements.in
-filelock==3.18.0
+filelock==3.19.1
     # via
     #   huggingface-hub
     #   torch
     #   transformers
 filetype==1.2.0
     # via langchain-google-genai
-flask==3.1.1
+flask==3.1.2
     # via -r requirements.in
 flatbuffers==25.2.10
     # via onnxruntime
@@ -156,7 +156,7 @@ h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
-hf-xet==1.1.7
+hf-xet==1.1.9
     # via huggingface-hub
 httpcore==1.0.9
     # via httpx
@@ -188,7 +188,7 @@ importlib-metadata==8.7.0
     #   opentelemetry-api
 importlib-resources==6.5.2
     # via chromadb
-instructor==1.10.0
+instructor==1.11.2
     # via crewai
 ipython==9.4.0
     # via pyvis
@@ -209,11 +209,11 @@ jiter==0.10.0
     # via
     #   instructor
     #   openai
-joblib==1.5.1
+joblib==1.5.2
     # via scikit-learn
-json-repair==0.49.0
+json-repair==0.50.0
     # via crewai
-json5==0.12.0
+json5==0.12.1
     # via -r requirements.in
 jsonpatch==1.33
     # via langchain-core
@@ -223,7 +223,7 @@ jsonpointer==3.0.0
     # via jsonpatch
 jsonref==1.1.0
     # via crewai
-jsonschema==4.25.0
+jsonschema==4.25.1
     # via
     #   chromadb
     #   litellm
@@ -233,24 +233,24 @@ kombu==5.5.4
     # via celery
 kubernetes==33.1.0
     # via chromadb
-langchain-core==0.3.74
+langchain-core==0.3.75
     # via
     #   langchain-google-genai
     #   langchain-openai
     #   langchain-xai
-langchain-google-genai==2.1.9
+langchain-google-genai==2.1.10
     # via -r requirements.in
-langchain-openai==0.3.30
+langchain-openai==0.3.32
     # via
     #   -r requirements.in
     #   langchain-xai
 langchain-xai==0.2.5
     # via -r requirements.in
-langsmith==0.4.13
+langsmith==0.4.20
     # via langchain-core
 levenshtein==0.27.1
     # via python-levenshtein
-litellm==1.75.5.post1
+litellm==1.76.0
     # via crewai
 markdown-it-py==4.0.0
     # via rich
@@ -325,7 +325,7 @@ oauthlib==3.3.1
     #   requests-oauthlib
 onnxruntime==1.22.1
     # via chromadb
-openai==1.99.9
+openai==1.102.0
     # via
     #   crewai
     #   instructor
@@ -362,7 +362,7 @@ opentelemetry-sdk==1.36.0
     #   opentelemetry-exporter-otlp-proto-http
 opentelemetry-semantic-conventions==0.57b0
     # via opentelemetry-sdk
-orjson==3.11.2
+orjson==3.11.3
     # via
     #   chromadb
     #   langsmith
@@ -378,7 +378,7 @@ packaging==25.0
     #   langsmith
     #   onnxruntime
     #   transformers
-parso==0.8.4
+parso==0.8.5
     # via jedi
 pdfminer-six==20250506
     # via pdfplumber
@@ -392,7 +392,7 @@ pillow==11.3.0
     #   sentence-transformers
 posthog==5.4.0
     # via chromadb
-prompt-toolkit==3.0.51
+prompt-toolkit==3.0.52
     # via
     #   click-repl
     #   ipython
@@ -404,7 +404,7 @@ proto-plus==1.26.1
     # via
     #   google-ai-generativelanguage
     #   google-api-core
-protobuf==6.31.1
+protobuf==6.32.0
     # via
     #   google-ai-generativelanguage
     #   google-api-core
@@ -487,7 +487,7 @@ pyyaml==6.0.2
     #   langchain-core
     #   transformers
     #   uvicorn
-rapidfuzz==3.13.0
+rapidfuzz==3.14.0
     # via
     #   levenshtein
     #   thefuzz
@@ -502,7 +502,7 @@ regex==2025.7.34
     #   crewai
     #   tiktoken
     #   transformers
-requests==2.32.4
+requests==2.32.5
     # via
     #   auth0-python
     #   elevenlabs
@@ -528,7 +528,7 @@ rich==14.1.0
     #   chromadb
     #   instructor
     #   typer
-rpds-py==0.27.0
+rpds-py==0.27.1
     # via
     #   jsonschema
     #   referencing
@@ -545,9 +545,7 @@ scipy==1.16.1
 sentence-transformers==5.1.0
     # via -r requirements.in
 setuptools==80.9.0
-    # via
-    #   supervisor
-    #   triton
+    # via triton
 shellingham==1.5.4
     # via typer
 six==1.17.0
@@ -561,11 +559,11 @@ sniffio==1.3.1
     #   openai
 stack-data==0.6.3
     # via ipython
-starlette==0.47.2
+starlette==0.47.3
     # via fastapi
 structlog==25.4.0
     # via -r requirements.in
-supervisor==4.2.5
+supervisor==4.3.0
     # via -r requirements.in
 sympy==1.14.0
     # via
@@ -606,15 +604,15 @@ traitlets==5.14.3
     # via
     #   ipython
     #   matplotlib-inline
-transformers==4.55.0
+transformers==4.55.4
     # via sentence-transformers
 triton==3.4.0
     # via torch
-typer==0.16.0
+typer==0.16.1
     # via
     #   chromadb
     #   instructor
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
     #   aiosignal
     #   anyio
@@ -651,7 +649,7 @@ urllib3==2.5.0
     #   auth0-python
     #   kubernetes
     #   requests
-uv==0.8.9
+uv==0.8.13
     # via crewai
 uvicorn==0.35.0
     # via chromadb
@@ -678,5 +676,5 @@ yarl==1.20.1
     # via aiohttp
 zipp==3.23.0
     # via importlib-metadata
-zstandard==0.23.0
+zstandard==0.24.0
     # via langsmith
