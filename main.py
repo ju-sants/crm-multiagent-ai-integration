@@ -22,7 +22,7 @@ from app.services.state_manager_service import StateManagerService
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
-from app.services.nlp_service import carregar_modelo_semantico
+from app.services.nlp_service import carregar_modelo_semantico, extrair_nome_contato
 
 from app.crews.src.main_crews.routing_agent import pre_routing_orchestrator
 from app.crews.src.main_crews.communication import communication_task
@@ -142,6 +142,7 @@ def process_message_task(self, contact_uuid):
             state, is_new = state_manager.get_state(contact_uuid)
             state.metadata.phone_number = phone_number
             state.metadata.contact_name = contact_name
+            state.metadata.extracted_name = extrair_nome_contato(str(contact_name))
             state_manager.save_state(contact_uuid, state)
 
         # Verify if theres another instance processing the strategy, waiting before routing agent can judge the strategy properly
