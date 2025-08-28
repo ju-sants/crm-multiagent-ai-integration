@@ -1,27 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
-# --- Models for Hierarchical History ---
-
-class TopicDetail(BaseModel):
-    topic_id: str
-    title: str
-    summary: str
-    quality_score: float = Field(default=1.0, ge=0.0, le=1.0)
-    reason: Optional[str] = None
-    start_index: int
-    end_index: int
-    full_details: Optional[str] = None
-    key_entities: List[str] = []
-    sentiment_trend: List[str] = []
-
-class HierarchicalHistory(BaseModel):
-    summary_version: str = "1.0"
-    last_updated: str
-    topics: List[TopicDetail] = []
-
 # --- Models for Conversation State ---
-
 class StateMetadata(BaseModel):
     contact_id: str
     current_turn_number: int = 0
@@ -81,19 +61,3 @@ class ConversationState(BaseModel):
     last_turn_recap: Optional[TurnRecap] = None
     unresolved_objections: List[ObjectionItem] = []
     conversation_goals: List[ConversationGoal] = []
-
-# --- Models for Customer Profile ---
-
-class CustomerIdentity(BaseModel):
-    name: Optional[str] = None
-    roles: List[str] = []
-
-class StrategicInsights(BaseModel):
-    communication_preferences: Dict[str, str] = {}
-    key_motivations: List[str] = []
-    potential_frustrations: List[str] = []
-    sales_recommendations: List[str] = []
-
-class CustomerAssets(BaseModel):
-    vehicles: List[str] = []
-    active_plans: List[str] = []
