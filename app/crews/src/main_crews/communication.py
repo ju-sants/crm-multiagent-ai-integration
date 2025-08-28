@@ -133,6 +133,14 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
                 
             response_json['messages_sequence'] = messages_sequence
 
+            if state.metadata.extracted_name:
+                for message in messages_sequence:
+                    for name_word in state.metadata.extracted_name:
+                        if name_word in message:
+                            message.replace(f", {name_word}")     
+                            message.replace(f" {name_word}")     
+                            message.replace(f"{name_word}")     
+
         # 2. Trigger enrichment pipeline (now self-sufficient) and send_message if needed
         trigger_post_processing.apply_async(args=[contact_id, send_message, response_json, phone_number])
         
