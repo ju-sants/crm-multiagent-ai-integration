@@ -2,6 +2,7 @@ import json
 from crewai import Crew, Process
 from datetime import datetime, timezone
 import time
+import re
 
 from app.services.celery_service import celery_app
 from app.crews.src.secondary_crews.enrichment_crew import trigger_post_processing
@@ -136,10 +137,11 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
             if state.metadata.extracted_name:
                 for message in messages_sequence:
                     for name_word in state.metadata.extracted_name:
-                        if name_word in message:
-                            message.replace(f", {name_word}")     
-                            message.replace(f" {name_word}")     
-                            message.replace(f"{name_word}")     
+                        if name_word.lower() in message.lower():
+                            escaped_name_word = re.escape(name_word)
+                            pattern = rf'^(?:,\s*{escaped_name_word}|\s+{escaped_name_word}|{escaped_name_word})\s*$'
+
+                            re.sub(pattern, "", message, flags=re.IGNORECASE)
 
         # 2. Trigger enrichment pipeline (now self-sufficient) and send_message if needed
         trigger_post_processing.apply_async(args=[contact_id, send_message, response_json, phone_number])
