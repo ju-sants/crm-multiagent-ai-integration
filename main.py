@@ -31,14 +31,8 @@ from app.crews.src.main_crews.communication import communication_task
 
 from app.utils.static import default_strategic_plan
 
-@signals.worker_ready.connect
-def on_worker_ready(sender, **kwargs):
-    get_logger(__name__).info(f"Celery worker ready: {sender.hostname}")
 
-@signals.worker_shutdown.connect
-def on_worker_shutdown(sender, **kwargs):
-    get_logger(__name__).warning(f"Celery: Worker {getattr(sender, 'hostname', 'unknown')} is shutting down.")
-
+# Constantes
 IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
 # Objetos
@@ -253,6 +247,7 @@ def process_incoming_message(payload):
     logger.info(f"[{contact_uuid}] - Scheduled new processing task {new_task.id} to run in 4 seconds. Pending task key set.")
 
 
+# Routes
 @app.route('/receive_message', methods=['POST'])
 def receive_message():
     webhook_payload = request.get_json()
