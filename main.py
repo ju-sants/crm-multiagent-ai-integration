@@ -265,6 +265,7 @@ def receive_message():
             logger.warning("Webhook: Mensagem recebida sem 'contact.uuid'. Ignorando.")
             return jsonify({"status": "ok", "message": "No contact UUID"}), 200
         
+        logger.info(f"Contact uuid: {contact_info.get('uuid')}")
         # Alessandro's team UUID
         if contact_info.get("team", {}).get("uuid") == "d468731afdba45c3a3a65895e4b08a5a":
             # Salvando o timestamp da última mensagem recebida
