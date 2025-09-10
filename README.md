@@ -14,6 +14,7 @@ A solução foi projetada com foco em robustez e extensibilidade, incorporando f
 - **Tolerância a Erros de Digitação (Fuzzy Matching):** Emprega a biblioteca `thefuzz` para interpretar queries de forma flexível, aumentando a robustez do sistema contra erros de digitação do usuário.
 - **Processamento de Mídia:** Transcreve áudios, descreve imagens e envia respostas em áudio (via ElevenLabs) para criar uma experiência de usuário mais rica e acessível.
 - **Limpeza de Saída do LLM:** Aplica técnicas de NLP com Sentence Transformers para remover "tiques verbais" e artefatos indesejados das respostas geradas pela IA, garantindo uma comunicação mais natural. Veja a implementação em [`/app/utils/funcs/parse_llm_output.py`](/app/utils/funcs/parse_llm_output.py).
+- **Anonimização de Nome de Usuário:** Resolve o problema de repetição excessiva do nome do cliente pela IA. Um modelo BERT para NER extrai o nome real do usuário do nome do contato (que pode conter códigos adicionais), salva-o no estado da conversa (em [`app/models/data_models.py`](app/models/data_models.py:10)), e, após a geração da mensagem, remove-o estrategicamente das respostas do agente (implementado em [`app/crews/src/main_crews/communication.py`](app/crews/src/main_crews/communication.py:137)). A extração do nome é feita por [`app/services/nlp_service.py`](app/services/nlp_service.py:26).
 - **Interação Segura com o Sistema:** Agentes especializados podem interagir com sistemas externos através de ferramentas seguras e bem definidas, como as encontradas em [`/app/tools/system_operations_tools.py`](/app/tools/system_operations_tools.py).
 - **Agente de Reengajamento:** Um worker de inatividade ([`/app/workers/inactivity_worker.py`](/app/workers/inactivity_worker.py)) monitora conversas silenciosas e decide de forma inteligente se deve ou não enviar uma mensagem de acompanhamento para reengajar o cliente.
 - **Gerenciamento de Estado com Pydantic e Redis:** O estado da conversa é gerenciado de forma robusta e persistente com modelos Pydantic e armazenado no Redis, permitindo que os agentes tenham memória de longo prazo das interações.
@@ -39,7 +40,11 @@ O comportamento dos agentes é definido por prompts programáticos de alto níve
 
 ### Patches e Customizações
 
-O projeto inclui patches para bibliotecas de terceiros como `litellm` e `crewai.telemetry` para adaptar seu comportamento às necessidades específicas da aplicação. Veja em [`/app/patches`](/app/patches).
+O projeto faz uso inteligente de _monkey patching_ para resolver problemas intrínsecos e limitações de bibliotecas de terceiros, garantindo um comportamento mais robusto e adaptado às necessidades da aplicação. Os patches podem ser encontrados em [`/app/patches`](/app/patches) e incluem:
+
+-   **[`litellm_patch.py`](app/patches/litellm_patch.py:1):** Implementa o comando `stop_sequences` para provedores de LLM que nativamente não o suportam (como Grok ou o4), removendo o parâmetro `stop` da chamada `litellm.completion` para evitar crashes e padronizar o comportamento de parada de geração de texto.
+-   **[`crewai_telemetry_patch.py`](app/patches/crewai_telemetry_patch.py:1):** Desabilita a telemetria da biblioteca CrewAI, evitando erros de conexão e garantindo a privacidade ao "destruir" a classe `Telemetry` original e substituindo seus métodos por operações `noop`.
+-   **[`crewai_tool_input_validation_patch.py`](app/patches/crewai_tool_input_validation_patch.py:1):** Aprimora a validação de entrada de ferramentas do CrewAI. A função original lançava um erro e impedia o agente de tentar novamente, levando a alucinações. Este patch introduz um regex robusto para extrair parâmetros válidos de inputs malformados (mesmo quando acompanhados de outras alucinações que não são bem lidados pelo `ast.literal_eval`), permitindo que o agente recupere informações e use a ferramenta corretamente.
 
 ## Tecnologias Utilizadas
 
