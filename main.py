@@ -1,3 +1,6 @@
+import multiprocessing
+multiprocessing.set_start_method("spawn", True)
+
 from flask import Flask, jsonify, request
 import json
 
