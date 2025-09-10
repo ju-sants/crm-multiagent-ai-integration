@@ -17,8 +17,7 @@ from app.models.data_models import ConversationState
 from app.core.logger import get_logger
 
 from app.config.settings import settings
-from app.patches.litellm_patch import apply_litellm_patch
-from app.patches.crewai_telemetry_patch import apply_crewai_telemetry_patch
+from app import patches
 
 from app.services.celery_service import celery_app
 from app.services.state_manager_service import StateManagerService
@@ -42,18 +41,32 @@ def on_worker_shutdown(sender, **kwargs):
 
 IMAGE_EXTENSIONS = ['.png', '.jpg', '.gif', '.webp', '.jpeg']
 
-apply_litellm_patch()
-apply_crewai_telemetry_patch()
-
-# Pre carregamento do modelo semântico
-carregar_modelo_semantico()
-
+# Objetos
 app: Flask = Flask(__name__)
 state_manager: StateManagerService = StateManagerService()
 redis_client: redis.Redis = get_redis()
 client_description: ImageDescriptionAPI = ImageDescriptionAPI(settings.APPID_IMAGE_DESCRIPTION, settings.SECRET_IMAGE_DESCRIPTION)
 logger: BoundLogger = get_logger(__name__)
 
+# Monkey Patching
+patches.apply_litellm_patch()
+patches.apply_crewai_telemetry_patch()
+patches.apply_crewai_tool_input_patch()
+
+# Pre carregamento do modelo semântico
+carregar_modelo_semantico()
+
+# Celery Worker Callback
+@signals.worker_ready.connect
+def on_worker_ready(sender, **kwargs):
+    get_logger(__name__).info(f"Celery worker ready: {sender.hostname}")
+
+@signals.worker_shutdown.connect
+def on_worker_shutdown(sender, **kwargs):
+    get_logger(__name__).warning(f"Celery: Worker {getattr(sender, 'hostname', 'unknown')} is shutting down.")
+
+
+# Tasks
 @celery_app.task(name='io.process_audio_attachment')
 def process_audio_attachment_task(contact_uuid, url):
     logger.info(f"[{contact_uuid}] - Transcribing audio from URL: {url}")
