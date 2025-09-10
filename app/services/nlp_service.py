@@ -17,7 +17,7 @@ def carregar_modelo_semantico():
 @lru_cache(maxsize=1)
 def carregar_contact_name_extractor():
     logger.info("Carregando modelo NER...")
-    ner = pipeline("ner", "ju-sants/contact-name-extractor")
+    ner = pipeline("ner", "ju-sants/contact-name-extractor", device="cpu")
     logger.info("Modelo NER carregado...")
 
     return ner
