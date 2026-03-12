@@ -10,7 +10,7 @@ from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.services.telegram_service import send_single_telegram_message
-from app.utils.funcs.funcs import distill_conversation_state
+from app.utils.funcs.funcs import distill_conversation_state, safe_inject, build_longterm_context
 
 from datetime import datetime, timezone
 
@@ -41,11 +41,8 @@ def registration_task(contact_id: str):
 
         shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
-        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
-        history_messages = "\n\n".join([
-            f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in longterm_history.get("topic_details", [])[-5:]
-        ])
+        longterm_history_raw = json.loads(longterm_history_json) if longterm_history_json else {}
+        longterm_context = build_longterm_context(longterm_history_raw)
 
         inputs = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -53,8 +50,8 @@ def registration_task(contact_id: str):
             "client_message": "\n".join(last_processed_messages),
             "collected_data_so_far": user_data_so_far if user_data_so_far else "{}",
             "plan_details": plan_details if plan_details else "{}",
-            "longterm_history": history_messages,
-            "shorterm_history": shorterm_history
+            "longterm_history": longterm_context,
+            "shorterm_history": safe_inject(shorterm_history)
         }
 
         result = crew.kickoff(inputs=inputs)
@@ -62,7 +59,7 @@ def registration_task(contact_id: str):
 
         if updated_state_dict:
 
-            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=30):
                 state, _ = state_manager.get_state(contact_id)
 
                 if "entities_extracted" in updated_state_dict and updated_state_dict["entities_extracted"]:

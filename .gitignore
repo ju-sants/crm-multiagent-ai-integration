@@ -11,3 +11,4 @@ app.log
 tmp_files/
 info/
 sentence_transformers/
+.venv/

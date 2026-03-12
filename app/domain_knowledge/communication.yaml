@@ -64,7 +64,7 @@ sales:
       - topic: "contract_terms"
         params: { contract_id: "standard_contract" }
         description: "Revisar os termos do contrato padrão."
-      - topic: "get_sales_philosophy"
+      - topic: "sales_philosophy"
         params: {}
         description: "Revisar a filosofia de vendas."
 
@@ -94,9 +94,9 @@ support:
     - topic: "technical_limitations"
       params: {}
       description: "Consultar as limitações técnicas dos produtos."
-    - topic: "get_support_philosophy"
+    - topic: "support_philosophy"
       params: {}
       description: "Revisar a filosofia de suporte."
-    - topic: "get_web_access_features"
+    - topic: "web_access_features"
       params: {}
       description: "Conhecer as funcionalidades do acesso via web para melhor auxiliar o cliente."

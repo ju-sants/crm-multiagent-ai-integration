@@ -1,0 +1,24 @@
+{
+    "name": "Suporte Básico: Reset Senha com Complicação",
+    "description": "Cenário baseline de suporte técnico com procedimento operacional específico. Avalia conhecimento de procedimentos e tom de suporte. RoutingAgent deve classificar como SUPPORT desde a 1a msg, is_plan_acceptable=False (não é vendas), sem rotear para sys_ops desnecessariamente; StrategicAdvisor deve operar em modo RESOLUTION, buscar procedimento de password_reset via knowledge_service; IncrementalPlanner deve acumular contexto do problema (app→senha→email não funciona) sem resetar; CommunicationAgent deve explicar função ESQUECEU SENHA no app, informar que alteração fora do horário comercial não é possível, sugerir verificar dados de contato atualizados, sem prometer prazos, sem referências internas ao sistema.",
+    "complexity": "baixa",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Classificar SUPPORT desde msg 1", "Sem rotear para system_operations", "is_plan_acceptable=False"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Modo RESOLUTION", "Procedimento password_reset correto", "Horário comercial como limitação"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Explicar ESQUECEU SENHA no app", "Sem prometer prazos", "Sem referências internas", "Tom direto e resolutivo"]
+        }
+    },
+    "session_id": "support-reset-senha",
+    "contact_name": "Roberto",
+    "messages": [
+        {"text": "n consigo entrar no app", "wait": 60},
+        {"text": "esqueci a senha", "wait": 60},
+        {"text": "email roberto@email.com", "wait": 60},
+        {"text": "ja tentei e n chega o email", "wait": 60}
+    ]
+}

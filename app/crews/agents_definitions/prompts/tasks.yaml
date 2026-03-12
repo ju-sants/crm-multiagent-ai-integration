@@ -286,12 +286,9 @@ communication_task:
       "task_output": {
         "request_human_intervention": false,
         "messages_sequence": [
-          "Juan, entendi sua preocupação com a segurança da sua moto, já que a usa para tudo.",
-          "Com base nisso, nossa recomendação principal é o Plano Rastreamento + Proteção Total PGS.",
-          "O grande diferencial dele é a tranquilidade da proteção financeira.",
-          "Se sua moto for roubada e não a recuperarmos, você recebe o valor dela pela tabela FIPE.",
-          "Um ponto importante, para total transparência: nosso serviço é de rastreamento com essa garantia de reembolso, não um seguro tradicional.",
-          "Essa abordagem com foco total na sua segurança faz sentido para você?"
+          "Juan, pra sua moto nossa melhor solução é o Plano Proteção Total PGS — tranquilidade completa com garantia de reembolso FIPE se não recuperarmos! 🛡️",
+          "Ponto importante: nosso serviço é rastreamento com essa garantia de reembolso, não seguro tradicional.",
+          "Faz sentido pra você essa proteção completa? Posso te passar todos os detalhes!"
         ],
         "plan_names": ["Plano Rastreamento + Proteção Total PGS"]
       },
@@ -408,6 +405,7 @@ summarize_history_task:
     {
       "topic_details": [
         {
+          "topic_id": "<slug único e curto derivado do título, ex: 'rastreamento_moto', 'suporte_gps_offline'. Use snake_case, sem acentos, max 40 chars>",
           "title": "<Concise topic title>",
           "summary": "<A brief summary of the topic>",
           "full_details": "<A more detailed, narrative version of the topic>",

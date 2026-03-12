@@ -32,6 +32,6 @@ funcoes_de_gestao:
     - "Define um limite de velocidade geral para a placa com notificações."
     - "Estabelece os dias da semana e horários permitidos para circulação, com notificações para uso fora do período."
 related_queries:
-  - topic: "get_application_features"
+  - topic: "application_features"
     params: {}
     description: "Consultar as funcionalidades do aplicativo móvel."

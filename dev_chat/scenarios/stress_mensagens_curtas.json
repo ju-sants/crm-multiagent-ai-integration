@@ -1,0 +1,24 @@
+{
+    "name": "Stress: Mensagens Fragmentadas WhatsApp Mobile",
+    "description": "Cenário de stress de concatenação: cliente manda mensagens curtas fragmentadas típicas de digitação mobile. Testa capacidade de debounce e reconstrução de intent. Avalia: RoutingAgent deve concatenar fragmentos e extrair intent correta (BUDGET para moto), não criar múltiplas classificações por fragmento; StrategicAdvisor deve trabalhar com intent reconstruída ('quero rastreamento pra moto cg 160'), não reagir a cada fragmento isolado; IncrementalPlanner deve tratar a sequência como uma mensagem lógica; CommunicationAgent deve responder ao conjunto, não ao fragmento, com naturalidade WhatsApp, e informar que adesão R$120 (não é grátis) com transparência.",
+    "complexity": "média",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Concatenar fragmentos em intent única", "Classificar BUDGET corretamente", "Não reagir a fragmento isolado"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Responder ao conjunto coeso", "Informar adesão R$120 transparentemente", "Tom WhatsApp natural sem formalidade"]
+        }
+    },
+    "session_id": "stress-mensagens-curtas",
+    "contact_name": "Joao",
+    "messages": [
+        {"text": "oi", "wait": 30},
+        {"text": "qro", "wait": 30},
+        {"text": "rastreamnt", "wait": 30},
+        {"text": "p moto cg 160", "wait": 60},
+        {"text": "tem", "wait": 30},
+        {"text": "instalação", "wait": 30},
+        {"text": "gratis?", "wait": 60}
+    ]
+}

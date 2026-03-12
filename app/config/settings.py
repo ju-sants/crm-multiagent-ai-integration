@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     )
 
     LLM_STREAM: bool = True
+    DEV_CHAT_MODE: bool = False
     
     XAI_API_KEY: str = "..."
     GEMINI_API_KEY: str = "..."
@@ -27,6 +28,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     
     MAX_RETRIES_MODEL: int = 500
+
+    AGENTS_PROMPT_FILE: str = 'app/crews/agents_definitions/prompts/agents.yaml'
+    TASKS_PROMPT_FILE: str = 'app/crews/agents_definitions/prompts/tasks.yaml'
     
     REDIS_HOST: str = 'localhost'
     REDIS_PORT: int = 6379

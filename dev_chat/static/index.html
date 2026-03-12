@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev Chat — Global System AI</title>
+    <style>
+        :root {
+            --bg: #0a0a0a; --surface: #111111; --surface2: #1a1a1a; --accent: #1e1e1e;
+            --primary: #25d366; --text: #f0f0f0; --text-dim: #888; --green: #25d366;
+            --border: #2a2a2a; --yellow: #f0c040; --red: #e74c3c; --blue: #3498db;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+
+        /* Top bar */
+        .topbar { height: 42px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 16px; flex-shrink: 0; }
+        .topbar .logo { font-weight: 700; color: var(--primary); font-size: 14px; letter-spacing: 1px; }
+        .mode-btns { display: flex; gap: 2px; background: var(--bg); border-radius: 6px; padding: 2px; }
+        .mode-btn { padding: 4px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; background: transparent; color: var(--text-dim); }
+        .mode-btn.active { background: var(--primary); color: #fff; }
+
+        /* Main content */
+        .content { flex: 1; display: flex; overflow: hidden; }
+
+        /* ===== CHAT MODE ===== */
+        .chat-mode { display: flex; flex: 1; }
+        .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 12px; border-bottom: 1px solid var(--border); }
+        .sidebar-header h2 { font-size: 13px; color: var(--primary); margin-bottom: 6px; }
+        .session-input { display: flex; gap: 4px; }
+        .session-input input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 5px; font-size: 12px; }
+        .session-list { flex: 1; overflow-y: auto; padding: 6px; }
+        .session-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 3px; }
+        .session-item:hover { background: var(--accent); }
+        .session-item.active { background: var(--accent); border-left: 3px solid var(--primary); }
+        .main-chat { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .controls { padding: 8px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .controls .sn { font-weight: 600; font-size: 14px; margin-right: auto; }
+        .controls label { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 3px; cursor: pointer; }
+        .controls input[type="text"] { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 3px 6px; border-radius: 4px; font-size: 11px; width: 100px; }
+        .btn { padding: 5px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 600; transition: opacity 0.15s; }
+        .btn:hover { opacity: 0.85; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-secondary { background: var(--accent); color: var(--text); }
+        .btn-danger { background: var(--red); color: #fff; }
+        .btn-sm { padding: 3px 8px; font-size: 10px; }
+        .chat-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+        .msg { max-width: 70%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; word-wrap: break-word; white-space: pre-wrap; }
+        .msg.user { align-self: flex-end; background: #005c4b; border-bottom-right-radius: 3px; }
+        .msg.bot { align-self: flex-start; background: var(--surface2); border-bottom-left-radius: 3px; }
+        .msg .meta { font-size: 9px; color: var(--text-dim); margin-top: 3px; }
+        .msg.system { align-self: center; background: var(--accent); font-size: 11px; color: var(--text-dim); border-radius: 16px; padding: 3px 12px; }
+        .typing { align-self: flex-start; color: var(--text-dim); font-size: 12px; font-style: italic; padding: 6px; }
+        .input-area { padding: 10px 14px; background: var(--surface2); border-top: 1px solid var(--border); display: flex; gap: 6px; align-items: center; }
+        .input-area textarea { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; resize: none; height: 40px; font-family: inherit; }
+        .input-area textarea:focus { outline: none; border-color: var(--primary); }
+
+        /* Inspector */
+        .inspector { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+        .inspector.collapsed { width: 0; border: none; }
+        .inspector-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+        .inspector-tab { padding: 6px 12px; font-size: 11px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-dim); }
+        .inspector-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .inspector-content { flex: 1; overflow-y: auto; padding: 10px; }
+        .inspector-content pre { font-size: 10px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; color: #b8c7e0; }
+        .disc-result { margin-bottom: 12px; padding: 10px; background: var(--bg); border-radius: 6px; border-left: 3px solid var(--primary); }
+        .disc-result .score { font-size: 18px; font-weight: 700; }
+        .disc-result .details { font-size: 11px; margin-top: 6px; white-space: pre-wrap; }
+
+        /* ===== DASHBOARD MODE ===== */
+        .dash-mode { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+        .dash-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--surface); padding: 0 16px; }
+        .dash-tab { padding: 10px 20px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-dim); font-weight: 600; }
+        .dash-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .dash-content { flex: 1; overflow-y: auto; padding: 20px; }
+
+        /* Dashboard cards */
+        .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .card { background: var(--surface); border-radius: 8px; padding: 14px; border: 1px solid var(--border); }
+        .card .label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+        .card .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+        .card .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+        /* Tables */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+        .data-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border); color: var(--primary); font-size: 11px; text-transform: uppercase; }
+        .data-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+        .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        /* Forms */
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+        .form-select, .form-input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 5px; font-size: 12px; width: 100%; }
+        .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .check-group label { font-size: 12px; display: flex; align-items: center; gap: 4px; color: var(--text); cursor: pointer; background: var(--surface2); padding: 4px 10px; border-radius: 4px; }
+
+        /* Benchmark result cards */
+        .bench-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+        .bench-card .model-name { font-weight: 700; font-size: 14px; color: var(--blue); }
+        .bench-card .stats { display: flex; gap: 16px; margin-top: 6px; font-size: 12px; }
+        .bench-card .stat { display: flex; flex-direction: column; }
+        .bench-card .stat .sl { font-size: 10px; color: var(--text-dim); }
+
+        /* Section titles */
+        .section-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+
+        /* Audio recording & playback */
+        .mic-btn { width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: var(--accent); color: var(--text); transition: all 0.2s; flex-shrink: 0; }
+        .mic-btn:hover { background: var(--primary); }
+        .mic-btn.recording { background: var(--red); animation: mic-pulse 1s ease-in-out infinite; }
+        @keyframes mic-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(231,76,60,0.4); } 50% { box-shadow: 0 0 0 10px rgba(231,76,60,0); } }
+        .recording-bar { display: flex; align-items: center; gap: 10px; flex: 1; background: var(--bg); border: 1px solid var(--red); border-radius: 8px; padding: 4px 12px; animation: rec-fade-in 0.2s; }
+        @keyframes rec-fade-in { from { opacity:0; transform: scaleX(0.9); } to { opacity:1; transform: scaleX(1); } }
+        .recording-bar .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: rec-blink 1s infinite; }
+        @keyframes rec-blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+        .recording-bar .rec-time { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); min-width: 36px; }
+        .recording-bar .rec-cancel { font-size: 11px; color: var(--text-dim); margin-left: auto; cursor: pointer; }
+        .recording-bar .rec-cancel:hover { color: var(--red); }
+        .audio-bubble { display: flex; align-items: center; gap: 8px; min-width: 220px; }
+        .audio-bubble .play-btn { width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .msg.user .audio-bubble .play-btn { background: rgba(255,255,255,0.15); color: #fff; }
+        .msg.bot .audio-bubble .play-btn { background: rgba(255,255,255,0.08); color: var(--green); }
+        .audio-bubble .play-btn:hover { opacity: 0.8; }
+        .audio-bubble .wave-container { flex: 1; display: flex; align-items: center; gap: 1px; height: 28px; cursor: pointer; }
+        .audio-bubble .wave-bar { width: 3px; border-radius: 1.5px; transition: height 0.1s; }
+        .msg.user .audio-bubble .wave-bar { background: rgba(255,255,255,0.5); }
+        .msg.bot .audio-bubble .wave-bar { background: rgba(37,211,102,0.5); }
+        .msg.user .audio-bubble .wave-bar.played { background: #fff; }
+        .msg.bot .audio-bubble .wave-bar.played { background: var(--green); }
+        .audio-bubble .audio-time { font-size: 10px; color: var(--text-dim); min-width: 28px; text-align: right; flex-shrink: 0; }
+        .audio-transcript { font-size: 11px; color: var(--text-dim); margin-top: 4px; font-style: italic; }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* Live benchmark progress panel */
+        .bench-live { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+        .bench-live .live-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .bench-live .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: rec-blink 1s infinite; }
+        .bench-live .live-title { font-size: 13px; font-weight: 700; }
+        .bench-live .live-elapsed { font-size: 11px; color: var(--text-dim); margin-left: auto; font-variant-numeric: tabular-nums; }
+        .bench-live .live-bar-bg { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+        .bench-live .live-bar-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width 0.4s ease; }
+        .bench-live .live-counters { display: flex; gap: 16px; font-size: 12px; margin-bottom: 8px; }
+        .bench-live .live-counters span { display: flex; align-items: center; gap: 4px; }
+        .bench-live .live-current { font-size: 12px; color: var(--blue); margin-bottom: 6px; font-weight: 600; }
+        .bench-live .live-log { max-height: 200px; overflow-y: auto; font-size: 11px; border-top: 1px solid var(--border); padding-top: 6px; }
+        .bench-live .live-log-entry { padding: 2px 0; display: flex; gap: 8px; }
+        .bench-live .live-log-entry .log-time { color: var(--text-dim); min-width: 55px; font-variant-numeric: tabular-nums; }
+
+        /* Benchmark progress zone — dedicated fixed area between config & results */
+        .bench-progress-zone { margin: 16px 0; }
+        .bench-progress-zone:empty { margin: 0; }
+
+        /* Benchmark layout sections */
+        .bench-section { margin-bottom: 20px; }
+        .bench-mode-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .bench-mode-tab { font-weight: 600; border-bottom: 2px solid transparent; transition: border-color 0.15s; }
+        .bench-mode-tab.active { border-bottom-color: var(--blue); }
+        .bench-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+        .bench-options-row { display: flex; gap: 16px; align-items: end; margin-bottom: 12px; flex-wrap: wrap; }
+        .bench-option-narrow { flex: 0; }
+        .bench-option-check { flex: 0; margin-bottom: 18px; }
+        .bench-option-check label { white-space: nowrap; cursor: pointer; }
+        .bench-actions { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+        .bench-status { margin-left: 10px; font-size: 12px; color: var(--text-dim); }
+
+        /* Checkpoint cards */
+        .checkpoint-card { margin-bottom: 10px; padding: 12px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); border-left: 3px solid var(--yellow); }
+        .checkpoint-header { display: flex; justify-content: space-between; align-items: center; }
+        .checkpoint-info { flex: 1; }
+        .checkpoint-title { font-size: 13px; font-weight: 700; }
+        .checkpoint-meta { font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+        .checkpoint-stats { font-size: 11px; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .checkpoint-stats .ok { color: var(--green); }
+        .checkpoint-stats .err { color: var(--red); }
+        .checkpoint-stats .rem { color: var(--text-dim); }
+        .checkpoint-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .checkpoint-bar { margin-top: 6px; height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; }
+        .checkpoint-bar-fill { height: 100%; background: var(--yellow); border-radius: 2px; }
+
+        /* Result cards */
+        .result-card { margin-bottom: 16px; padding: 12px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
+        .result-card.matrix { border-left: 3px solid var(--blue); }
+        .result-card-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+        .result-card-subtitle { font-size: 11px; margin-bottom: 6px; }
+        .result-card-header { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+        .result-card-meta { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; }
+        .result-card-scenario { font-size: 11px; color: var(--yellow); margin-bottom: 6px; }
+        .result-card-footer { margin-top: 10px; display: flex; gap: 8px; }
+        .result-section-header { margin-top: 24px; display: flex; justify-content: space-between; align-items: center; }
+
+        /* Run detail rows */
+        .run-details-list { margin-top: 6px; font-size: 11px; }
+        .run-detail { padding: 6px 8px; margin: 4px 0; background: var(--bg); border-radius: 4px; border-left: 3px solid var(--green); }
+        .run-detail.error { border-left-color: var(--red); }
+        .run-detail-row { display: flex; gap: 12px; font-size: 11px; flex-wrap: wrap; }
+        .run-detail-agent { font-weight: 600; }
+        .run-detail-scenario { color: var(--yellow); }
+        .run-detail-score { font-weight: 700; }
+        .run-detail-scores { margin-top: 4px; font-size: 10px; color: var(--text-dim); display: flex; gap: 8px; flex-wrap: wrap; }
+        .run-detail-scores strong { color: var(--text); }
+        .run-detail-issues { margin-top: 3px; font-size: 10px; color: var(--yellow); }
+        .run-detail-error { color: var(--red); font-size: 10px; }
+        .run-detail-expand { margin-top: 3px; }
+        .run-detail-expand summary { font-size: 10px; cursor: pointer; }
+        .run-detail-pre { font-size: 9px; margin-top: 2px; max-height: 200px; overflow: auto; }
+        .run-detail-output summary, .run-detail-prompt summary { font-size: 10px; }
+        .run-detail-prompt summary { color: var(--blue); }
+        .run-detail-prompt-pre { font-size: 9px; margin-top: 2px; max-height: 300px; overflow: auto; }
+
+        /* Ranking tables */
+        .ranking-details { margin-bottom: 8px; }
+        .ranking-summary { font-size: 12px; font-weight: 600; cursor: pointer; }
+        .ranking-table { font-size: 11px; margin-top: 4px; }
+        .ranking-rank { font-weight: 700; }
+        .ranking-key { font-weight: 600; }
+
+        /* Model params grid */
+        .model-params-grid { display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px; align-items: center; font-size: 11px; margin-bottom: 4px; }
+        .model-params-header { font-weight: 600; }
+        .model-param-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px; align-items: center; margin-bottom: 4px; }
+        .model-param-name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .model-param-hint { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+
+        /* Misc helpers */
+        .text-dim { color: var(--text-dim); }
+        .text-green { color: var(--green); }
+        .text-red { color: var(--red); }
+        .text-yellow { color: var(--yellow); }
+        .text-blue { color: var(--blue); }
+        .fw-400 { font-weight: 400; }
+        .fw-600 { font-weight: 600; }
+        .fw-700 { font-weight: 700; }
+        .fs-10 { font-size: 10px; }
+        .fs-11 { font-size: 11px; }
+        .mt-8 { margin-top: 8px; }
+        .mt-10 { margin-top: 10px; }
+        .mt-24 { margin-top: 24px; }
+        .fs-10 { font-size: 10px; }
+        .fs-11 { font-size: 11px; }
+        .mt-24 { margin-top: 24px; }
+
+        /* Report modal */
+        .report-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .report-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 90vw; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; }
+        .report-modal-header { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+        .report-modal-header h3 { font-size: 15px; font-weight: 700; flex: 1; }
+        .report-modal-header button { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 0 4px; }
+        .report-modal-header button:hover { color: var(--text); }
+        .report-modal-body { flex: 1; overflow-y: auto; padding: 18px; font-size: 13px; line-height: 1.6; }
+        .report-modal-body h1 { font-size: 18px; margin: 16px 0 8px; color: var(--primary); }
+        .report-modal-body h2 { font-size: 16px; margin: 14px 0 6px; color: var(--primary); }
+        .report-modal-body h3 { font-size: 14px; margin: 12px 0 4px; color: var(--blue); }
+        .report-modal-body ul, .report-modal-body ol { padding-left: 20px; margin: 6px 0; }
+        .report-modal-body li { margin-bottom: 4px; }
+        .report-modal-body code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+        .report-modal-body pre { background: var(--bg); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 11px; margin: 8px 0; }
+        .report-modal-body table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+        .report-modal-body th, .report-modal-body td { padding: 6px 10px; border: 1px solid var(--border); text-align: left; }
+        .report-modal-body th { background: var(--bg); color: var(--primary); font-weight: 600; }
+        .report-modal-body strong { color: var(--green); }
+        .report-modal-body em { color: var(--text-dim); }
+        .report-modal-footer { padding: 10px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+        .report-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text-dim); font-size: 14px; gap: 10px; }
+        .report-loading .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+    <span class="logo">DEV CHAT</span>
+    <div class="mode-btns">
+        <button class="mode-btn active" onclick="setMode('chat')" id="modeChat">Chat</button>
+        <button class="mode-btn" onclick="setMode('dashboard')" id="modeDash">Dashboard</button>
+    </div>
+    <span style="margin-left:auto;font-size:11px;color:var(--text-dim)">Global System AI — Dev Environment</span>
+</div>
+
+<div class="content">
+
+<!-- ===== CHAT MODE ===== -->
+<div class="chat-mode" id="chatMode">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>SESSIONS</h2>
+            <div class="session-input">
+                <input type="text" id="newSessionInput" placeholder="Nova sessao...">
+                <button class="btn btn-primary btn-sm" onclick="createSession()">+</button>
+            </div>
+        </div>
+        <div class="session-list" id="sessionList"></div>
+    </div>
+    <div class="main-chat">
+        <div class="controls">
+            <span class="sn" id="currentSessionName">Selecione uma sessao</span>
+            <label>Nome: <input type="text" id="contactName" value="Dev Tester" style="width:90px"></label>
+            <label><input type="checkbox" id="autoDiscriminator"> Disc. Auto</label>
+            <label>Poll: <input type="text" id="pollInterval" value="2000" style="width:40px">ms</label>
+            <button class="btn btn-secondary btn-sm" onclick="toggleInspector()">Inspector</button>
+            <button class="btn btn-danger btn-sm" onclick="resetSession()">Reset</button>
+        </div>
+        <div class="chat-area" id="chatArea"><div class="msg system">Crie ou selecione uma sessao</div></div>
+        <div class="input-area" id="inputArea">
+            <textarea id="messageInput" placeholder="Digite sua mensagem..." onkeydown="handleKey(event)"></textarea>
+            <button class="btn btn-primary" onclick="sendMessage()" id="sendBtn">Enviar</button>
+            <button class="mic-btn" id="micBtn" onmousedown="micDown(event)" onmouseup="micUp(event)" onmouseleave="micLeave(event)" ontouchstart="micDown(event)" ontouchend="micUp(event)" title="Segure para gravar áudio">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+            <button class="btn btn-secondary" onclick="runDiscriminator()" title="Analisar ultima resposta">Disc</button>
+        </div>
+    </div>
+    <div class="inspector" id="inspectorPanel">
+        <div class="inspector-tabs">
+            <div class="inspector-tab active" onclick="switchTab('state',this)">State</div>
+            <div class="inspector-tab" onclick="switchTab('history',this)">History</div>
+            <div class="inspector-tab" onclick="switchTab('discriminator',this)">Disc</div>
+            <div class="inspector-tab" onclick="switchTab('session_analytics',this)">Analytics</div>
+        </div>
+        <div class="inspector-content"><pre id="inspectorPre">Selecione uma sessao</pre></div>
+    </div>
+</div>
+
+<!-- ===== DASHBOARD MODE ===== -->
+<div class="dash-mode" id="dashMode">
+    <div class="dash-tabs">
+        <div class="dash-tab active" onclick="switchDashTab('analytics',this)">Analytics</div>
+        <div class="dash-tab" onclick="switchDashTab('benchmarks',this)">Benchmarks</div>
+        <div class="dash-tab" onclick="switchDashTab('models',this)">Models</div>
+        <div class="dash-tab" onclick="switchDashTab('scenarios',this)">Scenarios</div>
+    </div>
+    <div class="dash-content" id="dashContent"><p>Loading...</p></div>
+</div>
+
+</div>
+
+<script>
+const BASE = '/dev';
+let currentSession = null, pollTimer = null, lastBotMessages = [], activeTab = 'state', activeDashTab = 'analytics';
+
+// ===== MODE SWITCHING =====
+function setMode(mode) {
+    document.getElementById('chatMode').style.display = mode === 'chat' ? 'flex' : 'none';
+    document.getElementById('dashMode').style.display = mode === 'dashboard' ? 'flex' : 'none';
+    document.getElementById('modeChat').className = 'mode-btn' + (mode === 'chat' ? ' active' : '');
+    document.getElementById('modeDash').className = 'mode-btn' + (mode === 'dashboard' ? ' active' : '');
+    if (mode === 'dashboard') refreshDashboard();
+}
+
+// ===== CHAT FUNCTIONS =====
+function createSession() {
+    const input = document.getElementById('newSessionInput');
+    const name = input.value.trim() || `s-${Date.now()}`;
+    input.value = '';
+    switchSession(name);
+    loadSessions();
+}
+function loadSessions() {
+    fetch(`${BASE}/sessions`).then(r=>r.json()).then(d=>{
+        const list = document.getElementById('sessionList');
+        list.innerHTML = '';
+        d.sessions.forEach(s=>{
+            const div = document.createElement('div');
+            div.className = `session-item ${s===currentSession?'active':''}`;
+            div.textContent = s;
+            div.onclick = ()=>switchSession(s);
+            list.appendChild(div);
+        });
+    });
+}
+function switchSession(name) {
+    currentSession = name;
+    document.getElementById('currentSessionName').textContent = name;
+    document.getElementById('chatArea').innerHTML = '';
+    loadHistory(); loadSessions(); refreshInspector(); startPolling();
+}
+function sendMessage() {
+    if (!currentSession) return alert('Selecione uma sessao');
+    const input = document.getElementById('messageInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    appendMsg(text, 'user', now); appendTyping();
+    fetch(`${BASE}/send`, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ session_id: currentSession, message: text, contact_name: document.getElementById('contactName').value })
+    });
+}
+function handleKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+
+// ===== AUDIO HELPERS =====
+function generateWaveBars(count) {
+    // Generate pseudo-random waveform bar heights
+    const bars = [];
+    for (let i = 0; i < count; i++) {
+        const h = 4 + Math.floor(Math.random() * 20);
+        bars.push(h);
+    }
+    return bars;
+}
+function formatAudioTime(sec) {
+    if (!sec || isNaN(sec)) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+function createAudioBubbleHTML(audioSrc, transcriptText, uniqueId) {
+    const bars = generateWaveBars(30);
+    let barsHtml = bars.map((h, i) => `<div class="wave-bar" data-idx="${i}" style="height:${h}px"></div>`).join('');
+    let html = `<div class="audio-bubble" data-audio-id="${uniqueId}">`;
+    html += `<button class="play-btn" onclick="toggleAudioPlay('${uniqueId}')">`;
+    html += `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="playIcon_${uniqueId}"><polygon points="5,3 19,12 5,21"/></svg>`;
+    html += `</button>`;
+    html += `<div class="wave-container" onclick="seekAudio(event,'${uniqueId}')">${barsHtml}</div>`;
+    html += `<span class="audio-time" id="audioTime_${uniqueId}">0:00</span>`;
+    html += `</div>`;
+    html += `<audio id="audio_${uniqueId}" src="${audioSrc}" preload="metadata"></audio>`;
+    if (transcriptText) {
+        html += `<div class="audio-transcript">${transcriptText}</div>`;
+    }
+    return html;
+}
+// Audio player instances
+const audioPlayers = {};
+function toggleAudioPlay(id) {
+    const audio = document.getElementById('audio_' + id);
+    const icon = document.getElementById('playIcon_' + id);
+    if (!audio) return;
+    if (audio.paused) {
+        // Pause any other playing audios
+        document.querySelectorAll('audio').forEach(a => { if (a.id !== 'audio_'+id && !a.paused) a.pause(); });
+        audio.play();
+        icon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+        if (!audioPlayers[id]) {
+            audioPlayers[id] = true;
+            audio.addEventListener('timeupdate', () => updateAudioProgress(id));
+            audio.addEventListener('ended', () => {
+                icon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+                updateAudioProgress(id, true);
+            });
+            audio.addEventListener('loadedmetadata', () => {
+                document.getElementById('audioTime_'+id).textContent = formatAudioTime(audio.duration);
+            });
+        }
+    } else {
+        audio.pause();
+        icon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+    }
+}
+function updateAudioProgress(id, reset) {
+    const audio = document.getElementById('audio_' + id);
+    const timeEl = document.getElementById('audioTime_' + id);
+    const bubble = document.querySelector(`.audio-bubble[data-audio-id="${id}"]`);
+    if (!audio || !bubble) return;
+    const bars = bubble.querySelectorAll('.wave-bar');
+    const progress = reset ? 0 : (audio.currentTime / (audio.duration || 1));
+    const playedCount = Math.floor(progress * bars.length);
+    bars.forEach((b, i) => b.classList.toggle('played', i < playedCount));
+    if (timeEl) {
+        timeEl.textContent = reset ? formatAudioTime(audio.duration) : formatAudioTime(audio.duration - audio.currentTime);
+    }
+}
+function seekAudio(event, id) {
+    const audio = document.getElementById('audio_' + id);
+    const container = event.currentTarget;
+    if (!audio || !audio.duration) return;
+    const rect = container.getBoundingClientRect();
+    const pct = (event.clientX - rect.left) / rect.width;
+    audio.currentTime = pct * audio.duration;
+    if (audio.paused) toggleAudioPlay(id);
+}
+
+// ===== AUDIO RECORDING =====
+let mediaRecorder = null, audioChunks = [], recordingStartTime = 0, recordingTimer = null, isRecording = false;
+function micDown(e) {
+    e.preventDefault();
+    if (isRecording) return;
+    if (!currentSession) return alert('Selecione uma sessao');
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        isRecording = true;
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm' });
+        mediaRecorder.ondataavailable = ev => { if (ev.data.size > 0) audioChunks.push(ev.data); };
+        mediaRecorder.onstop = () => {
+            stream.getTracks().forEach(t => t.stop());
+            if (audioChunks.length && isRecording) {
+                const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                sendAudioBlob(blob);
+            }
+            isRecording = false;
+            hideRecordingUI();
+        };
+        mediaRecorder.start();
+        recordingStartTime = Date.now();
+        showRecordingUI();
+    }).catch(err => {
+        console.error('Mic access denied:', err);
+        alert('Permissão de microfone negada');
+    });
+}
+function micUp(e) {
+    e.preventDefault();
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    }
+}
+function micLeave(e) {
+    // Don't cancel on mouse leave — let the user release anywhere
+}
+function cancelRecording() {
+    isRecording = false;
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        audioChunks = []; // Clear so onstop won't send
+        mediaRecorder.stop();
+    }
+    hideRecordingUI();
+}
+function showRecordingUI() {
+    const inputArea = document.getElementById('inputArea');
+    const textarea = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const micBtn = document.getElementById('micBtn');
+    textarea.style.display = 'none';
+    sendBtn.style.display = 'none';
+    micBtn.classList.add('recording');
+    // Insert recording bar
+    const bar = document.createElement('div');
+    bar.className = 'recording-bar';
+    bar.id = 'recordingBar';
+    bar.innerHTML = '<span class="rec-dot"></span><span class="rec-time" id="recTimer">0:00</span><span class="rec-cancel" onclick="cancelRecording()">✕ cancelar</span>';
+    inputArea.insertBefore(bar, micBtn);
+    recordingTimer = setInterval(() => {
+        const elapsed = (Date.now() - recordingStartTime) / 1000;
+        const el = document.getElementById('recTimer');
+        if (el) el.textContent = formatAudioTime(elapsed);
+    }, 200);
+}
+function hideRecordingUI() {
+    clearInterval(recordingTimer);
+    const bar = document.getElementById('recordingBar');
+    if (bar) bar.remove();
+    const textarea = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const micBtn = document.getElementById('micBtn');
+    textarea.style.display = '';
+    sendBtn.style.display = '';
+    micBtn.classList.remove('recording');
+}
+function sendAudioBlob(blob) {
+    if (blob.size < 1000) return; // Too short, ignore
+    const formData = new FormData();
+    formData.append('audio', blob, 'recording.webm');
+    formData.append('session_id', currentSession);
+    formData.append('contact_name', document.getElementById('contactName').value);
+    // Show optimistic audio bubble
+    const tempId = 'rec_' + Date.now();
+    const tempUrl = URL.createObjectURL(blob);
+    const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    appendAudioMsg(tempUrl, null, 'user', now, tempId);
+    appendTyping();
+    fetch(`${BASE}/audio/send`, { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            // Update the transcript in the optimistic bubble
+            if (data.transcription) {
+                const bubble = document.querySelector(`[data-temp-audio="${tempId}"]`);
+                if (bubble) {
+                    let transcriptDiv = bubble.querySelector('.audio-transcript');
+                    if (!transcriptDiv) {
+                        transcriptDiv = document.createElement('div');
+                        transcriptDiv.className = 'audio-transcript';
+                        bubble.appendChild(transcriptDiv);
+                    }
+                    transcriptDiv.textContent = data.transcription;
+                }
+            }
+        })
+        .catch(err => console.error('Audio send failed:', err));
+}
+function appendAudioMsg(audioSrc, transcriptText, type, time, tempId) {
+    const area = document.getElementById('chatArea');
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    if (tempId) div.setAttribute('data-temp-audio', tempId);
+    const uniqueId = 'ap_' + Math.random().toString(36).substring(2, 9);
+    div.innerHTML = createAudioBubbleHTML(audioSrc, transcriptText, uniqueId);
+    if (time) div.innerHTML += `<div class="meta">${time}</div>`;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+    // Load duration
+    setTimeout(() => {
+        const audio = document.getElementById('audio_' + uniqueId);
+        if (audio) audio.addEventListener('loadedmetadata', () => {
+            const timeEl = document.getElementById('audioTime_' + uniqueId);
+            if (timeEl) timeEl.textContent = formatAudioTime(audio.duration);
+        });
+    }, 50);
+}
+
+// ===== MESSAGE DISPLAY =====
+function appendMsg(text, type, time, msgObj) {
+    const area = document.getElementById('chatArea');
+
+    // Check if this is an audio message
+    if (msgObj && msgObj.audio_url) {
+        // User-recorded audio with transcription
+        const transcript = text.replace(/^\(Áudio\):\s*/, '').replace(/^\(Áudio transcrito\):\s*/, '');
+        appendAudioMsg(msgObj.audio_url, transcript, type, time);
+        return;
+    }
+    if (type === 'bot' && typeof text === 'string' && text.startsWith('[AUDIO] ')) {
+        // Bot audio message — extract URL
+        const audioUrl = text.substring(8).trim();
+        appendAudioMsg(audioUrl, null, type, time);
+        return;
+    }
+
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    let t = type==='bot' ? text.replace('*Alessandro Assistente Global:*\n','') : text;
+    div.innerHTML = t + (time ? `<div class="meta">${time}</div>` : '');
+    area.appendChild(div); area.scrollTop = area.scrollHeight;
+}
+function appendTyping() { removeTyping(); const area = document.getElementById('chatArea'); const d = document.createElement('div'); d.className='typing'; d.id='typingIndicator'; d.textContent='Alessandro processando...'; area.appendChild(d); area.scrollTop=area.scrollHeight; }
+function removeTyping() { const e=document.getElementById('typingIndicator'); if(e) e.remove(); }
+function startPolling() { if(pollTimer) clearInterval(pollTimer); const i=parseInt(document.getElementById('pollInterval').value)||2000; pollTimer=setInterval(pollMessages,i); }
+function pollMessages() {
+    if (!currentSession) return;
+    fetch(`${BASE}/messages/${currentSession}`).then(r=>r.json()).then(d=>{
+        if (d.messages && d.messages.length) {
+            removeTyping(); lastBotMessages = d.messages;
+            d.messages.forEach(m=>appendMsg(m.text||'','bot',m.createdAt,m));
+            refreshInspector();
+            if (document.getElementById('autoDiscriminator').checked) runDiscriminator();
+        }
+    });
+}
+function loadHistory() {
+    if (!currentSession) return;
+    fetch(`${BASE}/history/${currentSession}`).then(r=>r.json()).then(d=>{
+        document.getElementById('chatArea').innerHTML='';
+        d.messages.forEach(m=>appendMsg(m.text||'', m.status==='received'?'user':'bot', m.createdAt, m));
+    });
+}
+function toggleInspector() { document.getElementById('inspectorPanel').classList.toggle('collapsed'); }
+function switchTab(tab, el) {
+    activeTab = tab;
+    document.querySelectorAll('.inspector-tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active'); refreshInspector();
+}
+function refreshInspector() {
+    if (!currentSession) return;
+    const pre = document.getElementById('inspectorPre');
+    const container = document.querySelector('.inspector-content');
+    if (activeTab==='state') {
+        fetch(`${BASE}/state/${currentSession}`).then(r=>r.json()).then(d=>{ pre.textContent=JSON.stringify(d,null,2); container.innerHTML=''; container.appendChild(pre); });
+    } else if (activeTab==='history') {
+        fetch(`${BASE}/history/${currentSession}`).then(r=>r.json()).then(d=>{ pre.textContent=JSON.stringify(d.messages,null,2); container.innerHTML=''; container.appendChild(pre); });
+    } else if (activeTab==='discriminator') {
+        fetch(`${BASE}/discriminator/results/${currentSession}`).then(r=>r.json()).then(d=>{
+            container.innerHTML='';
+            if (!d.results.length) { container.innerHTML='<pre>Nenhuma analise. Clique Disc para analisar.</pre>'; return; }
+            d.results.forEach(r=>{ const div=document.createElement('div'); div.className='disc-result'; const a=r.analysis; div.innerHTML=`<div class="score">${a.overall_score||'N/A'}/10</div><div class="meta">${r.timestamp}</div><div class="details">${fmtAnalysis(a)}</div>`; container.appendChild(div); });
+        });
+    } else if (activeTab==='session_analytics') {
+        fetch(`${BASE}/analytics/${currentSession}`).then(r=>r.json()).then(d=>{
+            if (!d.metrics||!d.metrics.length) { pre.textContent='Nenhuma metrica ainda.'; container.innerHTML=''; container.appendChild(pre); return; }
+            let html='<table class="data-table"><tr><th>Agent</th><th>Model</th><th>Time</th><th>Status</th></tr>';
+            d.metrics.forEach(m=>{ html+=`<tr><td>${(m.agent||'').substring(0,30)}</td><td>${m.model||''}</td><td>${m.duration_s}s</td><td>${m.status}</td></tr>`; });
+            html+='</table>';
+            container.innerHTML=html;
+        });
+    }
+}
+function fmtAnalysis(a) {
+    if (typeof a==='string') return a;
+    let o='';
+    // Multi-stage format
+    if (a.stages) {
+        for (const [k,v] of Object.entries(a.stages)) {
+            if (!v) continue;
+            o += `\n--- ${k.toUpperCase()} ---\n`;
+            if (v.score !== undefined) o += `Score: ${v.score}/10\n`;
+            if (v.reasoning) o += `${v.reasoning}\n`;
+            if (v.issues && v.issues.length) o += `Issues: ${v.issues.join('; ')}\n`;
+            if (v.violations && v.violations.length) o += `Violations: ${v.violations.join('; ')}\n`;
+            if (v.invented_claims && v.invented_claims.length) o += `INVENTED: ${v.invented_claims.join('; ')}\n`;
+        }
+    }
+    if (a.gaps && a.gaps.length) o += `\nGAPS:\n${a.gaps.map(g=>'  - '+g).join('\n')}\n`;
+    if (a.hallucinations && a.hallucinations.length) o += `\nHALLUCINATIONS:\n${a.hallucinations.map(h=>'  - '+h).join('\n')}\n`;
+    if (a.prompt_violations && a.prompt_violations.length) o += `\nVIOLATIONS:\n${a.prompt_violations.map(v=>'  - '+v).join('\n')}\n`;
+    if (a.suggestions && a.suggestions.length) o += `\nSUGGESTIONS:\n${a.suggestions.map(s=>'  - '+s).join('\n')}\n`;
+    if (a.adherence) o += `\nAdherence: ${a.adherence}\n`;
+    if (a.tone) o += `Tone: ${a.tone}\n`;
+    if (!o.trim()) o = JSON.stringify(a, null, 2);
+    return o;
+}
+function runDiscriminator() {
+    if (!currentSession || !lastBotMessages.length) return;
+    fetch(`${BASE}/discriminator/analyze`, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ session_id: currentSession, bot_response: lastBotMessages.map(m=>m.text||'') })
+    }).then(r=>r.json()).then(()=>{ if (activeTab==='discriminator') refreshInspector(); });
+}
+function resetSession() {
+    if (!currentSession || !confirm(`Resetar "${currentSession}"?`)) return;
+    fetch(`${BASE}/reset/${currentSession}`,{method:'POST'}).then(()=>{
+        document.getElementById('chatArea').innerHTML='<div class="msg system">Sessao resetada</div>';
+        refreshInspector();
+    });
+}
+
+// ===== DASHBOARD FUNCTIONS =====
+function switchDashTab(tab, el) {
+    activeDashTab = tab;
+    document.querySelectorAll('.dash-tab').forEach(t=>t.classList.remove('active'));
+    if (el) el.classList.add('active');
+    else document.querySelector(`.dash-tab[onclick*="${tab}"]`)?.classList.add('active');
+    refreshDashboard();
+}
+function refreshDashboard() {
+    const c = document.getElementById('dashContent');
+    if (activeDashTab === 'analytics') renderAnalytics(c);
+    else if (activeDashTab === 'benchmarks') renderBenchmarks(c);
+    else if (activeDashTab === 'models') renderModels(c);
+    else if (activeDashTab === 'scenarios') renderScenarios(c);
+}
+
+// --- Analytics Dashboard ---
+function renderAnalytics(c) {
+    c.innerHTML = '<p class="text-dim">Carregando analytics...</p>';
+    fetch(`${BASE}/analytics`).then(r=>r.json()).then(d=>{
+        let html = `<div class="section-title">Analytics — Resumo Global</div>`;
+
+        // Summary cards
+        const totalExec = d.total_executions || 0;
+        const agentCount = d.by_agent ? Object.keys(d.by_agent).length : 0;
+        const modelCount = d.by_model ? Object.keys(d.by_model).length : 0;
+        const totalErrors = d.by_agent ? Object.values(d.by_agent).reduce((s,a) => s + (a.errors||0), 0) : 0;
+        html += `<div class="cards">
+            <div class="card"><div class="label">Execuções</div><div class="value">${totalExec}</div></div>
+            <div class="card"><div class="label">Agentes</div><div class="value">${agentCount}</div></div>
+            <div class="card"><div class="label">Modelos</div><div class="value">${modelCount}</div></div>
+            <div class="card"><div class="label">Erros</div><div class="value ${totalErrors>0?'text-red':''}">${totalErrors}</div></div>
+        </div>`;
+
+        // By Agent table
+        html += `<div class="section-title">Performance por Agente</div>`;
+        if (d.by_agent && Object.keys(d.by_agent).length) {
+            html += '<table class="data-table"><tr><th>Agent</th><th>Runs</th><th>Avg</th><th>P50</th><th>P95</th><th>Min</th><th>Max</th><th>Errors</th></tr>';
+            for (const [name,s] of Object.entries(d.by_agent)) {
+                const errCls = s.errors > 0 ? 'text-red' : '';
+                html += `<tr><td class="fw-600">${name.substring(0,35)}</td><td>${s.count}</td><td>${s.avg_time}s</td><td>${s.p50_time}s</td><td>${s.p95_time}s</td><td>${s.min_time}s</td><td>${s.max_time}s</td><td class="${errCls}">${s.errors}</td></tr>`;
+            }
+            html += '</table>';
+        } else { html += '<p class="text-dim">Nenhum dado ainda. Execute conversas no Chat para gerar métricas.</p>'; }
+
+        // By Model table
+        html += `<div class="section-title">Performance por Modelo</div>`;
+        if (d.by_model && Object.keys(d.by_model).length) {
+            html += '<table class="data-table"><tr><th>Model</th><th>Runs</th><th>Avg</th><th>P50</th><th>P95</th><th>Min</th><th>Max</th><th>Errors</th></tr>';
+            for (const [name,s] of Object.entries(d.by_model)) {
+                const errCls = s.errors > 0 ? 'text-red' : '';
+                html += `<tr><td class="fw-600">${name}</td><td>${s.count}</td><td>${s.avg_time}s</td><td>${s.p50_time}s</td><td>${s.p95_time}s</td><td>${s.min_time}s</td><td>${s.max_time}s</td><td class="${errCls}">${s.errors}</td></tr>`;
+            }
+            html += '</table>';
+        } else { html += '<p class="text-dim">Nenhum dado.</p>'; }
+
+        html += '<button class="btn btn-danger btn-sm" onclick="clearAnalytics()">Limpar Analytics</button>';
+        c.innerHTML = html;
+    });
+}
+function clearAnalytics() {
+    if (!confirm('Limpar todos os dados de analytics?')) return;
+    fetch(`${BASE}/analytics`, {method:'DELETE'}).then(()=>refreshDashboard());
+}
+
+// --- Benchmarks Dashboard ---
+function renderBenchmarks(c) {
+    Promise.all([
+        fetch(`${BASE}/benchmarks/discover`).then(r=>r.json()),
+        fetch(`${BASE}/benchmarks/results`).then(r=>r.json()),
+        fetch(`${BASE}/sessions`).then(r=>r.json()),
+        fetch(`${BASE}/benchmarks/checkpoints`).then(r=>r.json()).catch(()=>({checkpoints:[]})),
+    ]).then(([discoverData, resultsData, sessionsData, checkpointData]) => {
+        const models = discoverData.models || {};
+        const agents = discoverData.agents || {};
+        const scenarios = discoverData.scenarios || {};
+
+        let html = `<div class="section-title">Benchmark Engine</div>`;
+
+        // Mode selector: Single vs Matrix
+        html += `<div class="bench-mode-tabs">`;
+        html += `<button class="btn btn-secondary btn-sm bench-mode-tab active" id="benchModeSingle" onclick="switchBenchMode('single')">Single Agent</button>`;
+        html += `<button class="btn btn-secondary btn-sm bench-mode-tab" id="benchModeMatrix" onclick="switchBenchMode('matrix')">Matrix (Agents × Models × Scenarios)</button>`;
+        html += `</div>`;
+
+        // ── Single Mode Form ──
+        html += `<div id="benchSingleForm">`;
+
+        // Row 1: agent + source
+        html += `<div class="bench-form-grid">`;
+        html += `<div class="form-group"><label>Agente</label><select class="form-select" id="benchAgent">`;
+        for (const [name,info] of Object.entries(agents)) {
+            html += `<option value="${name}">${name} — ${info.description}</option>`;
+        }
+        html += `</select></div>`;
+
+        html += `<div class="form-group"><label>Fonte de Estado</label><select class="form-select" id="benchSource" onchange="toggleBenchSource()">`;
+        html += `<option value="synthetic">Cenario Sintetico (recomendado)</option>`;
+        html += `<option value="session">Sessao Existente</option>`;
+        html += `</select></div></div>`;
+
+        // Row 2: synthetic scenario + session + iterations
+        html += `<div class="bench-form-grid">`;
+        html += `<div class="form-group" id="benchSyntheticGroup"><label>Cenario Sintetico</label><select class="form-select" id="benchSynthetic">`;
+        for (const [name,info] of Object.entries(scenarios)) {
+            html += `<option value="${name}" title="${info.description}">${name} — T${info.turn} ${info.topic} (${info.agent_focus.join(', ')})</option>`;
+        }
+        html += `</select></div>`;
+        html += `<div class="form-group" id="benchSessionGroup" style="display:none"><label>Sessao (precisa ter state)</label><select class="form-select" id="benchSession">`;
+        sessionsData.sessions.forEach(s=>{ html += `<option value="${s}">${s}</option>`; });
+        html += `</select></div>`;
+
+        html += `<div class="bench-options-row">`;
+        html += `<div class="form-group bench-option-narrow"><label>Iteracoes</label><input type="number" class="form-input" id="benchIterations" value="1" min="1" max="20" style="width:60px"></div>`;
+        html += `<div class="form-group bench-option-narrow"><label title="Threads paralelas (1 = sequencial)">Workers</label><input type="number" class="form-input" id="benchMaxWorkers" value="4" min="1" max="32" style="width:60px" title="Número de execuções paralelas. 1 = sequencial."></div>`;
+        html += `<div class="form-group bench-option-check"><label><input type="checkbox" id="benchCapture"> Capturar Prompt</label></div>`;
+        html += `<div class="form-group bench-option-check"><label><input type="checkbox" id="benchEval" checked> Avaliar Qualidade</label></div>`;
+        html += `</div></div>`;
+
+        // Models checkboxes
+        html += `<div class="form-group"><label>Modelos</label><div class="check-group" id="benchModels">`;
+        for (const [key,info] of Object.entries(models)) {
+            html += `<label><input type="checkbox" value="${key}" ${key==='xai/grok-3-mini-fast'?'checked':''} onchange="updateModelParamsUI('bench')"> ${key}</label>`;
+        }
+        html += `</div></div>`;
+
+        // Per-model LLM params (expandable)
+        html += `<div class="form-group"><label>Parâmetros LLM por Modelo <button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:10px;margin-left:6px" onclick="toggleModelParams('bench')">▼ Expandir</button></label>`;
+        html += `<div id="benchModelParams" style="display:none;margin-top:8px;"></div></div>`;
+
+        html += `<div class="bench-actions">`;
+        html += `<button class="btn btn-primary" onclick="runBenchmark()" id="benchRunBtn">Executar Benchmark</button>`;
+        html += `<button class="btn btn-secondary btn-sm" onclick="exportBenchConfig('single')" title="Exportar configuração">📤 Exportar</button>`;
+        html += `<button class="btn btn-secondary btn-sm" onclick="importBenchConfig('single')" title="Importar configuração">📥 Importar</button>`;
+        html += `<input type="file" id="benchImportFile" accept=".json" style="display:none" onchange="handleConfigImport(event,'single')">`;
+        html += `<span id="benchStatus" class="bench-status"></span>`;
+        html += `</div>`;
+        html += `</div>`; // end benchSingleForm
+
+        // ── Matrix Mode Form ──
+        html += `<div id="benchMatrixForm" style="display:none">`;
+
+        // Agents (checkboxes)
+        html += `<div class="form-group"><label>Agentes</label><div class="check-group" id="matrixAgents">`;
+        for (const [name,info] of Object.entries(agents)) {
+            html += `<label><input type="checkbox" value="${name}" checked> ${name} <span class="text-dim fs-10">${info.description}</span></label>`;
+        }
+        html += `</div></div>`;
+
+        // Models (checkboxes)
+        html += `<div class="form-group"><label>Modelos</label><div class="check-group" id="matrixModels">`;
+        for (const [key,info] of Object.entries(models)) {
+            html += `<label><input type="checkbox" value="${key}" checked onchange="updateModelParamsUI('matrix');updateMatrixRunCount()"> ${key} <span class="text-dim fs-10">${info.description}</span></label>`;
+        }
+        html += `</div></div>`;
+
+        // Per-model LLM params (expandable)
+        html += `<div class="form-group"><label>Parâmetros LLM por Modelo <button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:10px;margin-left:6px" onclick="toggleModelParams('matrix')">▼ Expandir</button></label>`;
+        html += `<div id="matrixModelParams" style="display:none;margin-top:8px;"></div></div>`;
+
+        // Scenarios (checkboxes + all)
+        html += `<div class="form-group"><label>Cenarios <button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:10px;margin-left:6px" onclick="toggleAllMatrixScenarios()">Todos</button></label><div class="check-group" id="matrixScenarios">`;
+        for (const [name,info] of Object.entries(scenarios)) {
+            html += `<label><input type="checkbox" value="${name}" checked> ${name} <span class="text-dim fs-10">T${info.turn} ${info.topic}</span></label>`;
+        }
+        html += `</div></div>`;
+
+        // Config row: iterations, order, options
+        html += `<div class="bench-options-row">`;
+        html += `<div class="form-group bench-option-narrow"><label>Iteracoes</label><input type="number" class="form-input" id="matrixIterations" value="1" min="1" max="10" style="width:60px"></div>`;
+        html += `<div class="form-group bench-option-narrow"><label title="Threads paralelas (1 = sequencial)">Workers</label><input type="number" class="form-input" id="matrixMaxWorkers" value="4" min="1" max="32" style="width:60px" title="Número de execuções paralelas. 1 = sequencial."></div>`;
+        html += `<div class="form-group bench-option-narrow"><label>Ordem</label><select class="form-select" id="matrixOrder" style="width:auto"><option value="sequential">Sequencial</option><option value="random">Aleatorio</option></select></div>`;
+        html += `<div class="form-group bench-option-check"><label><input type="checkbox" id="matrixCapture"> Prompt</label></div>`;
+        html += `<div class="form-group bench-option-check"><label><input type="checkbox" id="matrixEval" checked> Avaliar</label></div>`;
+        html += `</div>`;
+
+        // Run count preview + button
+        html += `<div class="bench-actions">`;
+        html += `<button class="btn btn-primary" onclick="runMatrixBenchmark()" id="matrixRunBtn">Executar Matrix</button>`;
+        html += `<button class="btn btn-secondary btn-sm" onclick="exportBenchConfig('matrix')" title="Exportar configuração">📤 Exportar</button>`;
+        html += `<button class="btn btn-secondary btn-sm" onclick="importBenchConfig('matrix')" title="Importar configuração">📥 Importar</button>`;
+        html += `<input type="file" id="matrixImportFile" accept=".json" style="display:none" onchange="handleConfigImport(event,'matrix')">`;
+        html += `<span id="matrixRunCount" class="bench-status"></span>`;
+        html += `<span id="matrixStatus" class="bench-status"></span>`;
+        html += `</div>`;
+        html += `</div>`; // end benchMatrixForm
+
+        // ── Dedicated Progress Zone — always between config & results ──
+        html += `<div id="benchProgressZone" class="bench-progress-zone"></div>`;
+
+        // ── Active Checkpoints (resumable) ──
+        const checkpoints = checkpointData.checkpoints || [];
+        if (checkpoints.length > 0) {
+            html += `<div class="section-title mt-24">Benchmarks Interrompidos</div>`;
+            checkpoints.forEach(cp => {
+                const pct = cp.total > 0 ? Math.round(((cp.completed) / cp.total) * 100) : 0;
+                const cfg = cp.config || {};
+                const cfgDesc = cp.mode === 'matrix'
+                    ? `${(cfg.agents||[]).length} agents × ${(cfg.models||[]).length} models × ${(cfg.scenarios||[]).length} scenarios`
+                    : `${cfg.agent || '?'} — ${(cfg.models||[]).length} models`;
+                html += `<div class="checkpoint-card" data-checkpoint="${cp.run_id}">`;
+                html += `<div class="checkpoint-header">`;
+                html += `<div class="checkpoint-info">`;
+                html += `<span class="checkpoint-title">run:${cp.run_id}</span>`;
+                html += `<span class="checkpoint-meta">${cp.mode} — ${cfgDesc}</span>`;
+                html += `<div class="checkpoint-stats">`;
+                html += `<span class="ok">✓ ${cp.completed - cp.errors} OK</span>`;
+                html += `<span class="err">✗ ${cp.errors} erros</span>`;
+                html += `<span class="rem">${cp.remaining} restantes</span>`;
+                html += `<span class="rem">${pct}% concluido</span>`;
+                html += `</div></div>`;
+                html += `<div class="checkpoint-actions">`;
+                html += `<button class="btn btn-primary btn-sm" onclick="resumeBenchmark('${cp.run_id}', this)">▶ Continuar</button>`;
+                html += `<button class="btn btn-secondary btn-sm text-red" onclick="deleteCheckpoint('${cp.run_id}')">✗</button>`;
+                html += `</div></div>`;
+                html += `<div class="checkpoint-bar"><div class="checkpoint-bar-fill" style="width:${pct}%"></div></div>`;
+                html += `</div>`;
+            });
+        }
+
+        // ── Results ──
+        html += `<div class="section-title result-section-header mt-24">Resultados <button class="btn btn-primary btn-sm" onclick="generateCrossReport()" style="font-size:10px;">📊 Análise Cruzada (Todos)</button></div>`;
+        if (resultsData.results && resultsData.results.length) {
+            resultsData.results.reverse().forEach(run => {
+                if (run.type === 'matrix') {
+                    html += renderMatrixResult(run);
+                } else {
+                    html += renderSingleResult(run);
+                }
+            });
+        } else { html += '<p class="text-dim">Nenhum benchmark executado ainda.</p>'; }
+        c.innerHTML = html;
+        updateMatrixRunCount();
+    });
+}
+function escHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function toggleBenchSource() {
+    const src = document.getElementById('benchSource').value;
+    document.getElementById('benchSyntheticGroup').style.display = src==='synthetic' ? '' : 'none';
+    document.getElementById('benchSessionGroup').style.display = src==='session' ? '' : 'none';
+}
+function switchBenchMode(mode) {
+    document.getElementById('benchSingleForm').style.display = mode==='single'?'':'none';
+    document.getElementById('benchMatrixForm').style.display = mode==='matrix'?'':'none';
+    document.getElementById('benchModeSingle').classList.toggle('active', mode==='single');
+    document.getElementById('benchModeMatrix').classList.toggle('active', mode==='matrix');
+    if (mode==='matrix') updateMatrixRunCount();
+}
+function updateMatrixRunCount() {
+    const el = document.getElementById('matrixRunCount');
+    if (!el) return;
+    const a = document.querySelectorAll('#matrixAgents input:checked').length;
+    const s = document.querySelectorAll('#matrixScenarios input:checked').length;
+    const iter = parseInt((document.getElementById('matrixIterations')||{}).value)||1;
+    // Count model variants (models × param range expansion)
+    const modelVariants = countModelVariants('matrix');
+    const total = a * modelVariants * s * iter;
+    const mCount = document.querySelectorAll('#matrixModels input:checked').length;
+    const extra = modelVariants > mCount ? ` (${mCount} modelos × params = ${modelVariants} variantes)` : '';
+    el.textContent = `${a} agents × ${modelVariants} model-configs × ${s} scenarios × ${iter} iter = ${total} runs${extra}`;
+}
+function toggleAllMatrixScenarios() {
+    const cbs = document.querySelectorAll('#matrixScenarios input[type="checkbox"]');
+    const allChecked = Array.from(cbs).every(cb=>cb.checked);
+    cbs.forEach(cb=>cb.checked=!allChecked);
+    updateMatrixRunCount();
+}
+// ── Per-model LLM parameter controls ──
+function toggleModelParams(prefix) {
+    const container = document.getElementById(prefix + 'ModelParams');
+    if (!container) return;
+    const visible = container.style.display !== 'none';
+    container.style.display = visible ? 'none' : '';
+    if (!visible) updateModelParamsUI(prefix);
+}
+function updateModelParamsUI(prefix) {
+    const container = document.getElementById(prefix + 'ModelParams');
+    if (!container || container.style.display === 'none') return;
+    const selector = prefix === 'bench' ? '#benchModels' : '#matrixModels';
+    const checked = Array.from(document.querySelectorAll(selector + ' input:checked')).map(cb => cb.value);
+    // Preserve existing values
+    const existing = {};
+    container.querySelectorAll('.model-param-row').forEach(row => {
+        const mk = row.dataset.model;
+        existing[mk] = {
+            temperature: row.querySelector('.mp-temp')?.value || '',
+            top_p: row.querySelector('.mp-topp')?.value || '',
+            max_tokens: row.querySelector('.mp-maxt')?.value || '',
+        };
+    });
+    let h = '';
+    if (checked.length === 0) {
+        h = '<div class="text-dim fs-11">Selecione modelos acima</div>';
+    } else {
+        h += '<div class="model-params-grid">';
+        h += '<span class="model-params-header">Modelo</span><span class="model-params-header">Temperature</span><span class="model-params-header">Top P</span><span class="model-params-header">Max Tokens</span>';
+        h += '</div>';
+        checked.forEach(mk => {
+            const prev = existing[mk] || {};
+            const short = mk.length > 30 ? '…' + mk.slice(-28) : mk;
+            h += `<div class="model-param-row" data-model="${mk}">`;
+            h += `<span class="model-param-name" title="${mk}">${short}</span>`;
+            h += `<input class="form-input mp-temp" placeholder="ex: 0.3 ou 0.1,0.5,0.9" value="${prev.temperature||''}" style="width:130px;font-size:11px;padding:3px 6px;" onchange="updateMatrixRunCount()">`;
+            h += `<input class="form-input mp-topp" placeholder="ex: 0.9" value="${prev.top_p||''}" style="width:90px;font-size:11px;padding:3px 6px;" onchange="updateMatrixRunCount()">`;
+            h += `<input class="form-input mp-maxt" placeholder="ex: 4096" value="${prev.max_tokens||''}" style="width:90px;font-size:11px;padding:3px 6px;" onchange="updateMatrixRunCount()">`;
+            h += '</div>';
+        });
+        h += '<div class="model-param-hint">Use vírgulas para testar múltiplos valores (ranges): <code>0.1,0.3,0.7</code> cria um run separado para cada valor.</div>';
+    }
+    container.innerHTML = h;
+}
+function collectModelParams(prefix) {
+    const container = document.getElementById(prefix + 'ModelParams');
+    if (!container) return null;
+    const rows = container.querySelectorAll('.model-param-row');
+    if (!rows.length) return null;
+    const params = {};
+    let hasAny = false;
+    rows.forEach(row => {
+        const mk = row.dataset.model;
+        const tempStr = row.querySelector('.mp-temp')?.value?.trim();
+        const toppStr = row.querySelector('.mp-topp')?.value?.trim();
+        const maxtStr = row.querySelector('.mp-maxt')?.value?.trim();
+        const p = {};
+        if (tempStr) {
+            const vals = tempStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+            p.temperature = vals.length === 1 ? vals[0] : vals;
+            hasAny = true;
+        }
+        if (toppStr) {
+            const vals = toppStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+            p.top_p = vals.length === 1 ? vals[0] : vals;
+            hasAny = true;
+        }
+        if (maxtStr) {
+            const vals = maxtStr.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+            p.max_tokens = vals.length === 1 ? vals[0] : vals;
+            hasAny = true;
+        }
+        if (Object.keys(p).length) params[mk] = p;
+    });
+    return hasAny ? params : null;
+}
+function countModelVariants(prefix) {
+    const selector = prefix === 'bench' ? '#benchModels' : '#matrixModels';
+    const checked = Array.from(document.querySelectorAll(selector + ' input:checked')).map(cb => cb.value);
+    const container = document.getElementById(prefix + 'ModelParams');
+    if (!container) return checked.length;
+    let total = 0;
+    checked.forEach(mk => {
+        const row = container.querySelector(`.model-param-row[data-model="${mk}"]`);
+        if (!row) { total += 1; return; }
+        // Count cartesian product of range params
+        let combos = 1;
+        ['mp-temp', 'mp-topp', 'mp-maxt'].forEach(cls => {
+            const val = row.querySelector('.' + cls)?.value?.trim();
+            if (val && val.includes(',')) {
+                const cnt = val.split(',').filter(v => v.trim() !== '').length;
+                if (cnt > 1) combos *= cnt;
+            }
+        });
+        total += combos;
+    });
+    return total || checked.length;
+}
+// ── Export / Import ──
+function _buildBenchConfig(mode) {
+    let config = {};
+    if (mode === 'single') {
+        config.mode = 'single';
+        config.agent = document.getElementById('benchAgent')?.value;
+        config.models = Array.from(document.querySelectorAll('#benchModels input:checked')).map(cb=>cb.value);
+        config.iterations = parseInt(document.getElementById('benchIterations')?.value)||1;
+        config.capture_prompt = document.getElementById('benchCapture')?.checked||false;
+        config.run_discriminator = document.getElementById('benchEval')?.checked!==false;
+        const src = document.getElementById('benchSource')?.value;
+        if (src === 'synthetic') config.synthetic_scenario = document.getElementById('benchSynthetic')?.value;
+        const mp = collectModelParams('bench');
+        if (mp) config.model_params = mp;
+    } else {
+        config.mode = 'matrix';
+        config.agents = Array.from(document.querySelectorAll('#matrixAgents input:checked')).map(cb=>cb.value);
+        config.models = Array.from(document.querySelectorAll('#matrixModels input:checked')).map(cb=>cb.value);
+        config.scenarios = Array.from(document.querySelectorAll('#matrixScenarios input:checked')).map(cb=>cb.value);
+        config.iterations = parseInt(document.getElementById('matrixIterations')?.value)||1;
+        config.scenario_order = document.getElementById('matrixOrder')?.value||'sequential';
+        config.capture_prompt = document.getElementById('matrixCapture')?.checked||false;
+        config.run_discriminator = document.getElementById('matrixEval')?.checked!==false;
+        const mp = collectModelParams('matrix');
+        if (mp) config.model_params = mp;
+    }
+    return config;
+}
+function exportBenchConfig(mode) {
+    const config = _buildBenchConfig(mode);
+    const jsonStr = JSON.stringify(config, null, 2);
+    _showConfigModal('Exportar Configuração', jsonStr, mode, 'export');
+}
+function importBenchConfig(mode) {
+    _showConfigModal('Importar Configuração', '', mode, 'import');
+}
+function _showConfigModal(title, content, mode, action) {
+    let overlay = document.getElementById('configModalOverlay');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.id = 'configModalOverlay';
+    overlay.className = 'report-overlay';
+    const isExport = action === 'export';
+    overlay.innerHTML = `
+        <div class="report-modal" style="max-width:650px;">
+            <div class="report-modal-header">
+                <h3>${title}</h3>
+                <button onclick="document.getElementById('configModalOverlay').remove()" title="Fechar">✕</button>
+            </div>
+            <div class="report-modal-body" style="padding:14px 18px;">
+                <textarea id="configModalText" style="width:100%;min-height:250px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:12px;padding:10px;resize:vertical;" placeholder="Cole o JSON da configuração aqui...">${isExport ? escHtml(content) : ''}</textarea>
+                <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+                    ${isExport ? `
+                        <button class="btn btn-primary btn-sm" onclick="_copyConfigText()">📋 Copiar</button>
+                        <button class="btn btn-secondary btn-sm" onclick="_downloadConfigFile('${mode}')">💾 Baixar Arquivo</button>
+                        <span id="configModalStatus" style="font-size:11px;color:var(--green);margin-left:4px;"></span>
+                    ` : `
+                        <button class="btn btn-primary btn-sm" onclick="_applyConfigFromText('${mode}')">✅ Aplicar</button>
+                        <button class="btn btn-secondary btn-sm" onclick="_loadConfigFromFile('${mode}')">📂 Carregar Arquivo</button>
+                        <input type="file" id="configModalFile" accept=".json" style="display:none" onchange="_handleConfigFile(event,'${mode}')">
+                        <span id="configModalStatus" style="font-size:11px;color:var(--text-dim);margin-left:4px;"></span>
+                    `}
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    if (isExport) document.getElementById('configModalText').select();
+}
+function _copyConfigText() {
+    const ta = document.getElementById('configModalText');
+    if (!ta) return;
+    navigator.clipboard.writeText(ta.value).then(() => {
+        const st = document.getElementById('configModalStatus');
+        if (st) { st.textContent = 'Copiado!'; setTimeout(() => st.textContent = '', 2000); }
+    });
+}
+function _downloadConfigFile(mode) {
+    const ta = document.getElementById('configModalText');
+    if (!ta) return;
+    const blob = new Blob([ta.value], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `bench-config-${mode}-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+function _applyConfigFromText(mode) {
+    const ta = document.getElementById('configModalText');
+    if (!ta || !ta.value.trim()) return alert('Cole o JSON antes de aplicar.');
+    try {
+        const config = JSON.parse(ta.value.trim());
+        document.getElementById('configModalOverlay')?.remove();
+        loadConfigToForm(config, mode);
+    } catch(err) {
+        const st = document.getElementById('configModalStatus');
+        if (st) { st.style.color = 'var(--red)'; st.textContent = 'JSON inválido: ' + err.message; }
+    }
+}
+function _loadConfigFromFile(mode) {
+    document.getElementById('configModalFile')?.click();
+}
+function _handleConfigFile(event, mode) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const ta = document.getElementById('configModalText');
+        if (ta) ta.value = e.target.result;
+        const st = document.getElementById('configModalStatus');
+        if (st) { st.style.color = 'var(--green)'; st.textContent = `Arquivo "${file.name}" carregado — clique Aplicar.`; }
+    };
+    reader.readAsText(file);
+}
+function handleConfigImport(event, mode) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const config = JSON.parse(e.target.result);
+            loadConfigToForm(config, mode);
+        } catch(err) {
+            alert('Erro ao ler config JSON: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+function loadConfigToForm(config, mode) {
+    if (mode === 'single' || config.mode === 'single') {
+        // Switch to single mode
+        switchBenchMode('single');
+        if (config.agent) {
+            const sel = document.getElementById('benchAgent');
+            if (sel) sel.value = config.agent;
+        }
+        if (config.models) {
+            document.querySelectorAll('#benchModels input').forEach(cb => {
+                cb.checked = config.models.includes(cb.value);
+            });
+        }
+        if (config.iterations) {
+            const el = document.getElementById('benchIterations');
+            if (el) el.value = config.iterations;
+        }
+        if (config.synthetic_scenario) {
+            const src = document.getElementById('benchSource');
+            if (src) { src.value = 'synthetic'; toggleBenchSource(); }
+            const syn = document.getElementById('benchSynthetic');
+            if (syn) syn.value = config.synthetic_scenario;
+        }
+        if (config.capture_prompt !== undefined) {
+            const el = document.getElementById('benchCapture');
+            if (el) el.checked = config.capture_prompt;
+        }
+        if (config.run_discriminator !== undefined) {
+            const el = document.getElementById('benchEval');
+            if (el) el.checked = config.run_discriminator;
+        }
+        // Load model params
+        if (config.model_params) {
+            updateModelParamsUI('bench');
+            const container = document.getElementById('benchModelParams');
+            if (container) {
+                container.style.display = '';
+                setTimeout(() => {
+                    updateModelParamsUI('bench');
+                    setTimeout(() => _applyModelParamsToUI('bench', config.model_params), 50);
+                }, 50);
+            }
+        }
+    } else {
+        // Matrix mode
+        switchBenchMode('matrix');
+        if (config.agents) {
+            document.querySelectorAll('#matrixAgents input').forEach(cb => {
+                cb.checked = config.agents.includes(cb.value);
+            });
+        }
+        if (config.models) {
+            document.querySelectorAll('#matrixModels input').forEach(cb => {
+                cb.checked = config.models.includes(cb.value);
+            });
+        }
+        if (config.scenarios) {
+            document.querySelectorAll('#matrixScenarios input').forEach(cb => {
+                cb.checked = config.scenarios.includes(cb.value);
+            });
+        }
+        if (config.iterations) {
+            const el = document.getElementById('matrixIterations');
+            if (el) el.value = config.iterations;
+        }
+        if (config.scenario_order) {
+            const el = document.getElementById('matrixOrder');
+            if (el) el.value = config.scenario_order;
+        }
+        if (config.capture_prompt !== undefined) {
+            const el = document.getElementById('matrixCapture');
+            if (el) el.checked = config.capture_prompt;
+        }
+        if (config.run_discriminator !== undefined) {
+            const el = document.getElementById('matrixEval');
+            if (el) el.checked = config.run_discriminator;
+        }
+        if (config.model_params) {
+            const container = document.getElementById('matrixModelParams');
+            if (container) {
+                container.style.display = '';
+                setTimeout(() => {
+                    updateModelParamsUI('matrix');
+                    setTimeout(() => _applyModelParamsToUI('matrix', config.model_params), 50);
+                }, 50);
+            }
+        }
+        updateMatrixRunCount();
+    }
+}
+function _applyModelParamsToUI(prefix, modelParams) {
+    const container = document.getElementById(prefix + 'ModelParams');
+    if (!container) return;
+    for (const [mk, params] of Object.entries(modelParams)) {
+        const row = container.querySelector(`.model-param-row[data-model="${mk}"]`);
+        if (!row) continue;
+        if (params.temperature !== undefined) {
+            const el = row.querySelector('.mp-temp');
+            if (el) el.value = Array.isArray(params.temperature) ? params.temperature.join(',') : params.temperature;
+        }
+        if (params.top_p !== undefined) {
+            const el = row.querySelector('.mp-topp');
+            if (el) el.value = Array.isArray(params.top_p) ? params.top_p.join(',') : params.top_p;
+        }
+        if (params.max_tokens !== undefined) {
+            const el = row.querySelector('.mp-maxt');
+            if (el) el.value = Array.isArray(params.max_tokens) ? params.max_tokens.join(',') : params.max_tokens;
+        }
+    }
+    updateMatrixRunCount();
+}
+function runBenchmark() {
+    const agent = document.getElementById('benchAgent').value;
+    const source = document.getElementById('benchSource').value;
+    const checkboxes = document.querySelectorAll('#benchModels input[type="checkbox"]:checked');
+    const models = Array.from(checkboxes).map(cb=>cb.value);
+    const iterations = parseInt(document.getElementById('benchIterations').value) || 1;
+    const capturePrompt = document.getElementById('benchCapture').checked;
+    const runEval = document.getElementById('benchEval').checked;
+
+    if (models.length < 1) return alert('Selecione pelo menos 1 modelo');
+
+    const maxWorkers = parseInt(document.getElementById('benchMaxWorkers').value) || 4;
+    const body = { agent, models, run_discriminator: runEval, iterations, capture_prompt: capturePrompt, max_workers: maxWorkers };
+
+    const modelParams = collectModelParams('bench');
+    if (modelParams) body.model_params = modelParams;
+
+    if (source === 'synthetic') {
+        body.synthetic_scenario = document.getElementById('benchSynthetic').value;
+    } else {
+        const session = document.getElementById('benchSession').value;
+        if (!session) return alert('Selecione uma sessao com state');
+        body.session_id = session;
+    }
+
+    document.getElementById('benchRunBtn').disabled = true;
+    document.getElementById('benchStatus').textContent = '';
+    fetch(`${BASE}/benchmarks/run`, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+    }).then(r=>r.json()).then(data=>{
+        if (data.run_id) connectBenchmarkSSE(data.run_id);
+        else { document.getElementById('benchRunBtn').disabled = false; document.getElementById('benchStatus').textContent = 'Erro: sem run_id'; }
+    }).catch(()=>{
+        document.getElementById('benchRunBtn').disabled = false;
+        document.getElementById('benchStatus').textContent = 'Erro ao iniciar!';
+    });
+}
+function runMatrixBenchmark() {
+    const agents = Array.from(document.querySelectorAll('#matrixAgents input:checked')).map(cb=>cb.value);
+    const models = Array.from(document.querySelectorAll('#matrixModels input:checked')).map(cb=>cb.value);
+    const scenarios = Array.from(document.querySelectorAll('#matrixScenarios input:checked')).map(cb=>cb.value);
+    const iterations = parseInt(document.getElementById('matrixIterations').value) || 1;
+    const order = document.getElementById('matrixOrder').value;
+    const capturePrompt = document.getElementById('matrixCapture').checked;
+    const runEval = document.getElementById('matrixEval').checked;
+
+    if (!agents.length) return alert('Selecione pelo menos 1 agente');
+    if (!models.length) return alert('Selecione pelo menos 1 modelo');
+    if (!scenarios.length) return alert('Selecione pelo menos 1 cenario');
+
+    const totalVariants = countModelVariants('matrix');
+    const total = agents.length * totalVariants * scenarios.length * iterations;
+    if (total > 100 && !confirm(`Executar ${total} runs? Isso pode demorar.`)) return;
+
+    const maxWorkers = parseInt(document.getElementById('matrixMaxWorkers').value) || 4;
+    const body = { agents, models, scenarios, iterations, scenario_order: order, run_discriminator: runEval, capture_prompt: capturePrompt, max_workers: maxWorkers };
+    const modelParams = collectModelParams('matrix');
+    if (modelParams) body.model_params = modelParams;
+
+    document.getElementById('matrixRunBtn').disabled = true;
+    document.getElementById('matrixStatus').textContent = '';
+    fetch(`${BASE}/benchmarks/matrix`, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+    }).then(r=>r.json()).then(data=>{
+        if (data.run_id) connectBenchmarkSSE(data.run_id);
+        else { document.getElementById('matrixRunBtn').disabled = false; document.getElementById('matrixStatus').textContent = 'Erro: sem run_id'; }
+    }).catch(()=>{
+        document.getElementById('matrixRunBtn').disabled = false;
+        document.getElementById('matrixStatus').textContent = 'Erro ao iniciar!';
+    });
+}
+// --- SSE Live Progress ---
+let _benchSSE = null;
+let _benchTimer = null;
+let _sseRetries = 0;
+const SSE_MAX_RETRIES = 5;
+const SSE_BASE_DELAY = 1000;
+
+function connectBenchmarkSSE(runId) {
+    // Always render in the dedicated progress zone
+    const zone = document.getElementById('benchProgressZone');
+    if (!zone) return console.error('benchProgressZone not found');
+
+    let panel = document.getElementById('benchLivePanel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'benchLivePanel';
+        panel.className = 'bench-live';
+        zone.innerHTML = '';
+        zone.appendChild(panel);
+    }
+    // Scroll progress zone into view smoothly
+    zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    const startTime = Date.now();
+    let totalRuns = 0, current = 0, successes = 0, errors = 0;
+    const _logEntries = [];
+
+    function elapsed() {
+        const s = Math.floor((Date.now() - startTime) / 1000);
+        const m = Math.floor(s / 60);
+        return m > 0 ? `${m}m ${s%60}s` : `${s}s`;
+    }
+    function renderPanel(currentLabel) {
+        const pct = totalRuns > 0 ? Math.round((current / totalRuns) * 100) : 0;
+        let h = `<div class="live-header"><div class="live-dot"></div><span class="live-title">Benchmark ${runId} em execução</span><span class="live-elapsed" id="benchElapsed">${elapsed()}</span></div>`;
+        h += `<div class="live-bar-bg"><div class="live-bar-fill" style="width:${pct}%"></div></div>`;
+        h += `<div class="live-counters">`;
+        h += `<span class="fw-700">${current}/${totalRuns}</span>`;
+        h += `<span class="text-green">✓ ${successes}</span>`;
+        h += `<span class="text-red">✗ ${errors}</span>`;
+        h += `<span class="text-dim">${pct}%</span>`;
+        h += `</div>`;
+        if (currentLabel) h += `<div class="live-current">▶ ${currentLabel}</div>`;
+        h += `<div class="live-log" id="benchLiveLog"></div>`;
+        panel.innerHTML = h;
+        const logEl = document.getElementById('benchLiveLog');
+        if (logEl) logEl.innerHTML = _logEntries.join('');
+    }
+
+    function addLog(icon, text, cls) {
+        const t = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        _logEntries.push(`<div class="live-log-entry"><span class="log-time">${t}</span><span class="${cls||''}">${icon} ${text}</span></div>`);
+        const logEl = document.getElementById('benchLiveLog');
+        if (logEl) { logEl.innerHTML = _logEntries.join(''); logEl.scrollTop = logEl.scrollHeight; }
+    }
+
+    function cleanupSSE() {
+        if (_benchSSE) { _benchSSE.close(); _benchSSE = null; }
+        if (_benchTimer) { clearInterval(_benchTimer); _benchTimer = null; }
+    }
+
+    function resetFormButtons() {
+        ['benchRunBtn', 'matrixRunBtn'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.disabled = false;
+        });
+        ['benchStatus', 'matrixStatus'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.textContent = '';
+        });
+    }
+
+    function finishBenchmark() {
+        addLog('🏁', `Concluído! ${successes} OK, ${errors} erros em ${elapsed()}`, 'text-green');
+        renderPanel(null);
+        const dot = panel.querySelector('.live-dot');
+        if (dot) { dot.style.background = 'var(--text-dim)'; dot.style.animation = 'none'; }
+        const title = panel.querySelector('.live-title');
+        if (title) title.textContent = `Benchmark ${runId} concluído`;
+        cleanupSSE();
+        _sseRetries = 0;
+        resetFormButtons();
+        refreshDashboard();
+    }
+
+    function attemptReconnect() {
+        if (_sseRetries >= SSE_MAX_RETRIES) {
+            addLog('⚠', `Reconexão falhou após ${SSE_MAX_RETRIES} tentativas`, 'text-red');
+            cleanupSSE();
+            resetFormButtons();
+            setTimeout(refreshDashboard, 2000);
+            return;
+        }
+        _sseRetries++;
+        const delay = SSE_BASE_DELAY * Math.pow(2, _sseRetries - 1);
+        addLog('⟳', `Reconectando em ${delay/1000}s (tentativa ${_sseRetries}/${SSE_MAX_RETRIES})...`, 'text-dim');
+        setTimeout(() => openSSE(), delay);
+    }
+
+    function openSSE() {
+        if (_benchSSE) _benchSSE.close();
+        _benchSSE = new EventSource(`${BASE}/benchmarks/stream/${runId}`);
+
+        _benchSSE.onopen = () => {
+            if (_sseRetries > 0) {
+                addLog('✓', 'Reconectado com sucesso', 'text-green');
+                _sseRetries = 0;
+            }
+        };
+
+        _benchSSE.onmessage = (e) => {
+            try {
+                const d = JSON.parse(e.data);
+                _sseRetries = 0; // reset on any valid message
+                if (d.type === 'started') {
+                    totalRuns = d.total || 0;
+                    const mode = d.mode === 'matrix' ? 'Matrix' : 'Single';
+                    addLog('🚀', `${mode} iniciado — ${totalRuns} runs`, 'text-blue');
+                    renderPanel('Preparando...');
+                } else if (d.type === 'run_start') {
+                    current = d.current || current;
+                    totalRuns = d.total || totalRuns;
+                    const lbl = d.scenario ? `${d.agent} / ${d.model} / ${d.scenario} #${d.iteration}` : `${d.agent} / ${d.model} #${d.iteration}`;
+                    addLog('⏳', `[${d.current}/${d.total}] ${lbl}`, 'text-dim');
+                    renderPanel(lbl);
+                } else if (d.type === 'run_complete') {
+                    current = d.current || current;
+                    successes = d.successes || successes;
+                    errors = d.errors || errors;
+                    const scoreStr = d.score != null ? ` — Score: ${d.score}/10` : '';
+                    addLog('✓', `${d.model} ${d.duration_s}s${scoreStr}`, 'text-green');
+                    renderPanel(null);
+                } else if (d.type === 'run_error') {
+                    current = d.current || current;
+                    successes = d.successes || successes;
+                    errors = d.errors || errors;
+                    addLog('✗', `${d.model}: ${(d.error||'').substring(0,80)}`, 'text-red');
+                    renderPanel(null);
+                } else if (d.type === 'finished') {
+                    current = d.total || current;
+                    successes = d.successes || successes;
+                    errors = d.errors || errors;
+                    finishBenchmark();
+                }
+            } catch(err) { console.error('SSE parse error:', err); }
+        };
+
+        _benchSSE.onerror = () => {
+            addLog('⚠', 'Conexão SSE perdida', 'text-yellow');
+            _benchSSE.close();
+            _benchSSE = null;
+            attemptReconnect();
+        };
+    }
+
+    renderPanel('Conectando...');
+    _benchTimer = setInterval(() => {
+        const el = document.getElementById('benchElapsed');
+        if (el) el.textContent = elapsed();
+    }, 1000);
+
+    _sseRetries = 0;
+    openSSE();
+}
+function resumeBenchmark(runId, btnEl) {
+    // Remove the checkpoint card from UI
+    if (btnEl) {
+        const card = btnEl.closest('.checkpoint-card');
+        if (card) card.style.opacity = '0.4';
+    }
+    fetch(`${BASE}/benchmarks/resume/${runId}`, { method:'POST', headers:{'Content-Type':'application/json'} })
+    .then(r=>r.json()).then(data=>{
+        if (data.error) return alert('Erro: ' + data.error);
+        if (data.run_id) {
+            // Remove faded checkpoint card
+            if (btnEl) { const card = btnEl.closest('.checkpoint-card'); if (card) card.remove(); }
+            connectBenchmarkSSE(data.run_id);
+        }
+    }).catch(e=>{ console.error('Resume error:', e); alert('Erro ao retomar benchmark'); });
+}
+function deleteCheckpoint(runId) {
+    if (!confirm(`Deletar checkpoint ${runId}?`)) return;
+    fetch(`${BASE}/benchmarks/checkpoints/${runId}`, { method:'DELETE' })
+    .then(r=>r.json()).then(()=>refreshDashboard())
+    .catch(()=>alert('Erro ao deletar checkpoint'));
+}
+
+// ── Report Generation ──
+function generateReport(runId) {
+    showReportModal('Gerando relatório...', true);
+    fetch(`${BASE}/benchmarks/report`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ run_id: runId }) })
+    .then(r=>r.json()).then(data=>{
+        if (data.error) { closeReportModal(); alert('Erro: ' + data.error); return; }
+        showReportModal(data.report, false);
+    }).catch(e=>{ closeReportModal(); alert('Erro ao gerar relatório: ' + e.message); });
+}
+function generateCrossReport() {
+    showReportModal('Gerando análise cruzada de todos os benchmarks...', true);
+    fetch(`${BASE}/benchmarks/report/cross`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) })
+    .then(r=>r.json()).then(data=>{
+        if (data.error) { closeReportModal(); alert('Erro: ' + data.error); return; }
+        showReportModal(data.report, false);
+    }).catch(e=>{ closeReportModal(); alert('Erro ao gerar relatório: ' + e.message); });
+}
+function showReportModal(content, isLoading) {
+    let overlay = document.getElementById('reportOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'reportOverlay';
+        overlay.className = 'report-overlay';
+        overlay.addEventListener('click', e=>{ if (e.target === overlay) closeReportModal(); });
+        document.body.appendChild(overlay);
+    }
+    if (isLoading) {
+        overlay.innerHTML = `<div class="report-modal">
+            <div class="report-modal-header"><h3>📊 Relatório de Benchmark</h3><button onclick="closeReportModal()">&times;</button></div>
+            <div class="report-loading"><div class="spinner"></div>${content}</div>
+        </div>`;
+    } else {
+        overlay.innerHTML = `<div class="report-modal">
+            <div class="report-modal-header"><h3>📊 Relatório de Benchmark</h3><button onclick="closeReportModal()">&times;</button></div>
+            <div class="report-modal-body" id="reportBody"></div>
+            <div class="report-modal-footer"><button class="btn btn-secondary btn-sm" onclick="copyReport()">📋 Copiar</button><button class="btn btn-secondary btn-sm" onclick="closeReportModal()">Fechar</button></div>
+        </div>`;
+        document.getElementById('reportBody').innerHTML = renderMarkdown(content);
+    }
+    overlay.style.display = 'flex';
+}
+function closeReportModal() {
+    const overlay = document.getElementById('reportOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+function copyReport() {
+    const body = document.getElementById('reportBody');
+    if (body) { navigator.clipboard.writeText(body.innerText).then(()=>alert('Relatório copiado!')).catch(()=>{}); }
+}
+function renderMarkdown(md) {
+    // Lightweight markdown to HTML
+    let html = md
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+        .replace(/^---$/gm, '<hr>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+    // Wrap consecutive <li> in <ul>
+    html = html.replace(/(<li>.*?<\/li>(?:<br>)?)+/g, m => '<ul>' + m.replace(/<br>/g, '') + '</ul>');
+    return '<p>' + html + '</p>';
+}
+function renderSingleResult(run) {
+    let html = `<div class="result-card">`;
+    html += `<div class="result-card-title">${run.agent} — ${run.timestamp?.substring(0,19)} — run:${run.run_id}</div>`;
+    if (run.synthetic_scenario) html += `<div class="result-card-subtitle text-yellow">Cenário: ${run.synthetic_scenario} | ${run.iterations||1}x iterações</div>`;
+
+    (run.results||[]).forEach(ms => {
+        const scoreColor = ms.quality ? (ms.quality.avg_score>=7?'text-green':ms.quality.avg_score>=5?'text-yellow':'text-red') : 'text-dim';
+        html += `<div class="bench-card">`;
+        html += `<div class="model-name">${ms.model} <span class="text-dim fs-11 fw-400">${ms.successes||0}/${ms.iterations||1} OK</span></div>`;
+        html += `<div class="stats">`;
+        if (ms.timing) {
+            html += `<div class="stat"><span class="sl">Avg</span>${ms.timing.avg}s</div>`;
+            html += `<div class="stat"><span class="sl">P50</span>${ms.timing.p50}s</div>`;
+            html += `<div class="stat"><span class="sl">Min/Max</span>${ms.timing.min}–${ms.timing.max}s</div>`;
+        }
+        if (ms.quality) {
+            html += `<div class="stat"><span class="sl">Score</span><span class="${scoreColor} fw-700">${ms.quality.avg_score}/10</span></div>`;
+            if (ms.quality.min_score !== ms.quality.max_score) html += `<div class="stat"><span class="sl">Range</span>${ms.quality.min_score}–${ms.quality.max_score}</div>`;
+        }
+        if (ms.errors > 0) html += `<div class="stat"><span class="sl">Errors</span><span class="text-red">${ms.errors}</span></div>`;
+        html += `</div>`;
+        html += renderRunDetails(ms.runs);
+        html += `</div>`;
+    });
+    html += `</div>`;
+    return html;
+}
+function renderMatrixResult(run) {
+    let html = `<div class="result-card matrix">`;
+    html += `<div class="result-card-title">MATRIX — ${run.timestamp?.substring(0,19)} — run:${run.run_id}</div>`;
+    const cfg = run.config || {};
+    html += `<div class="result-card-meta">${cfg.total_runs} runs | ${(cfg.agents||[]).length} agents × ${(cfg.models||[]).length} models × ${(cfg.scenarios||[]).length} scenarios × ${cfg.iterations||1} iter | ${cfg.scenario_order||'sequential'}</div>`;
+
+    // Rankings tables
+    const rk = run.rankings || {};
+    if (rk.by_model && Object.keys(rk.by_model).length) {
+        html += `<details open class="ranking-details"><summary class="ranking-summary">Ranking por Modelo</summary>`;
+        html += renderRankingTable(rk.by_model);
+        html += `</details>`;
+    }
+    if (rk.by_agent && Object.keys(rk.by_agent).length) {
+        html += `<details class="ranking-details"><summary class="ranking-summary">Ranking por Agente</summary>`;
+        html += renderRankingTable(rk.by_agent);
+        html += `</details>`;
+    }
+    if (rk.by_combo && Object.keys(rk.by_combo).length) {
+        html += `<details class="ranking-details"><summary class="ranking-summary">Ranking por Combo (Agent|Model)</summary>`;
+        html += renderRankingTable(rk.by_combo);
+        html += `</details>`;
+    }
+    if (rk.by_scenario && Object.keys(rk.by_scenario).length) {
+        html += `<details class="ranking-details"><summary class="ranking-summary">Ranking por Cenário</summary>`;
+        html += renderRankingTable(rk.by_scenario);
+        html += `</details>`;
+    }
+
+    // All individual runs (expandable)
+    const runs = run.runs || [];
+    html += `<details class="ranking-details mt-8"><summary class="ranking-summary">${runs.length} runs individuais — clique para detalhes</summary>`;
+    html += renderRunDetails(runs);
+    html += `</details>`;
+
+    // Report button
+    html += `<div class="bench-actions mt-10">`;
+    html += `<button class="btn btn-primary btn-sm" onclick="generateReport('${run.run_id}')">📊 Gerar Relatório</button>`;
+    html += `</div>`;
+
+    html += `</div>`;
+    return html;
+}
+function renderRankingTable(ranking) {
+    let html = `<table class="data-table ranking-table"><tr><th>#</th><th>Key</th><th>Score</th><th>Avg Time</th><th>Runs</th><th>Errors</th></tr>`;
+    let rank = 1;
+    for (const [key, stats] of Object.entries(ranking)) {
+        const scoreCls = stats.avg_score!=null ? (stats.avg_score>=7?'text-green':stats.avg_score>=5?'text-yellow':'text-red') : 'text-dim';
+        html += `<tr>`;
+        html += `<td class="fw-700">${rank++}</td>`;
+        html += `<td class="fw-600">${key}</td>`;
+        html += `<td class="${scoreCls} fw-700">${stats.avg_score!=null?stats.avg_score+'/10':'—'}</td>`;
+        html += `<td>${stats.avg_time!=null?stats.avg_time+'s':'—'}</td>`;
+        html += `<td>${stats.runs}</td>`;
+        html += `<td class="${stats.errors>0?'text-red':'text-dim'}">${stats.errors}</td>`;
+        html += `</tr>`;
+    }
+    html += `</table>`;
+    return html;
+}
+function renderRunDetails(runs) {
+    if (!runs || !runs.length) return '';
+    let html = `<div class="run-details-list">`;
+    runs.forEach((r,i) => {
+        const rScore = r.evaluation && typeof r.evaluation.overall_score==='number' ? r.evaluation.overall_score : null;
+        const rCls = rScore!==null ? (rScore>=7?'text-green':rScore>=5?'text-yellow':'text-red') : 'text-dim';
+        const statusCls = r.status==='success' ? 'success' : 'error';
+        html += `<div class="run-detail ${statusCls}">`;
+        html += `<div class="run-detail-row">`;
+        if (r.agent) html += `<span class="fw-600">${r.agent}</span>`;
+        if (r.scenario) html += `<span class="text-yellow">${r.scenario}</span>`;
+        html += `<span>${r.model||''}</span>`;
+        html += `<span>#${r.iteration||i+1}</span>`;
+        html += `<span>${r.duration_s}s</span>`;
+        html += `<span>${r.status}</span>`;
+        if (rScore!==null) html += `<span class="${rCls} fw-700">${rScore}/10</span>`;
+        if (r.tokens) html += `<span>${r.tokens.total||'?'} tok</span>`;
+        html += `</div>`;
+        if (r.evaluation && r.evaluation.scores) {
+            html += `<div class="run-detail-scores">`;
+            for (const [k,v] of Object.entries(r.evaluation.scores)) {
+                html += `<span>${k}: <strong>${v}</strong></span>`;
+            }
+            html += `</div>`;
+        }
+        if (r.evaluation && r.evaluation.issues && r.evaluation.issues.length) {
+            html += `<div class="run-detail-issues">Issues: ${r.evaluation.issues.join('; ')}</div>`;
+        }
+        if (r.evaluation_error) html += `<div class="text-red fs-10">Eval error: ${r.evaluation_error}</div>`;
+        if (r.error) html += `<div class="text-red fs-10">Error: ${r.error.substring(0,200)}</div>`;
+        if (r.output_preview) html += `<details class="run-detail-expand"><summary>Output</summary><pre class="run-detail-pre">${escHtml(r.output_preview.substring(0,800))}</pre></details>`;
+        if (r.interpolated_prompt) html += `<details class="run-detail-expand"><summary class="text-blue">Prompt Interpolado</summary><pre class="run-detail-pre">${escHtml(JSON.stringify(r.interpolated_prompt,null,2))}</pre></details>`;
+        html += `</div>`;
+    });
+    html += `</div>`;
+    return html;
+}
+
+// --- Models Dashboard ---
+function renderModels(c) {
+    Promise.all([
+        fetch(`${BASE}/models/mapping`).then(r=>r.json()),
+        fetch(`${BASE}/benchmarks/models`).then(r=>r.json()),
+    ]).then(([mappingData, modelsData]) => {
+        let html = `<div class="section-title">Mapeamento Agente → Modelo</div>`;
+        html += `<p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Configure qual modelo cada agente usa. Overrides globais afetam todas as sessoes. Overrides por sessao tem prioridade.</p>`;
+
+        html += '<table class="data-table"><tr><th>Agent</th><th>Default</th><th>Override</th><th>Acao</th></tr>';
+        const allModels = Object.keys(modelsData.models);
+        for (const [agent, defaultModel] of Object.entries(mappingData.defaults)) {
+            const override = mappingData.overrides[agent] || '';
+            const activeModel = override || defaultModel;
+            html += `<tr>`;
+            html += `<td style="font-weight:600">${agent}</td>`;
+            html += `<td style="color:var(--text-dim)">${defaultModel}</td>`;
+            html += `<td><select class="form-select" style="width:auto;display:inline" id="ov_${agent}">`;
+            html += `<option value="">— default —</option>`;
+            allModels.forEach(m=>{ html += `<option value="${m}" ${m===override?'selected':''}>${m}</option>`; });
+            html += `</select></td>`;
+            html += `<td><button class="btn btn-primary btn-sm" onclick="setOverride('${agent}')">Set</button> `;
+            if (override) html += `<button class="btn btn-danger btn-sm" onclick="removeOverride('${agent}')">Remove</button>`;
+            html += `</td></tr>`;
+        }
+        html += '</table>';
+        c.innerHTML = html;
+    });
+}
+function setOverride(agent) {
+    const model = document.getElementById('ov_'+agent).value;
+    if (!model) return removeOverride(agent);
+    fetch(`${BASE}/models/override`, { method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ agent, model })
+    }).then(()=>refreshDashboard());
+}
+function removeOverride(agent) {
+    fetch(`${BASE}/models/override`, { method:'DELETE', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ agent })
+    }).then(()=>refreshDashboard());
+}
+
+// --- Scenarios Dashboard ---
+function renderScenarios(c) {
+    Promise.all([
+        fetch(`${BASE}/scenarios`).then(r=>r.json()),
+        fetch(`${BASE}/synthetic/scenarios`).then(r=>r.json()),
+    ]).then(([fileScenarios, syntheticData]) => {
+        let html = `<div class="section-title">Cenarios Sinteticos (para Benchmark)</div>`;
+        html += `<p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Estados pre-construidos com dados realistas. Use na aba Benchmarks ou injete manualmente.</p>`;
+        const synth = syntheticData.scenarios || {};
+        if (Object.keys(synth).length) {
+            html += '<table class="data-table"><tr><th>Nome</th><th>Turn</th><th>Contexto</th><th>Agentes Foco</th><th>Descricao</th><th>Acao</th></tr>';
+            for (const [name,info] of Object.entries(synth)) {
+                html += `<tr><td style="font-weight:600">${name}</td><td>${info.turn}</td><td>${info.topic}</td><td style="font-size:11px">${info.agent_focus.join(', ')}</td><td style="font-size:11px">${info.description}</td>`;
+                html += `<td><button class="btn btn-secondary btn-sm" onclick="injectSynthetic('${name}')">Injetar</button></td></tr>`;
+            }
+            html += '</table>';
+        }
+
+        html += `<div class="section-title" style="margin-top:24px;">Cenarios de Chat (JSON)</div>`;
+        html += `<p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Cenarios de mensagens em dev_chat/scenarios/. Para executar, use o CLI runner.</p>`;
+        const d = fileScenarios;
+        if (d.scenarios && d.scenarios.length) {
+            html += '<table class="data-table"><tr><th>Nome</th><th>Arquivo</th><th>Msgs</th><th>Descricao</th></tr>';
+            d.scenarios.forEach(s=>{
+                html += `<tr><td style="font-weight:600">${s.name}</td><td style="color:var(--text-dim)">${s.file}</td><td>${s.messages_count}</td><td style="font-size:11px">${s.description.substring(0,100)}</td></tr>`;
+            });
+            html += '</table>';
+        } else { html += '<p>Nenhum cenario de chat encontrado.</p>'; }
+
+        html += `<div class="section-title" style="margin-top:20px;">CLI Runner</div>`;
+        html += `<pre style="font-size:11px;background:var(--surface);padding:12px;border-radius:6px;">
+# Executar cenario com discriminador
+python -m dev_chat.runner --scenario dev_chat/scenarios/sales_carro_completo.json --discriminator
+
+# Modo interativo
+python -m dev_chat.runner --interactive --discriminator
+
+# Mensagem avulsa
+python -m dev_chat.runner --message "oi quero rastreador" --session test1 --discriminator
+
+# Com reset
+python -m dev_chat.runner --scenario dev_chat/scenarios/sales_objecao_preco.json --reset --discriminator --output results.json</pre>`;
+        c.innerHTML = html;
+    });
+}
+function injectSynthetic(name) {
+    if (!confirm(`Injetar cenario "${name}" no Redis?`)) return;
+    fetch(`${BASE}/synthetic/inject`, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ scenario: name })
+    }).then(r=>r.json()).then(d=>{
+        if (d.error) alert('Erro: '+d.error);
+        else alert(`Injetado! contact_id: ${d.contact_id}`);
+    });
+}
+
+// ===== INIT =====
+loadSessions();
+document.getElementById('pollInterval').addEventListener('change', startPolling);
+</script>
+</body>
+</html>

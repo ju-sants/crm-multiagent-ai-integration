@@ -1,0 +1,30 @@
+{
+    "name": "Compliance Contratual: Venda Carro com Disclosure Obrigatório",
+    "description": "Cenário focado em segurança jurídica e disclosure de termos contratuais. Cliente quer GSM 4G com bloqueio pro carro, e faz perguntas críticas: cancelamento, transferência de veículo, inadimplência. Avalia: RoutingAgent deve manter BUDGET e detectar transição para fechamento; StrategicAdvisor deve preencher disclosure_checklist com TODOS os termos obrigatórios (contrato 24 meses, taxa desinstalação R$200, comodato, não é seguro); IncrementalPlanner deve adicionar disclosure items conforme perguntas surgem sem remover existentes; CommunicationAgent DEVE comunicar cada termo e atualizar status para 'communicated', seguir princípio 'se não está no papel não existe', preços exatos sem invenção.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Manter BUDGET consistente", "Detectar is_sales_final_step=True no fechamento"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["disclosure_checklist com TODOS termos obrigatórios", "Contrato 24 meses, desinstalação R$200, comodato", "Clarificar que NÃO é seguro"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Adicionar disclosure items por pergunta", "NUNCA remover itens existentes do checklist"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Comunicar cada termo e atualizar status para communicated", "Preços exatos GSM 4G com bloqueio R$75/mês", "Princípio se não está no papel não existe"]
+        }
+    },
+    "session_id": "test-disclosure-compliance",
+    "contact_name": "Juliana Rodrigues",
+    "messages": [
+        {"text": "quero fechar o gsm 4g com bloqueio p meu corolla", "wait": 90},
+        {"text": "ja vi os precos, 75 p mes ne? quero esse", "wait": 90},
+        {"text": "se eu cancelar antes dos 24 meses pago multa?", "wait": 120},
+        {"text": "e se eu vender o carro oq acontece com o rastreador?", "wait": 120},
+        {"text": "e se atrasar o pagamento?", "wait": 120},
+        {"text": "isso eh tipo um seguro entao?", "wait": 90},
+        {"text": "ok entendi, bora fechar", "wait": 90}
+    ]
+}

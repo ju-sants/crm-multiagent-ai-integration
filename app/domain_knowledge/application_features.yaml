@@ -43,9 +43,9 @@ video_tutorials:
   - "Criação de cerca eletrônica: https://www.tiktok.com/@globalsystem24h/video/7486842696829603077"
   - "Visualização de rotas e trilhas: https://www.tiktok.com/@globalsystem24h/video/7486842532379282694"
 related_queries:
-  - topic: "get_support_philosophy"
+  - topic: "support_philosophy"
     params: {}
     description: "Consultar as diretrizes de suporte ao cliente."
-  - topic: "get_web_access_features"
+  - topic: "web_access_features"
     params: {}
     description: "Consultar as funcionalidades do acesso via web."

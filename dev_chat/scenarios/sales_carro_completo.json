@@ -1,0 +1,26 @@
+{
+    "name": "Venda Completa Carro: Funil Ideal com Downsell",
+    "description": "Cenário golden-path de venda de carro seguindo o funil completo das 5 etapas (conexão→diagnóstico→proposta→objeção→fechamento). Cliente cooperativo com objeção leve. Avalia: RoutingAgent deve classificar BUDGET logo na msg 1, manter consistente, e detectar is_sales_final_step=True na msg 6 ('pode ser esse'); StrategicAdvisor deve seguir hierarquia carro (Híbrido→GSM+WiFi→GSM 4G), oferecer Híbrido como padrão-ouro, reposicionar GSM 4G no downsell, disclosure_checklist com contrato 24 meses; IncrementalPlanner deve incorporar preferência de custo e ajustar primary_offer para GSM 4G; CommunicationAgent deve seguir tom consultivo, enviar catálogo apenas 1x, usar closing mindset na msg final, preços exatos (GSM 4G adesão R$200, R$65-75/mês).",
+    "complexity": "média",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["BUDGET desde msg 1", "is_sales_final_step=True na confirmação", "Ação consistente com BUDGET"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Hierarquia Híbrido > GSM 4G para carro", "disclosure_checklist com contrato e taxas", "Preços corretos do Híbrido e GSM 4G"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Catálogo enviado apenas 1x", "Closing mindset na confirmação", "Preços exatos sem invenção"]
+        }
+    },
+    "session_id": "sales-carro-completo",
+    "contact_name": "Fernanda Oliveira",
+    "messages": [
+        {"text": "boa tarde, quero colocar rastreador no meu carro", "wait": 60},
+        {"text": "corolla 2022, uso no dia a dia msm", "wait": 60},
+        {"text": "qual plano vcs recomendam?", "wait": 60},
+        {"text": "nn tem nada mais em conta?", "wait": 60},
+        {"text": "gostei, como faz pra contratar?", "wait": 60},
+        {"text": "pode ser esse ai, como pago?", "wait": 60}
+    ]
+}

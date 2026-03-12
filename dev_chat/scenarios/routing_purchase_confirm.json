@@ -1,0 +1,30 @@
+{
+    "name": "Funil Completo: Moto PGS até Fechamento",
+    "description": "Cenário de funil de vendas completo para moto com plano PGS. Percorre todas as 5 etapas de vendas até a confirmação de compra. Avalia: RoutingAgent deve classificar corretamente como BUDGET, detectar is_sales_final_step=True na confirmação explícita, e transicionar para BUDGET_ACCEPTED; StrategicAdvisor deve priorizar PGS sobre Básico (hierarquia de produto), preencher disclosure_checklist completo; IncrementalPlanner deve refinar plano conforme dados de FIPE surgem; CommunicationAgent deve seguir tom WhatsApp, enviar catálogo no momento certo, sem inventar preços; RegistrationDataCollector deve iniciar coleta após fechamento.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["BUDGET desde msg 1", "is_sales_final_step=True na confirmação PGS", "Transição para BUDGET_ACCEPTED"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Priorizar PGS sobre Básico", "disclosure_checklist completo", "Reembolso FIPE como diferencial"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Catálogo no momento certo", "Preços exatos PGS por faixa FIPE", "Tom WhatsApp natural"]
+        },
+        "RegistrationDataCollectorAgent": {
+            "critical_checkpoints": ["Iniciar coleta após fechamento", "Blocos lógicos de dados"]
+        }
+    },
+    "session_id": "test-full-funnel-moto-pgs",
+    "contact_name": "Fernanda Oliveira",
+    "messages": [
+        {"text": "oi quero colocar rastreador na minha moto", "wait": 90},
+        {"text": "yamaha fazer 250, uso p trabalho td dia", "wait": 90},
+        {"text": "qual o plano mais completo q vcs tem?", "wait": 90},
+        {"text": "a moto vale uns 18 mil na fipe", "wait": 90},
+        {"text": "e se roubarem e n recuperar como funciona o reembolso?", "wait": 120},
+        {"text": "blz entendi, bora fechar com o pgs", "wait": 90},
+        {"text": "sim manda os dados p eu preencher", "wait": 120}
+    ]
+}

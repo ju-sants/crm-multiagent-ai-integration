@@ -1,6 +1,8 @@
 import base64
 import hmac
 import hashlib
+import os
+import tempfile
 import time
 import secrets
 import requests
@@ -73,6 +75,7 @@ class ImageDescriptionAPI:
             Resposta da API em formato dict
         """
         redis_conn = get_redis()
+        _tmp_path = None  # track temp file for cleanup
 
         if not image_path and not image_url:
             return ValueError('Envie pelo menos um parâmetro com dados de imagem')
@@ -95,9 +98,16 @@ class ImageDescriptionAPI:
                 pass
 
             extension = image_url.split('?')[0].split('.')[-1]
-            image_path = f'app/services/tmp_files/tmp_image.{extension}'
-            with open(image_path, 'wb') as f:
-                f.write(image_bytes)
+            tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f'.{extension}')
+            try:
+                tmp_file.write(image_bytes)
+                tmp_file.close()
+                image_path = tmp_file.name
+                _tmp_path = tmp_file.name
+            except Exception:
+                tmp_file.close()
+                os.unlink(tmp_file.name)
+                raise
         
         elif not image_url and image_path:
             pass
@@ -105,50 +115,49 @@ class ImageDescriptionAPI:
         else:
             raise ValueError('Envie apenas um dos dois parâmetros com dados de imagem.')
         
-        
-        # 1. Carregar e converter imagem para base64
-        image_base64_data, image_bytes = self.load_image_from_file(image_path)
-        content_hash = hashlib.sha256(image_bytes).hexdigest()
-        cache_key = f"imagedescription:{content_hash}"
-        
-        cached_result = redis_conn.get(cache_key)
-        if cached_result:
-            logger.info(f"Cache hit for key: {cache_key}")
-            return json.loads(cached_result)
-
-        logger.info(f"Cache miss for key: {cache_key}. Executing image description.")
-
-        # 2. Gerar parâmetros de autenticação
-        timestamp = str(int(time.time() * 1000))
-        nonce = secrets.token_hex(4)
-        
-        # 3. Gerar assinatura
-        sign_string = self.build_sign_string(self.appid, timestamp, nonce)
-        signature = self.generate_signature(sign_string, self.secret)
-        
-        # 4. Preparar dados da requisição
-        if prompt is None:
-            prompt = ("Summarize the content of the picture in one sentence, "
-                     "then describe in detail what is in the picture, including "
-                     "objects, people, animals, and the atmosphere and mood of the picture")
-        
-        # Dados do formulário
-        form_data = {
-            'imageBase64Data': image_base64_data,
-            'lang': lang,
-            'prompt': prompt
-        }
-        
-        # Headers
-        headers = {
-            'appid': self.appid,
-            'timestamp': timestamp,
-            'nonce': nonce,
-            'signature': signature
-        }
-        
-        # 5. Fazer requisição
         try:
+            # 1. Carregar e converter imagem para base64
+            image_base64_data, image_bytes = self.load_image_from_file(image_path)
+            content_hash = hashlib.sha256(image_bytes).hexdigest()
+            cache_key = f"imagedescription:{content_hash}"
+            
+            cached_result = redis_conn.get(cache_key)
+            if cached_result:
+                logger.info(f"Cache hit for key: {cache_key}")
+                return json.loads(cached_result)
+
+            logger.info(f"Cache miss for key: {cache_key}. Executing image description.")
+
+            # 2. Gerar parâmetros de autenticação
+            timestamp = str(int(time.time() * 1000))
+            nonce = secrets.token_hex(4)
+            
+            # 3. Gerar assinatura
+            sign_string = self.build_sign_string(self.appid, timestamp, nonce)
+            signature = self.generate_signature(sign_string, self.secret)
+            
+            # 4. Preparar dados da requisição
+            if prompt is None:
+                prompt = ("Summarize the content of the picture in one sentence, "
+                         "then describe in detail what is in the picture, including "
+                         "objects, people, animals, and the atmosphere and mood of the picture")
+            
+            # Dados do formulário
+            form_data = {
+                'imageBase64Data': image_base64_data,
+                'lang': lang,
+                'prompt': prompt
+            }
+            
+            # Headers
+            headers = {
+                'appid': self.appid,
+                'timestamp': timestamp,
+                'nonce': nonce,
+                'signature': signature
+            }
+            
+            # 5. Fazer requisição
             response = requests.post(
                 self.base_url,
                 data=form_data,
@@ -160,16 +169,19 @@ class ImageDescriptionAPI:
             result = response.json()
 
             try:
-                redis_conn.setex(cache_key, 86400, json.dumps(result)) # Cache for 24 hours
+                redis_conn.setex(cache_key, 86400, json.dumps(result))
             except Exception as e:
                 logger.error(f"Failed to write to cache: {e}")
 
             return result
-            
+                
         except requests.exceptions.RequestException as e:
             raise Exception(f"Erro na requisição: {str(e)}")
         except ValueError as e:
             raise Exception(f"Erro ao decodificar JSON: {str(e)}")
+        finally:
+            if _tmp_path and os.path.exists(_tmp_path):
+                os.unlink(_tmp_path)
 
 if __name__ == '__main__':
     client = ImageDescriptionAPI('sum_valid_app', 'sum_valid_key')

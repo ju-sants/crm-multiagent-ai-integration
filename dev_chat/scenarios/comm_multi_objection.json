@@ -1,0 +1,32 @@
+{
+    "name": "Resiliência: Objeções em Cascata + Cliente Já Roubado",
+    "description": "Cenário de stress comercial com múltiplas objeções sequenciais de um cliente que já teve moto roubada. Testa resiliência e argumentação de toda a pipeline. Avalia: RoutingAgent deve manter BUDGET sem classificar como SUPPORT apesar do tom de reclamação; StrategicAdvisor deve ativar perfil 'Já teve o bem roubado' com script específico, usar objeção de preço como gatilho para downsell (Híbrido→GSM), sem inventar desconto; IncrementalPlanner deve registrar e atualizar unresolved_objections a cada nova objeção; CommunicationAgent deve lidar com empatia estratégica (não genérica), usar objection_handling da knowledge_base, contrapor concorrência com diferenciais reais, e não prometer coisas que não existem.",
+    "complexity": "muito alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Manter BUDGET apesar do tom emocional", "NÃO classificar como SUPPORT", "is_sales_final_step=False"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Perfil Já teve o bem roubado ativado", "Downsell com objection_handling", "NÃO inventar desconto"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Registrar cada objeção em unresolved_objections", "Incorporar comparação com concorrência"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Empatia estratégica específica", "Objection handling da knowledge_base", "NÃO prometer o que não existe", "Resumo solicitado no final"]
+        }
+    },
+    "session_id": "test-cascade-objections-robbed",
+    "contact_name": "Patrícia Alves",
+    "messages": [
+        {"text": "oi", "wait": 90},
+        {"text": "ja tive moto roubada antes e nao recuperaram, cansei", "wait": 90},
+        {"text": "comprei uma cb 300 nova e quero proteger agr", "wait": 90},
+        {"text": "120 de adesao? ta caro ein, outro lugar cobrava 80", "wait": 90},
+        {"text": "como q eu sei q vcs vao recuperar msm? a outra empresa falava o msm", "wait": 120},
+        {"text": "la eu pagava 40 p mes, pq vcs cobram mais?", "wait": 120},
+        {"text": "e se roubarem e n recuperar, perco de novo?", "wait": 120},
+        {"text": "hm e como funciona esse reembolso pela fipe?", "wait": 90},
+        {"text": "vou pensar, manda um resumo ai pfv", "wait": 90}
+    ]
+}

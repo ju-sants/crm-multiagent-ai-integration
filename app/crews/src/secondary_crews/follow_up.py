@@ -1,3 +1,4 @@
+import json
 from crewai import Crew, Process
 from datetime import datetime, timezone
 
@@ -10,6 +11,7 @@ from app.crews.agents_definitions.obj_declarations.agent_declaration import get_
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_follow_up_task
 from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.state_manager_service import StateManagerService
+from app.utils.funcs.funcs import safe_inject, build_longterm_context
 
 logger = get_logger(__name__)
 redis_client = get_redis()
@@ -30,7 +32,8 @@ def follow_up_task(contact_id: str):
     crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
     # Fetch required data from Redis
-    longterm_history = redis_client.get(f"longterm_history:{contact_id}")
+    longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
+    longterm_history_raw = json.loads(longterm_history_json) if longterm_history_json else {}
     customer_profile = redis_client.get(f"{contact_id}:customer_profile")
     shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
 
@@ -40,9 +43,9 @@ def follow_up_task(contact_id: str):
 
     inputs = {
         "contact_id": contact_id,
-        "longterm_history": str(longterm_history),
-        "shorterm_history": str(shorterm_history),
-        "customer_profile": str(customer_profile),
+        "longterm_history": build_longterm_context(longterm_history_raw),
+        "shorterm_history": safe_inject(shorterm_history),
+        "customer_profile": safe_inject(customer_profile),
         "now_timestamp": datetime.now(timezone.utc).isoformat(),
         "last_message_timestamp": last_timestamp
     }

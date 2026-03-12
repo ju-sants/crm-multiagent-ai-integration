@@ -19,7 +19,7 @@ def apply_litellm_patch():
 
         model_name_str = str(model_name).lower() if model_name else ""
 
-        if ('grok' in model_name_str or 'o4' in model_name_str) and 'stop' in kwargs:
+        if ('grok' in model_name_str or 'o3' in model_name_str or 'o4' in model_name_str) and 'stop' in kwargs:
             logger.info(f"LITELLM PATCH: Removing 'stop' parameter for model '{model_name}'.")
             kwargs.pop('stop')
 

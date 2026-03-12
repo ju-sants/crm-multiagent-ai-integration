@@ -50,7 +50,8 @@ class SystemOperationsService:
             "GET_VEHICLE_GEOFENCES": self._get_vehicle_geofences,
             "GET_VEHICLE_FULL_REPORT": self._get_vehicle_full_report,
             "SEND_TRACKER_RESET": self._send_tracker_reset_command,
-            "FIND_CLIENT_AND_GET_FINANCIALS": self._find_client_and_get_financials
+            "FIND_CLIENT_AND_GET_FINANCIALS": self._find_client_and_get_financials,
+            "CALCULATE_DISPLACEMENT_COST": self._calculate_displacement_cost,
         }
 
         action_function = action_map.get(action_type)

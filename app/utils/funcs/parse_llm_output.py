@@ -3,14 +3,11 @@ import json5
 import re
 import ast
 import logging
-from sentence_transformers import util
-
-from app.services.nlp_service import carregar_modelo_semantico
+from difflib import SequenceMatcher
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-modelo_semantico = carregar_modelo_semantico()
 def _extrair_bloco_json(texto_bruto: str) -> str:
     """
     Helper para extrair de forma inteligente o bloco JSON de uma string.
@@ -168,9 +165,7 @@ def limpar_com_rede_de_seguranca(mensagem_original: str) -> str:
     
     limiar_dinamico = max(limiar_dinamico, 0.35) 
     
-    embedding_original = modelo_semantico.encode(mensagem_original, convert_to_tensor=True)
-    embedding_limpo = modelo_semantico.encode(mensagem_limpa, convert_to_tensor=True)
-    similaridade = util.pytorch_cos_sim(embedding_original, embedding_limpo).item()
+    similaridade = SequenceMatcher(None, mensagem_original.lower(), mensagem_limpa.lower()).ratio()
 
     if similaridade >= limiar_dinamico:
         return mensagem_limpa

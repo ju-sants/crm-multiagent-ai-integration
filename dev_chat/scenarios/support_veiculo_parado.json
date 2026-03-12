@@ -1,0 +1,23 @@
+{
+    "name": "Suporte: Veículo Sem Atualização + Diagnóstico Técnico",
+    "description": "Cenário de suporte técnico com diagnóstico de hardware. Veículo sem atualizar há 2 dias, possível problema de bateria. Avalia: RoutingAgent deve classificar como SUPPORT e manter, detectar que sys_ops pode ser necessário após receber placa; StrategicAdvisor deve operar em modo RESOLUTION, buscar procedimentos de quick_diagnostics (GSM: falhas em áreas remotas, bateria: verificar conexões); SystemOperationsAgent deve executar consulta de veículo com placa ABC1234, sintetizar dados do rastreador (última atualização, nível bateria); CommunicationAgent deve comunicar diagnóstico de forma acessível sem termos técnicos excessivos, sugerir passos concretos (verificar bateria do veículo, agendar manutenção), tom empático e resolutivo.",
+    "complexity": "média",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Classificar SUPPORT", "Detectar necessidade de sys_ops com placa", "Não confundir com BUDGET"]
+        },
+        "SystemOperationsAgent": {
+            "critical_checkpoints": ["Executar diagnóstico com placa ABC1234", "Sintetizar resultado técnico", "Sugerir próximos passos"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Diagnóstico acessível sem jargão", "Passos concretos para resolução", "Tom empático e resolutivo"]
+        }
+    },
+    "session_id": "test-support-parado",
+    "contact_name": "Maria Oliveira",
+    "messages": [
+        {"text": "oi meu rastreador n ta funcionando", "wait": 90},
+        {"text": "faz 2 dias q n atualiza a posição", "wait": 90},
+        {"text": "placa ABC1234", "wait": 90}
+    ]
+}

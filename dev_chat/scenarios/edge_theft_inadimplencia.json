@@ -1,0 +1,29 @@
+{
+    "name": "Inadimplência + Roubo: Cenário Crítico de Cobertura",
+    "description": "Cenário edge-case crítico: cliente PGS com moto roubada que pode ter mensalidade atrasada. Testa conhecimento de regras de inadimplência vs cobertura. Avalia: RoutingAgent deve classificar como SUPPORT urgente; StrategicAdvisor deve buscar regras de cobertura PGS (comunicar roubo em 60 min, inadimplência cancela cobertura no dia 1); SystemOperationsAgent deve puxar dados do veículo e status de pagamento; IncrementalPlanner deve priorizar informação de obrigações do cliente; CommunicationAgent deve comunicar procedimento de roubo PGS com urgência e empatia, sem dar esperança falsa se inadimplente, e orientar a ligar pro plantão 24h.",
+    "complexity": "muito alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Classificar SUPPORT urgente", "Detectar necessidade de sys_ops", "NÃO classificar como BUDGET"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Regras PGS: comunicar roubo em 60 min", "Inadimplência cancela cobertura no dia 1", "Modo RESOLUTION"]
+        },
+        "SystemOperationsAgent": {
+            "critical_checkpoints": ["Puxar dados do veículo KLM3N45", "Verificar status de pagamento"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Urgência + empatia", "NÃO dar esperança falsa se inadimplente", "Orientar ligar pro plantão 24h", "Procedimento de roubo PGS"]
+        }
+    },
+    "session_id": "test-theft-inadimplencia-critical",
+    "contact_name": "Diego Santana",
+    "messages": [
+        {"text": "ROUBARAM MINHA MOTO AGR", "wait": 60},
+        {"text": "tenho pgs, placa KLM3N45", "wait": 60},
+        {"text": "foi agr a pouco tipo uns 30 min atras", "wait": 60},
+        {"text": "to com a mensalidade atrasada isso afeta alguma coisa?", "wait": 120},
+        {"text": "qto tempo atrasado? acho q uns 5 dias", "wait": 120},
+        {"text": "oq eu faco agr??", "wait": 60}
+    ]
+}

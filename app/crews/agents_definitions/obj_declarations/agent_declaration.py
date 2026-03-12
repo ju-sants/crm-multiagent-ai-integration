@@ -2,14 +2,13 @@ from crewai import Agent
 import yaml
 
 from app.config.llm_config import *
+from app.config.settings import settings
 
 from app.tools.knowledge_tools import knowledge_service_tool, drill_down_topic_tool
 from app.tools.system_operations_tools import system_operations_tool
 
 
-config_path = 'app/crews/agents_definitions/prompts/agents.yaml'
-
-agents_config = yaml.safe_load(open(config_path, 'r').read())
+agents_config = yaml.safe_load(open(settings.AGENTS_PROMPT_FILE, 'r').read())
 
 def get_routing_agent() -> Agent:
     return Agent(

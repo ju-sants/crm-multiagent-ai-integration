@@ -1,0 +1,26 @@
+{
+    "name": "Reengajamento: Retorno Após Inatividade com Memória",
+    "description": "Cenário de reengajamento pós-inatividade com teste de memória conversacional. Cliente demonstra interesse, some, e retorna pedindo para retomar. Avalia: RoutingAgent deve manter classificação BUDGET no retorno, is_plan_acceptable=True pois assunto não mudou; StrategicAdvisor deve ter plano que cobre contexto anterior; IncrementalPlanner deve manter plano intacto durante inatividade e não resetar; CommunicationAgent NÃO deve repetir informações já dadas (preço Básico já foi apresentado), deve reengajar naturalmente sem 'olá novamente', e retomar de onde parou.",
+    "complexity": "média",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Manter BUDGET no retorno", "is_plan_acceptable=True pois assunto não mudou"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Manter plano intacto durante inatividade", "Não resetar contexto"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["NÃO repetir informações já dadas", "Reengajar naturalmente sem olá novamente", "Retomar de onde parou"]
+        }
+    },
+    "session_id": "test-reengagement-memory",
+    "contact_name": "Bruno Nascimento",
+    "messages": [
+        {"text": "oi quero saber sobre rastreador p moto", "wait": 90},
+        {"text": "xre 300, uso p trilha e cidade", "wait": 90},
+        {"text": "hm", "wait": 180},
+        {"text": "opa desculpa tava no trampo", "wait": 120},
+        {"text": "vc tinha falado do plano ne, qto era msm o mais completo?", "wait": 90},
+        {"text": "esse tal de moto reserva como funciona?", "wait": 90}
+    ]
+}

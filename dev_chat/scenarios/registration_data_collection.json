@@ -1,0 +1,27 @@
+{
+    "name": "Pós-Venda Completo: Fechamento + Coleta Cadastral",
+    "description": "Cenário pós-venda que testa transição de fechamento para coleta de dados cadastrais. Cliente confirma compra e o sistema deve iniciar coleta em blocos lógicos. Avalia: RoutingAgent deve detectar is_sales_final_step=True e transicionar para BUDGET_ACCEPTED; StrategicAdvisor já deve ter disclosure_checklist completo antes do fechamento; RegistrationDataCollector deve coletar em blocos (identificação → contato → veículo → preferências), validar dia_vencimento (apenas 1,5,10,15,20,25), tratar dado parcial; CommunicationAgent deve usar tom acolhedor na coleta, personalizar com nome do cliente, e não parecer formulário.",
+    "complexity": "média",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Detectar is_sales_final_step=True", "Transicionar para BUDGET_ACCEPTED"]
+        },
+        "RegistrationDataCollectorAgent": {
+            "critical_checkpoints": ["Coleta em blocos lógicos", "Validar dia_vencimento (1,5,10,15,20,25)", "Rejeitar dia 12 educadamente"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Tom acolhedor na coleta", "Personalizar com nome Amanda", "NÃO parecer formulário"]
+        }
+    },
+    "session_id": "test-post-sale-registration",
+    "contact_name": "Amanda Ferreira",
+    "messages": [
+        {"text": "bora fechar o pgs p minha moto", "wait": 90},
+        {"text": "Amanda Ferreira da Silva, cpf 123.456.789-00", "wait": 90},
+        {"text": "email amanda.fs@gmail.com, zap eh esse msm numero", "wait": 90},
+        {"text": "honda cg 160 2024 placa RST7U89", "wait": 90},
+        {"text": "vencimento dia 12", "wait": 90},
+        {"text": "n tem dia 12? entao dia 15", "wait": 90},
+        {"text": "rua das flores 123 luis eduardo magalhaes ba 47850-000", "wait": 90}
+    ]
+}

@@ -8,6 +8,7 @@ class StateMetadata(BaseModel):
     phone_number: Optional[str] = None
     contact_name: Optional[str] = None
     extracted_name: Optional[str] = None
+
 class EntityItem(BaseModel):
     entity: str
     value: Any
@@ -20,6 +21,7 @@ class ChecklistItem(BaseModel):
     topic: str
     content: str
     status: str
+    
 class QualificationItem(BaseModel):
     topic: str
     status: str

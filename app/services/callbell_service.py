@@ -23,6 +23,21 @@ logger = get_logger(__name__)
 def send_callbell_message(contact_id, phone_number: str, messages: list = None, type: str = None, audio_url: str = None) -> Dict[str, Any]:
         """Envia uma mensagem via Callbell."""
         
+        # DEV MODE: store in Redis instead of calling Callbell API
+        if settings.DEV_CHAT_MODE:
+            now = datetime.now()
+            if type and type == 'audio':
+                msg_obj = json.dumps({"uuid": f"dev-{now.timestamp()}", "status": "sent", "text": f"[AUDIO] {audio_url}", "audio_url": audio_url, "createdAt": now.strftime('%Y-%m-%dT%H:%M:%SZ')})
+                redis_client.rpush(f"dev:history:{contact_id}", msg_obj)
+                redis_client.rpush(f"dev:outbox:{contact_id}", msg_obj)
+            else:
+                for message in (messages or []):
+                    msg_obj = json.dumps({"uuid": f"dev-{now.timestamp()}", "status": "sent", "text": f"*Alessandro Assistente Global:*\n{message}", "createdAt": now.strftime('%Y-%m-%dT%H:%M:%SZ')})
+                    redis_client.rpush(f"dev:history:{contact_id}", msg_obj)
+                    redis_client.rpush(f"dev:outbox:{contact_id}", msg_obj)
+            redis_client.set(f"history:last_timestamp:to_follow_up:{contact_id}", now.isoformat())
+            return {"status": "success"}
+
         statuses = []
 
         if type and type == 'audio':
@@ -95,6 +110,32 @@ def get_contact_messages(
     - Se 'since_timestamp' for fornecido, busca mensagens desde esse timestamp.
     - Caso contrário, busca as últimas 'limit' mensagens.
     """
+    # DEV MODE: read from Redis instead of Callbell API
+    if settings.DEV_CHAT_MODE:
+        raw_msgs = redis_client.lrange(f"dev:history:{contact_uuid}", 0, -1)
+        messages = [json.loads(m) for m in raw_msgs]
+        if since_timestamp:
+            since_dt = None
+            try:
+                if since_timestamp.endswith('Z'):
+                    since_dt = datetime.fromisoformat(since_timestamp.replace('Z', '+00:00'))
+                else:
+                    since_dt = datetime.fromisoformat(since_timestamp)
+            except ValueError:
+                return messages[-limit:]
+            filtered = []
+            for msg in messages:
+                msg_dt_str = msg.get("createdAt", "")
+                if msg_dt_str:
+                    try:
+                        msg_dt = datetime.fromisoformat(msg_dt_str.replace('Z', '+00:00')) if msg_dt_str.endswith('Z') else datetime.fromisoformat(msg_dt_str)
+                        if msg_dt > since_dt:
+                            filtered.append(msg)
+                    except ValueError:
+                        filtered.append(msg)
+            return filtered
+        return messages[-limit:]
+
     url = f"https://api.callbell.eu/v1/contacts/{contact_uuid}/messages"
     headers = {
         "Authorization": f"Bearer {settings.CALLBELL_API_KEY}",
@@ -173,6 +214,11 @@ def create_conversation_note(uuid: str, note_text: str) -> bool:
     Retorna:
     - bool: True se a requisição for bem-sucedida, False caso contrário.
     """
+    # DEV MODE: skip note creation
+    if settings.DEV_CHAT_MODE:
+        logger.info(f"[DEV] create_conversation_note skipped for {uuid}: {note_text[:80]}")
+        return True
+
     url = f'https://api.callbell.eu/v1/contacts/{uuid}/conversation/note'
     
     headers = {
@@ -294,7 +340,7 @@ def send_message(phone_number: str, messages: list, plan_names: list, contact_id
 
         logger.info(f"[{contact_id}] - Mensagens enviadas com sucesso para {phone_number}.")
         # After send message, update the state current turn number
-        with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+        with redis_client.lock(f"lock:state:{contact_id}", timeout=30):
             state, _ = state_manager.get_state(contact_id)
             state.metadata.current_turn_number += 1
             state_manager.save_state(contact_id, state)
@@ -321,6 +367,17 @@ def get_contact_details(contact_uuid):
     """Busca detalhes do contato, incluindo o assignedUser."""
     if not contact_uuid:
         return None
+
+    # DEV MODE: return synthetic contact details
+    if settings.DEV_CHAT_MODE:
+        return {
+            "uuid": contact_uuid,
+            "name": "Dev Tester",
+            "phoneNumber": "+5500000000000",
+            "assignedUser": None,
+            "team": {"uuid": "d468731afdba45c3a3a65895e4b08a5a"}
+        }
+
     url = f"https://api.callbell.eu/v1/contacts/{contact_uuid}"
 
     headers = {

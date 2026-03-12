@@ -8,21 +8,21 @@ from app.services.celery_service import celery_app
 from app.crews.src.secondary_crews.enrichment_crew import trigger_post_processing
 from app.core.logger import get_logger
 from app.crews.agents_definitions.obj_declarations.agent_declaration import get_communication_agent
-from app.config.llm_config import X_llm
+from app.config.llm_config import get_llm
 from app.tools.knowledge_tools import drill_down_topic_tool
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_communication_task
 from app.models.data_models import ConversationState
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
-from app.utils.funcs.funcs import distill_conversation_state
+from app.utils.funcs.funcs import distill_conversation_state, safe_inject, merge_state_fields, build_longterm_context
 from app.utils.funcs.parse_llm_output import limpar_com_rede_de_seguranca
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
-HISTORY_TOPIC_LIMIT = 10
+LONGTERM_TOKEN_BUDGET = 2000
 
 # --- Main Communication Task ---
 @celery_app.task(name='main_crews.communication')
@@ -35,26 +35,27 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
     logger.info(f"[{contact_id}] - Starting communication task.")
     state, _ = state_manager.get_state(contact_id)
 
-    while redis_client.keys(f"transcribing:*:{contact_id}"):
+    waited = 0
+    while (redis_client.exists(f"transcribing:audio:{contact_id}") or redis_client.exists(f"transcribing:image:{contact_id}")) and waited < 120:
         logger.info(f"[{contact_id}] - Waiting for transcription to complete.")
-        time.sleep(1)
+        time.sleep(2)
+        waited += 2
+    if waited >= 120:
+        logger.warning(f"[{contact_id}] - Transcription wait timed out after 120s. Proceeding.")
 
     try:
-        llm_w_tools = X_llm.bind_tools([drill_down_topic_tool])
+        llm = get_llm("CommunicationAgent", contact_id)
+        llm_w_tools = llm.bind_tools([drill_down_topic_tool])
         agent = get_communication_agent(llm_w_tools)
         task = create_communication_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
         # Process inputs
-        shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
+        shorterm_history = safe_inject(redis_client.get(f"shorterm_history:{contact_id}"), "")
 
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
-        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
-        topic_details = longterm_history.get("topic_details", [])[-HISTORY_TOPIC_LIMIT:]
-        longterm_history = "\n\n".join([
-            f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in topic_details
-        ])
+        longterm_history_raw = json.loads(longterm_history_json) if longterm_history_json else {}
+        longterm_history = build_longterm_context(longterm_history_raw, max_tokens=LONGTERM_TOKEN_BUDGET)
 
         system_op_output = redis_client.get(f"{contact_id}:last_system_operation_output")
 
@@ -72,11 +73,11 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
             "contact_id": contact_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "strategic_plan": json.dumps(strategic_plan),
-            "last_system_operation": system_op_output if system_op_output else "{}",
-            "customer_profile": str(redis_client.get(f"{contact_id}:customer_profile")),
-            "conversation_state": str(conversation_state_distilled),
+            "last_system_operation": safe_inject(system_op_output, "{}"),
+            "customer_profile": safe_inject(redis_client.get(f"{contact_id}:customer_profile"), "{}"),
+            "conversation_state": json.dumps(conversation_state_distilled),
             "longterm_history": longterm_history,
-            "shorterm_history": str(shorterm_history),
+            "shorterm_history": shorterm_history,
             "recently_sent_catalogs": ", ".join(redis_client.lrange(f"{contact_id}:sended_catalogs", 0, -1)),
             "disclosure_checklist": json.dumps([item.model_dump() for item in state.disclosure_checklist]) if not disclosure_checklist else str(disclosure_checklist),
             "client_message": "\n".join(last_processed_messages) if not is_follow_up else "",
@@ -88,9 +89,10 @@ def communication_task(contact_id: str, is_follow_up: bool = False):
         response_json, updated_state_dict = parse_json_from_string(result_str)
 
         if updated_state_dict:
-            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=30):
                 state, _ = state_manager.get_state(contact_id)
-                state = ConversationState(**{**state.model_dump(), **updated_state_dict})
+                merged = merge_state_fields(state.model_dump(), updated_state_dict)
+                state = ConversationState(**merged)
                 state_manager.save_state(contact_id, state)
 
         send_message = False

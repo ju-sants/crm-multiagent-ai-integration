@@ -101,7 +101,7 @@
         - topic: "theft_communication_scripts"
           params: { script_id: "moto_rastreamento" }
           description: "Ver o script de comunicação para roubo neste plano."
-        - topic: "products"
+        - topic: "list_plans"
           params: { name: "Plano Rastreamento + Proteção Total PGS" }
           description: "Comparar com o plano PGS para upsell."
         - topic: "pricing"

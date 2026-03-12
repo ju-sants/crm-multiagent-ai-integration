@@ -1,0 +1,30 @@
+{
+    "name": "Pivot Mid-Funnel: Carro → Moto + Objeção de Garantia",
+    "description": "Cenário de pivot de produto mid-funnel com objeção técnica. Cliente inicia pedindo rastreador pra carro, durante conversa revela que tem moto mais vulnerável e quer priorizar. Depois questiona se rastreador anula garantia da moto. Avalia: RoutingAgent deve manter BUDGET sem reclassificar no pivot (mesmo assunto, outro veículo); StrategicAdvisor deve adaptar de hierarquia carro (Híbrido→GSM) para moto (PGS→Básico); IncrementalPlanner deve REFINAR plano existente de carro incorporando moto como prioridade sem descartar contexto do carro; CommunicationAgent deve lidar com objeção de garantia usando FAQ específica do PGS, sem inventar termos.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Manter BUDGET sem reclassificar no pivot", "Mesmo assunto outro veículo"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Adaptar hierarquia carro→moto (PGS>Básico)", "FAQ garantia PGS correto"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["REFINAR plano incorporando moto como prioridade", "NÃO descartar contexto do carro", "Preservar dados existentes"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Objeção de garantia com FAQ específica", "NÃO inventar termos de garantia", "Preço PGS por FIPE R$20k = R$85/mês"]
+        }
+    },
+    "session_id": "test-pivot-car-to-moto",
+    "contact_name": "Rafael Costa",
+    "messages": [
+        {"text": "oi preciso de rastreador pro meu carro", "wait": 90},
+        {"text": "gol 2022, uso p trabalho", "wait": 90},
+        {"text": "na real eu tenho uma pcx 150 tb e ela eh mais facil de roubar", "wait": 90},
+        {"text": "quero começar pela moto, prioridade agr", "wait": 120},
+        {"text": "qual o plano mais completo p moto? q protege se roubar", "wait": 90},
+        {"text": "mas instalar rastreador n anula a garantia da moto?", "wait": 120},
+        {"text": "ok qto fica o pgs p pcx? ela vale uns 20 mil", "wait": 90}
+    ]
+}

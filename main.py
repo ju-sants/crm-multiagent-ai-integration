@@ -24,7 +24,7 @@ from app.services.state_manager_service import StateManagerService
 from app.services.redis_service import get_redis
 from app.services.transcript_service import transcript
 from app.services.image_describer_service import ImageDescriptionAPI
-from app.services.nlp_service import carregar_modelo_semantico, extrair_nome_contato
+from app.services.nlp_service import extrair_nome_contato
 
 from app.crews.src.main_crews.routing_agent import pre_routing_orchestrator
 from app.crews.src.main_crews.communication import communication_task
@@ -47,9 +47,6 @@ patches.apply_litellm_patch()
 patches.apply_crewai_telemetry_patch()
 patches.apply_crewai_tool_input_patch()
 
-# Pre carregamento do modelo semântico
-carregar_modelo_semantico()
-
 # Celery Worker Callback
 @signals.worker_ready.connect
 def on_worker_ready(sender, **kwargs):
@@ -64,7 +61,7 @@ def on_worker_shutdown(sender, **kwargs):
 @celery_app.task(name='io.process_audio_attachment')
 def process_audio_attachment_task(contact_uuid, url):
     logger.info(f"[{contact_uuid}] - Transcribing audio from URL: {url}")
-    redis_client.set(f"transcribing:audio:{contact_uuid}", "true")
+    redis_client.set(f"transcribing:audio:{contact_uuid}", "true", ex=300)
 
     try:
         transcription = transcript(url)
@@ -82,7 +79,7 @@ def process_audio_attachment_task(contact_uuid, url):
 @celery_app.task(name='io.process_image_attachment')
 def process_image_attachment_task(contact_uuid, url):
     logger.info(f"[{contact_uuid}] - Describing image from URL: {url}")
-    redis_client.set(f"transcribing:image:{contact_uuid}", "true")
+    redis_client.set(f"transcribing:image:{contact_uuid}", "true", ex=300)
     
     try:
         description_json = client_description.describe_image(image_url=url)
@@ -148,20 +145,27 @@ def process_message_task(self, contact_uuid):
         phone_number = str(contact_info.get("phoneNumber", "")).replace('+', '')
         contact_name = contact_info.get("name", "")
 
-        with redis_client.lock(f"lock:state:{contact_uuid}", timeout=10):
+        extracted_name = extrair_nome_contato(str(contact_name))
+
+        with redis_client.lock(f"lock:state:{contact_uuid}", timeout=30):
             state, is_new = state_manager.get_state(contact_uuid)
             state.metadata.phone_number = phone_number
             state.metadata.contact_name = contact_name
-            state.metadata.extracted_name = extrair_nome_contato(str(contact_name))
+            state.metadata.extracted_name = extracted_name
             state_manager.save_state(contact_uuid, state)
 
         # Verify if theres another instance processing the strategy, waiting before routing agent can judge the strategy properly
         if redis_client.exists(f"doing_strategy:{contact_uuid}") or redis_client.exists(f"refining_strategy:{contact_uuid}"):
             logger.info(f"[{contact_uuid}] - Strategy is already being refined / created. Waiting...")
-            while redis_client.exists(f"doing_strategy:{contact_uuid}") or redis_client.exists(f"refining_strategy:{contact_uuid}"):
+            waited = 0
+            while (redis_client.exists(f"doing_strategy:{contact_uuid}") or redis_client.exists(f"refining_strategy:{contact_uuid}")) and waited < 180:
                 time.sleep(1)
+                waited += 1
             
-            logger.info(f"[{contact_uuid}] - Strategy is ready. Continuing...")
+            if waited >= 180:
+                logger.warning(f"[{contact_uuid}] - Strategy wait timed out after 180s. Proceeding.")
+            else:
+                logger.info(f"[{contact_uuid}] - Strategy is ready. Continuing...")
 
         # Adicionando o contato na lista de contatos se não estiver lá
         if not redis_client.sismember("contacts", contact_uuid):
@@ -174,7 +178,7 @@ def process_message_task(self, contact_uuid):
             pre_routing_orchestrator.apply_async(args=[contact_uuid])
         
         else:
-            with redis_client.lock(f"lock:state:{contact_uuid}", timeout=10):
+            with redis_client.lock(f"lock:state:{contact_uuid}", timeout=30):
                 state, _ = state_manager.get_state(contact_uuid)
                 state_dict = state.model_dump()
                 state_dict['strategic_plan'] = default_strategic_plan
@@ -219,10 +223,10 @@ def process_incoming_message(payload):
     content_image = [attach for attach in content if any(ext in attach for ext in IMAGE_EXTENSIONS)]
 
     for audio_url in content_audio:
-        process_audio_attachment_task.apply_async(contact_uuid, audio_url)
+        process_audio_attachment_task.apply_async(args=(contact_uuid, audio_url))
     
     for image_url in content_image:
-        process_image_attachment_task.apply_async(contact_uuid, image_url)
+        process_image_attachment_task.apply_async(args=(contact_uuid, image_url))
 
     if text:
         redis_client.rpush(f'contacts_messages:waiting:{contact_uuid}', text)
@@ -279,5 +283,18 @@ def receive_message():
     return jsonify({'status': 'ok'}), 200
 
 
+# Dev Chat Blueprint (only when DEV_CHAT_MODE is enabled)
+if settings.DEV_CHAT_MODE:
+    from dev_chat.analytics import install_analytics
+    install_analytics()
+    from dev_chat.server import dev_chat_bp
+    app.register_blueprint(dev_chat_bp, url_prefix='/dev')
+    logger.info("🔧 DEV CHAT MODE enabled — UI available at /dev/")
+
+print(settings.AGENTS_PROMPT_FILE, settings.TASKS_PROMPT_FILE)
+
+
+
 if __name__ == '__main__':
+    print(settings.AGENTS_PROMPT_FILE, settings.TASKS_PROMPT_FILE)
     app.run('0.0.0.0', port=8080)

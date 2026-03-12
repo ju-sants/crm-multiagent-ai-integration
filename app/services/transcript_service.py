@@ -1,5 +1,6 @@
 import hashlib
 import json
+import time
 import requests
 from app.config.settings import settings
 from app.services.redis_service import get_redis
@@ -7,11 +8,15 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
+TRANSCRIPTION_POLL_INTERVAL = 2  # seconds between Gladia status checks
+TRANSCRIPTION_TIMEOUT = 120  # max seconds to wait for transcription
+
 def transcript(attach):
     redis_conn = get_redis()
+    cache_key = None
 
     try:
-        audio_bytes = requests.get(attach).content
+        audio_bytes = requests.get(attach, timeout=30).content
         content_hash = hashlib.sha256(audio_bytes).hexdigest()
         cache_key = f"transcript:{content_hash}"
 
@@ -22,13 +27,10 @@ def transcript(attach):
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to fetch audio from URL: {e}")
-        # Proceed to Gladia if fetching fails, as it might be a transient issue
-        pass
     except Exception as e:
         logger.error(f"An unexpected error occurred during cache check: {e}")
-        pass
 
-    logger.info(f"Cache miss for key: {cache_key}. Executing transcription.")
+    logger.info(f"Cache miss{f' for key: {cache_key}' if cache_key else ''}. Executing transcription.")
 
     headers = {
         'x-gladia-key': settings.X_GLADIA_KEY,
@@ -42,23 +44,27 @@ def transcript(attach):
         }
     }
     
-    response_initiate = requests.post('https://api.gladia.io/v2/pre-recorded', headers=headers, json=payload)
-    id = response_initiate.json().get('id')
+    response_initiate = requests.post('https://api.gladia.io/v2/pre-recorded', headers=headers, json=payload, timeout=30)
+    transcription_id = response_initiate.json().get('id')
     
-    while True:
-        response_transcript = requests.get(f'https://api.gladia.io/v2/pre-recorded/{id}', headers=headers).json()
-        
-        if response_transcript.get('status', '') != "done":
-            continue
-        else:
+    elapsed = 0
+    response_transcript = None
+    while elapsed < TRANSCRIPTION_TIMEOUT:
+        time.sleep(TRANSCRIPTION_POLL_INTERVAL)
+        elapsed += TRANSCRIPTION_POLL_INTERVAL
+        response_transcript = requests.get(f'https://api.gladia.io/v2/pre-recorded/{transcription_id}', headers=headers, timeout=30).json()
+        if response_transcript.get('status', '') == "done":
             break
-        
+    else:
+        logger.error(f"Transcription timed out after {TRANSCRIPTION_TIMEOUT}s for {attach}")
+        return None
 
     transcript_text = response_transcript.get('result', {}).get('transcription', {}).get('full_transcript', '')
     text = f'\n{transcript_text}'
             
     try:
-        redis_conn.setex(cache_key, 86400, json.dumps(text)) # Cache for 24 hours
+        if cache_key:
+            redis_conn.setex(cache_key, 86400, json.dumps(text))
     except Exception as e:
         logger.error(f"Failed to write to cache: {e}")
 

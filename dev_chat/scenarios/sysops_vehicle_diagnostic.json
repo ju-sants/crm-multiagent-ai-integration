@@ -1,0 +1,28 @@
+{
+    "name": "Suporte Técnico: Diagnóstico GPS Impreciso + Venda Cruzada",
+    "description": "Cenário de suporte que evolui para oportunidade de venda cruzada. Cliente existente com GPS impreciso. Fluxo requer coleta de placa antes de sys_ops. Avalia: RoutingAgent deve classificar como SUPPORT, detectar dados insuficientes na 1a msg (sem placa), e depois transicionar para BUDGET se cliente demonstrar interesse em upgrade; StrategicAdvisor deve criar plano de resolução antes e adaptar para vendas depois; SystemOperationsAgent deve executar diagnóstico após receber placa, sintetizar resultado técnico; CommunicationAgent deve comunicar diagnóstico de forma acessível e natural, sem termos técnicos excessivos.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Classificar SUPPORT inicialmente", "Detectar falta de placa na 1a msg", "Transicionar para BUDGET se interesse em upgrade"]
+        },
+        "SystemOperationsAgent": {
+            "critical_checkpoints": ["Executar diagnóstico após receber placa MNO5P67", "Sintetizar resultado técnico"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Modo RESOLUTION inicialmente", "Adaptar para vendas se cross-sell", "Comparação GSM vs Satelital em galpões"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Diagnóstico acessível sem termos técnicos", "Limitação Satelital em coberturas metálicas", "Diferença de preço correta"]
+        }
+    },
+    "session_id": "test-support-diagnostic-crosssell",
+    "contact_name": "Marcos Vieira",
+    "messages": [
+        {"text": "oi meu rastreador tá doido, a localização fica pulando no mapa", "wait": 90},
+        {"text": "ah a placa é MNO5P67, é um fusca que eu reformei", "wait": 120},
+        {"text": "tenho o GSM 4G, ele fica nuns galpões às vezes", "wait": 120},
+        {"text": "será que não seria melhor trocar pro satelital? funciona melhor em galpão?", "wait": 120},
+        {"text": "quanto ficaria a diferença de preço?", "wait": 90}
+    ]
+}

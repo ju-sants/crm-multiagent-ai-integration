@@ -4,7 +4,7 @@ from crewai import Crew, Process
 from app.services.celery_service import celery_app
 from app.core.logger import get_logger
 from app.crews.agents_definitions.obj_declarations.agent_declaration import get_system_operations_agent
-from app.config.llm_config import X_llm
+from app.config.llm_config import get_llm
 from app.tools.system_operations_tools import system_operations_tool
 from app.crews.agents_definitions.obj_declarations.tasks_declaration import create_execute_system_operations_task
 from app.services.state_manager_service import StateManagerService
@@ -13,13 +13,11 @@ from app.services.redis_service import get_redis
 from app.services.callbell_service import send_callbell_message
 from app.crews.src.main_crews.communication import communication_task
 from app.crews.src.secondary_crews.enrichment_crew import trigger_post_processing
-from app.utils.funcs.funcs import distill_conversation_state
+from app.utils.funcs.funcs import distill_conversation_state, safe_inject, build_longterm_context
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
-
-HISTORY_TOPIC_LIMIT = 10
 
 @celery_app.task(name='main_crews.system_operations')
 def system_operations_task(contact_id: str):
@@ -30,7 +28,8 @@ def system_operations_task(contact_id: str):
     state, _ = state_manager.get_state(contact_id)
     
     try:
-        llm_w_tools = X_llm.bind_tools([system_operations_tool])
+        llm = get_llm("SystemOperationsAgent", contact_id)
+        llm_w_tools = llm.bind_tools([system_operations_tool])
         agent = get_system_operations_agent(llm_w_tools)
         task = create_execute_system_operations_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
@@ -40,11 +39,8 @@ def system_operations_task(contact_id: str):
         shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
 
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
-        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
-        longterm_history = "\n\n".join([
-            f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in longterm_history.get("topic_details", [])[-HISTORY_TOPIC_LIMIT:]
-        ])
+        longterm_history_raw = json.loads(longterm_history_json) if longterm_history_json else {}
+        longterm_history = build_longterm_context(longterm_history_raw)
 
         last_processed_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
 
@@ -53,22 +49,22 @@ def system_operations_task(contact_id: str):
 
         inputs = {
             "action_requested": state.system_action_request,
-            "customer_profile": str(profile),
+            "customer_profile": safe_inject(profile),
             "conversation_state": str(conversation_state_distilled),
             "longterm_history": longterm_history,
-            "shorterm_history": str(shorterm_history),
+            "shorterm_history": safe_inject(shorterm_history),
             "client_message": "\n".join(last_processed_messages),
             "contact_name": state.metadata.contact_name,
         }
 
-        # Set the flag
-        redis_client.set(f"doing_system_operations:{contact_id}", "true")
+        # Set the flag (TTL=300s safety net in case of worker crash)
+        redis_client.set(f"doing_system_operations:{contact_id}", "true", ex=300)
         
         result = crew.kickoff(inputs=inputs)
         response_json = parse_json_from_string(result.raw, update=False)
 
         if response_json:
-            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=30):
                 
                 state, _ = state_manager.get_state(contact_id)
 
@@ -116,10 +112,9 @@ def system_operations_task(contact_id: str):
 
                 state_manager.save_state(contact_id, state)
 
-        # Deletando a FLAG
-        redis_client.delete(f"doing_system_operations:{contact_id}")
-
         return contact_id
     except Exception as e:
         logger.error(f"[{contact_id}] - Error in system_operations_task: {e}", exc_info=True)
         raise e
+    finally:
+        redis_client.delete(f"doing_system_operations:{contact_id}")

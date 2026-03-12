@@ -1,9 +1,9 @@
 from crewai import Task, Agent
 import yaml
 
-config_path = 'app/crews/agents_definitions/prompts/tasks.yaml'
+from app.config.settings import settings
 
-tasks_config = yaml.safe_load(open(config_path, 'r').read())
+tasks_config = yaml.safe_load(open(settings.TASKS_PROMPT_FILE, 'r').read())
 
 
 

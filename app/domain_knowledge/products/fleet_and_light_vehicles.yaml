@@ -95,7 +95,7 @@ plans:
           - topic: "technical_limitations"
             params: { detail: "gsm_gprs" }
             description: "Consultar limitações da tecnologia GSM."
-          - topic: "compatibility"
+          - topic: "product_compatibility"
             params: { detail: "john_deere_autopilot" }
             description: "Verificar compatibilidade com piloto automático John Deere."
           - topic: "pricing"

@@ -1,0 +1,25 @@
+{
+    "name": "Fluxo Básico de Venda - Moto CG 160",
+    "description": "Cenário baseline de venda simples de moto. Funil curto e linear sem objeções fortes. Avalia: RoutingAgent deve classificar como BUDGET desde a 1a msg com contexto, manter is_plan_acceptable e não classificar como final_step; StrategicAdvisor deve priorizar PGS sobre Básico (hierarquia moto→PGS→Básico), operar em QUALIFICATION até ter dados, transicionar para PRESENTATION com CG 160; IncrementalPlanner deve incorporar dados do veículo progressivamente e ajustar a oferta ao downsell quando cliente pede barato; CommunicationAgent deve apresentar PGS primeiro com entusiasmo calibrado, reposicionar Básico R$60 como alternativa ao 'tem mais barato' sem desvalorizar PGS, preços exatos sem invenção.",
+    "complexity": "baixa",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Classificar BUDGET desde msg 2", "is_plan_acceptable=True após plano criado", "is_sales_final_step=False durante todo cenário"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Hierarquia PGS > Básico", "Modo QUALIFICATION inicialmente", "Preços corretos: adesão R$120, PGS R$77-110, Básico R$60"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Apresentar PGS primeiro", "Downsell natural para Básico", "Sem inventar preços ou funcionalidades"]
+        }
+    },
+    "session_id": "test-sales-moto",
+    "contact_name": "João da Silva",
+    "messages": [
+        {"text": "oi boa tarde", "wait": 90},
+        {"text": "vcs fazem rastreamento de moto?", "wait": 90},
+        {"text": "cg 160, uso td dia pro trabalho", "wait": 90},
+        {"text": "qto custa?", "wait": 90},
+        {"text": "xi tem algo mais barato n?", "wait": 90}
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "name": "Restrição Regional: Moto em DDD 66 (PGS Indisponível)",
+    "description": "Cenário crítico de compliance que testa restrição regional: PGS não disponível em DDD 66 (Mato Grosso). Cliente de moto pede exatamente o produto restrito. Avalia: RoutingAgent deve classificar como BUDGET normalmente; StrategicAdvisor DEVE conhecer a restrição via knowledge_service e NÃO recomendar PGS — oferecer apenas Plano Básico como primary_offer, registrar em information_gaps; IncrementalPlanner deve manter consistência da restrição mesmo se cliente insistir; CommunicationAgent deve comunicar a indisponibilidade com empatia, sem prometer solução futura, e reposicionar o Básico como alternativa viável.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Classificar BUDGET normalmente", "Manter mesmo com produto indisponível"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["NÃO recomendar PGS em DDD 66", "Apenas Plano Básico como primary_offer", "Registrar em information_gaps"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Manter restrição mesmo se cliente insistir", "NÃO contradizer decisão"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Comunicar indisponibilidade com empatia", "NÃO prometer disponibilidade futura", "Reposicionar Básico R$60/mês como alternativa"]
+        }
+    },
+    "session_id": "test-regional-ddd66-restriction",
+    "contact_name": "Gustavo Pereira",
+    "messages": [
+        {"text": "eae quero o plano mais completo p minha moto", "wait": 90},
+        {"text": "moro em sorriso, mato grosso", "wait": 90},
+        {"text": "honda bros 160", "wait": 90},
+        {"text": "quero aquele plano com reembolso da fipe, o pgs", "wait": 120},
+        {"text": "serio q n tem aqui? pq?", "wait": 120},
+        {"text": "ta bom e o basico como funciona entao?", "wait": 90},
+        {"text": "se roubar e n recuperar perco a moto?", "wait": 90}
+    ]
+}

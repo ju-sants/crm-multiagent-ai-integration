@@ -1,0 +1,30 @@
+{
+    "name": "Fazenda com WiFi: Rastreamento Rural + Compatibilidade",
+    "description": "Cenário rural específico para fazendeiro com maquinário agrícola e necessidade de WiFi. Cobre product gap não testado (GSM+WiFi). Avalia: RoutingAgent deve classificar como BUDGET e manter; StrategicAdvisor deve recomendar GSM+WiFi como primary (fazenda com Starlink), verificar compatibilidade John Deere via knowledge_service (NÃO instalar satelital se usa piloto automático), e recomendar GSM 4G como alternativa caso necessário; IncrementalPlanner deve incorporar informação de piloto automático como constraint crítica; CommunicationAgent deve explicar que inclui 2 roteadores, storage offline 3 meses, e diferença entre GSM+WiFi e Satelital usando linguagem acessível para produtor rural.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Classificar BUDGET e manter", "Sem confundir com SUPPORT"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["GSM+WiFi como primary para fazenda com Starlink", "Verificar compatibilidade John Deere", "NÃO instalar satelital em piloto automático", "GSM 4G como alternativa"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Incorporar piloto automático como constraint crítica", "Ajustar recomendações por tipo de máquina"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Explicar 2 roteadores inclusos", "Storage offline 3 meses", "Linguagem acessível para produtor rural", "Preços corretos GSM+WiFi"]
+        }
+    },
+    "session_id": "test-farm-wifi-compatibility",
+    "contact_name": "Sebastião Borges",
+    "messages": [
+        {"text": "oi preciso rastrear as maquinas da fazenda", "wait": 90},
+        {"text": "3 colheitadeira john deere e 2 trator case", "wait": 90},
+        {"text": "aqui em LEM na fazenda n pega cel", "wait": 90},
+        {"text": "mas tenho starlink la, funciona wifi", "wait": 120},
+        {"text": "as john deere tem piloto automatico, interfere?", "wait": 120},
+        {"text": "e se a internet da fazenda cair perco os dados?", "wait": 120},
+        {"text": "qto fica p 5 maquinas?", "wait": 90}
+    ]
+}

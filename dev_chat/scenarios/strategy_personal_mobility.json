@@ -1,0 +1,29 @@
+{
+    "name": "Mobilidade Pessoal: Patinete + Bike Elétrica Familiar",
+    "description": "Cenário de produto de nicho (mobilidade pessoal) com contexto familiar. Testa toda a pipeline com produto menos comum. Avalia: RoutingAgent deve classificar como BUDGET mesmo com produto não-convencional; StrategicAdvisor deve encontrar o plano específico de scooters/bikes via knowledge_service, sem confundir com planos de moto, e trabalhar o angle de segurança familiar; IncrementalPlanner deve adaptar quando surgem 2 veículos (patinete + bike); CommunicationAgent deve abordar com empatia maternal/paternal, preço R$45/mês e adesão R$100, sem misturar com preços de moto.",
+    "complexity": "média",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Classificar BUDGET mesmo com produto não-convencional", "NÃO confundir patinete com moto"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Encontrar plano scooters/bikes via knowledge_service", "NÃO confundir com planos de moto", "Angle segurança familiar"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Adaptar para 2 veículos (patinete + bike)", "Preços corretos R$45/mês cada"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Empatia familiar/parental", "Preço R$45/mês e adesão R$100", "App features: cerca e notificação", "NÃO misturar com preços de moto"]
+        }
+    },
+    "session_id": "test-personal-mobility-family",
+    "contact_name": "Camila Duarte",
+    "messages": [
+        {"text": "oi vcs fazem rastreamento de patinete eletrico?", "wait": 90},
+        {"text": "eh um xiaomi, meu filho de 14 anos usa p ir na escola", "wait": 90},
+        {"text": "ele tb tem uma bike eletrica, da p rastrear as duas?", "wait": 90},
+        {"text": "qto ficaria pros dois? descarrega mt a bateria?", "wait": 90},
+        {"text": "consigo ver pelo cel onde ele ta em tempo real?", "wait": 90},
+        {"text": "da p criar tipo uma cerca, se sair de uma area me avisa?", "wait": 90}
+    ]
+}

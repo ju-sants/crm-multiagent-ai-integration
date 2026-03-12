@@ -12,7 +12,7 @@ company_info:
   website: "www.globalsystem24h.com"
   support_whatsapp: "0800 606 8000"
   related_queries:
-    - topic: "get_sales_philosophy"
+    - topic: "sales_philosophy"
       params: {}
       description: "Conhecer nossa filosofia de vendas."
     - topic: "regional_availability"

@@ -1,0 +1,29 @@
+{
+    "name": "Suporte App: Reset Senha + Acesso Terceiros + Funcionalidades",
+    "description": "Cenário de suporte técnico completo cobrindo 3 demandas sequenciais: reset de senha do app, remoção de acesso de terceiro (ex-marido), e dúvida sobre funcionalidades do app. Exercita conhecimento operacional profundo. Avalia: RoutingAgent deve manter SUPPORT consistentemente, sem confundir com BUDGET; StrategicAdvisor deve operar em modo RESOLUTION com informação de password_reset e third_party_access_removal; IncrementalPlanner deve acumular contexto de suporte multi-issue; CommunicationAgent deve explicar procedimento ESQUECEU SENHA, informar que suporte não remove acesso de terceiros diretamente (titular altera senha), e descrever funcionalidades como cercas e notificações sem referências internas ao sistema.",
+    "complexity": "média",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Manter SUPPORT consistentemente", "NÃO confundir com BUDGET", "Mesmo com múltiplas demandas"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Modo RESOLUTION", "password_reset: função ESQUECEU SENHA", "third_party_access: titular altera senha"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Acumular contexto multi-issue", "NÃO resetar entre demandas"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["ESQUECEU SENHA no app", "Suporte NÃO remove acesso de terceiros", "Cercas e notificações explicadas", "Sem referências internas"]
+        }
+    },
+    "session_id": "test-support-app-multissue",
+    "contact_name": "Renata Campos",
+    "messages": [
+        {"text": "oi n consigo entrar no app de rastreamento", "wait": 90},
+        {"text": "esqueci a senha e o email cadastrado eh antigo", "wait": 90},
+        {"text": "consegui obg! outra coisa: meu ex marido ainda tem acesso ao app e ve onde eu to", "wait": 120},
+        {"text": "como faco p tirar o acesso dele?", "wait": 120},
+        {"text": "entendi vou trocar a senha. e como faco p criar aquela cerca no mapa?", "wait": 90},
+        {"text": "da p receber notificacao quando o carro sair de casa?", "wait": 90}
+    ]
+}

@@ -1,0 +1,29 @@
+{
+    "name": "Resiliência Comercial: Objeção de Preço Repetida + Desconto",
+    "description": "Cenário de stress comercial com objeções de preço persistentes e pedido de desconto. Testa resiliência e estratégia de downsell de toda a pipeline. Avalia: RoutingAgent deve manter BUDGET consistentemente sem confundir objeção com SUPPORT, is_sales_final_step=False (cliente não confirmou); StrategicAdvisor deve ativar perfil 'Foco em Custo', usar objeção como gatilho de downsell PGS→Básico, registrar objection em unresolved_objections; IncrementalPlanner deve ajustar primary_offer de PGS para Básico, incorporar menção à concorrência como differentiation point; CommunicationAgent deve usar empatia estratégica real (não genérica), reposicionar com foco em valor e diferenciais (100% recuperação PGS, plantão 24h), NÃO inventar descontos ou promoções, manter closing mindset suave no 'vou pensar'.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Manter BUDGET apesar do tom de reclamação", "is_sales_final_step=False em todo cenário", "Sem rotear para SUPPORT"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Downsell PGS→Básico como alternativa", "Perfil Foco em Custo ativado", "Diferenciais reais vs concorrência"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Registrar objeção de preço", "Ajustar primary_offer", "Incorporar menção à concorrência"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["NÃO inventar descontos", "Empatia estratégica real", "Closing mindset suave", "Argumentação com diferenciais reais"]
+        }
+    },
+    "session_id": "sales-objecao-preco",
+    "contact_name": "Marcelo Santos",
+    "messages": [
+        {"text": "boa noite", "wait": 60},
+        {"text": "quero rastreamento p moto, cg 160 fan", "wait": 60},
+        {"text": "achei caro em, n tem mais barato?", "wait": 60},
+        {"text": "mas na concorrencia é mais barato q isso", "wait": 60},
+        {"text": "vou pensar dps eu volto", "wait": 60},
+        {"text": "se tiver desconto fecho agr msm", "wait": 60}
+    ]
+}

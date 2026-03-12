@@ -1,0 +1,25 @@
+{
+    "name": "Edge: Saudação Ambígua com Zero Contexto",
+    "description": "Cenário edge-case de cold start absoluto com mensagens mínimas e ambíguas. Avalia paciência e qualificação gradual de toda a pipeline. RoutingAgent não deve forçar classificação prematura (CUSTOMER_SERVICE até esclarecimento), transicionar para BUDGET apenas quando 'é pra carro' aparece; StrategicAdvisor deve operar em modo QUALIFICATION puro sem assumir produto, gerando perguntas abertas pra descobrir necessidade; IncrementalPlanner deve incorporar cada migalha de contexto ('carro') sem inventar perfil; CommunicationAgent deve acolher com naturalidade sem parecer interrogatório, tom WhatsApp casual, sem saudações repetidas a cada turno, e NÃO reafirmar contexto conhecido.",
+    "complexity": "média",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Não classificar BUDGET prematuramente nas 3 primeiras msgs", "Transicionar para BUDGET somente com contexto suficiente", "is_plan_acceptable=False sem plano"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Modo QUALIFICATION obrigatório", "Não assumir produto sem dados", "Gerar perguntas abertas relevantes"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Acolhimento natural sem interrogatório", "Sem saudações repetidas", "Sem reafirmação de contexto"]
+        }
+    },
+    "session_id": "edge-saudacao-ambigua",
+    "contact_name": "Carlos",
+    "messages": [
+        {"text": "oi", "wait": 45},
+        {"text": "hum", "wait": 45},
+        {"text": "to pensando", "wait": 45},
+        {"text": "é pra carro", "wait": 60},
+        {"text": "qto custa", "wait": 60}
+    ]
+}

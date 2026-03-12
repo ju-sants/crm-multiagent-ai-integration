@@ -25,24 +25,55 @@ class KnowledgeService:
             self.knowledge_base_path = knowledge_base_path
             self._load_rules()
             self._topic_map = {
-                'application_features': ('application_features',),
-                'get_web_access_features': ('web_access_features',),
+                # Informações da empresa
                 'company_info': ('business_rules', 'company_info'),
-                'maintenance_policy': ('operational_procedures', 'maintenance'),
-                'scheduling_rules': ('operational_procedures', 'scheduling'),
-                'installation_policy': ('operational_procedures', 'installation'),
-                'product_compatibility': ('operational_procedures', 'compatibility'),
-                'regional_availability': ('operational_procedures', 'regional_service_rules'),
-                'sales_philosophy': ('communication', 'sales'),
-                'support_philosophy': ('communication', 'support'),
-                'technical_limitations': ('operational_procedures', 'technical_limitations'),
-                'blocker_installation_rules': ('operational_procedures', 'blocker_installation_rules'),
-                'customer_profile_scripts': ('business_rules', 'customer_profiles_and_triggers'),
+
+                # Produtos e vendas
                 'list_all_products': ('products',),
                 'sales_guidance': ('business_rules', 'sales_guidance'),
+                'sales_philosophy': ('communication', 'sales'),
+                'customer_profile_scripts': ('business_rules', 'customer_profiles_and_triggers'),
+                'theft_communication_scripts': ('communication', 'sales', 'theft_communication_scripts'),
+
+                # Suporte
+                'support_philosophy': ('communication', 'support'),
+
+                # Políticas e procedimentos
                 'contract_terms': ('contracts',),
+                'installation_policy': ('operational_procedures', 'installation'),
+                'maintenance_policy': ('operational_procedures', 'maintenance'),
+                'scheduling_rules': ('operational_procedures', 'scheduling'),
+                'product_compatibility': ('operational_procedures', 'compatibility'),
+                'regional_availability': ('operational_procedures', 'regional_service_rules'),
+                'technical_limitations': ('operational_procedures', 'technical_limitations'),
+                'blocker_installation_rules': ('operational_procedures', 'blocker_installation_rules'),
+
+                # Funcionalidades
+                'application_features': ('application_features',),
+                'web_access_features': ('web_access_features',),
             }
+
+            # Aliases — topics referenciados nos YAMLs com prefixo 'get_' ou
+            # nomes alternativos.  Resolvidos antes do fuzzy matching para
+            # evitar chamadas extras de processamento.
+            self._topic_aliases = {
+                'get_company_info': 'company_info',
+                'get_sales_philosophy': 'sales_philosophy',
+                'get_support_philosophy': 'support_philosophy',
+                'get_application_features': 'application_features',
+                'get_web_access_features': 'web_access_features',
+                'compatibility': 'product_compatibility',
+                'products': 'list_all_products',
+            }
+
+            # Tópicos que esperam param `plan_name` e buscam dentro do plano
             self._plan_based_topics = {'pricing', 'faq', 'key_selling_points', 'objection_handling'}
+
+            # Tópicos que aceitam um param `detail` para navegar em sub-seções
+            self._detail_capable_topics = {
+                'technical_limitations', 'product_compatibility', 'installation_policy',
+                'regional_availability',
+            }
 
     def _deep_merge(self, destination: Dict, source: Dict):
         """
@@ -135,6 +166,52 @@ class KnowledgeService:
         logger.warning(f"Nenhum plano correspondente encontrado para '{plan_name}' (melhor tentativa: '{best_match}', score: {score}).")
         return None
 
+    def _list_plans_summary(self) -> Dict[str, Any]:
+        """Retorna uma lista leve com nome, tipo, preço e sales_pitch de cada plano.
+
+        Ideal para o LLM fazer uma primeira triagem sem receber o YAML inteiro.
+        """
+        summaries = []
+        for category in self._get_rule_section('products'):
+            for plan in category.get('plans', []):
+                summary = {
+                    "name": plan.get('name'),
+                    "type": plan.get('type'),
+                    "sales_pitch": plan.get('sales_pitch'),
+                    "target_audience": plan.get('target_audience'),
+                    "pricing": plan.get('pricing'),
+                    "key_selling_points": plan.get('key_selling_points'),
+                }
+                summaries.append(summary)
+
+        guidance = self._get_rule_section('business_rules')
+        sales_guidance = guidance.get('sales_guidance') if isinstance(guidance, dict) else None
+
+        return {
+            "data": {
+                "plans": summaries,
+                "sales_guidance": sales_guidance,
+            },
+            "related_queries": [
+                {"topic": "pricing", "params": {"plan_name": "<nome>"}, "description": "Preços detalhados de um plano"},
+                {"topic": "faq", "params": {"plan_name": "<nome>"}, "description": "Perguntas frequentes de um plano"},
+                {"topic": "contract_terms", "params": {"contract_id": "standard_contract"}, "description": "Termos contratuais padrão"},
+                {"topic": "objection_handling", "params": {"plan_name": "<nome>"}, "description": "Respostas a objeções de um plano"},
+            ],
+        }
+
+    def _get_plan_details(self, plan_name: str) -> Dict[str, Any]:
+        """Retorna TODOS os dados de um plano específico (pricing, FAQ, termos, objeções, etc.)."""
+        plan = self._find_plan_by_name(plan_name)
+        if not plan:
+            available = [p['name'] for p in self._get_all_plans()]
+            return {"error": f"Plano '{plan_name}' não encontrado. Planos disponíveis: {available}"}
+
+        return {
+            "data": plan,
+            "related_queries": plan.get('related_queries', [])
+        }
+
     def _get_data_with_related_queries(self, *section_keys: str) -> Optional[Dict[str, Any]]:
         """
         Busca dados aninhados e agrega 'related_queries' de todos os níveis.
@@ -186,7 +263,20 @@ class KnowledgeService:
         """
         topic = query.get('topic')
         params = query.get('params', {})
-        
+
+        # Resolve aliases primeiro (evita fuzzy matching desnecessário)
+        topic = self._topic_aliases.get(topic, topic)
+
+        # --- Tópicos especiais (pré-roteamento) ---
+        if topic == 'list_plans':
+            return self._list_plans_summary()
+
+        if topic == 'get_plan_details':
+            plan_name = params.get('plan_name')
+            if not plan_name:
+                return {"error": "Parâmetro 'plan_name' é obrigatório para 'get_plan_details'."}
+            return self._get_plan_details(plan_name)
+
         # Lógica de fallback com Fuzzy Matching
         all_topics = list(self._topic_map.keys()) + list(self._plan_based_topics)
         if topic not in all_topics:
@@ -241,6 +331,12 @@ class KnowledgeService:
                 else:
                     # Se nenhum feature_name for fornecido, retorna a visão geral
                     path.append('overview')
+
+            # Tópicos que aceitam param `detail` para navegar em sub-seções
+            elif topic in self._detail_capable_topics:
+                detail = params.get('detail')
+                if detail:
+                    path.append(detail)
             
             return self._get_data_with_related_queries(*path)
 

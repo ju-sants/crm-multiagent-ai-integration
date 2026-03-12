@@ -1,0 +1,30 @@
+{
+    "name": "B2B Frota Mista: Caminhões + Fazenda + Satelital",
+    "description": "Cenário B2B complexo de frota mista com necessidades divergentes: caminhões rodovieiros, maquinário agrícola em fazenda sem sinal, e vans urbanas. Exercita mix de produtos. Avalia: RoutingAgent deve manter BUDGET consistentemente apesar da complexidade; StrategicAdvisor deve recomendar mix de planos (Satelital para rodovieiros, GSM+WiFi para fazenda, GSM 4G para urbano), verificar compatibilidade John Deere, e operar em modo QUALIFICATION consultivo; IncrementalPlanner deve incorporar nova informação de WiFi na fazenda e ajustar recomendações; CommunicationAgent deve usar tom profissional B2B, apresentar orpamento consolidado sem inventar preços de pacotes que não existem.",
+    "complexity": "muito alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Manter BUDGET consistentemente", "NÃO confundir complexidade com SUPPORT"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Mix: Satelital para rodovieiros, GSM+WiFi para fazenda, GSM 4G para vans", "Verificar compatibilidade John Deere", "Modo QUALIFICATION consultivo"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Incorporar WiFi na fazenda", "Ajustar recomendações por tipo de veículo", "NÃO descartar plano"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Tom profissional B2B", "Orçamento consolidado sem inventar pacotes", "Preços individuais corretos"]
+        }
+    },
+    "session_id": "test-fleet-b2b-mixed",
+    "contact_name": "André Machado",
+    "messages": [
+        {"text": "boa tarde, sou gerente de frota da TransLog Agro", "wait": 90},
+        {"text": "preciso rastrear 12 caminhao de entrega, 5 john deere e 3 van", "wait": 90},
+        {"text": "os caminhao roda entre goiania e barreiras, mt trecho sem sinal", "wait": 120},
+        {"text": "as maquina fica na fazenda em sorriso MT, la tem starlink", "wait": 120},
+        {"text": "as john deere tem piloto automatico, isso interfere?", "wait": 120},
+        {"text": "as van so roda em goiania msm", "wait": 90},
+        {"text": "da p fazer um orçamento com td junto?", "wait": 120}
+    ]
+}

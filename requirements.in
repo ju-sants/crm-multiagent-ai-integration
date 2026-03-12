@@ -14,11 +14,9 @@ gunicorn
 langchain-xai
 structlog
 langchain-google-genai
-supervisor
 thefuzz
 python-Levenshtein
 json5
-fastapi
-fastapi
-sentence_transformers
-sentence_transformers
+transformers
+torch
+emoji

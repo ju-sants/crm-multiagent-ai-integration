@@ -7,6 +7,7 @@ from app.crews.agents_definitions.obj_declarations.tasks_declaration import crea
 from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
+from app.utils.funcs.funcs import safe_inject, build_longterm_context
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
@@ -25,23 +26,20 @@ def purchase_confirmation_task(contact_id: str):
 
         shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
-        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
-        history_messages = "\n\n".join([
-            f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in longterm_history.get("topic_details", [])[-5:]
-        ])
+        longterm_history_raw = json.loads(longterm_history_json) if longterm_history_json else {}
+        longterm_context = build_longterm_context(longterm_history_raw)
 
         inputs = {
             "client_message": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
-            "shorterm_history": str(shorterm_history),
-            "longterm_history": history_messages,
+            "shorterm_history": safe_inject(shorterm_history),
+            "longterm_history": longterm_context,
         }
 
         result = crew.kickoff(inputs=inputs)
         parsed_result = parse_json_from_string(result.raw, update=False)
 
         if parsed_result and parsed_result.get("budget_accepted") is True:
-            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=30):
                 current_state, _ = state_manager.get_state(contact_id)
                 current_state.operational_context = "BUDGET_ACCEPTED"
                 current_state.budget_accepted = True

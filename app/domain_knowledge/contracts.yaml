@@ -42,7 +42,7 @@ general_terms:
     - topic: "contract_terms"
       params: { contract_id: "moto_pgs_contract" }
       description: "Ver os termos do contrato de moto com cobertura."
-    - topic: "get_company_info"
+    - topic: "company_info"
       params: {}
       description: "Ver informações da empresa."
 

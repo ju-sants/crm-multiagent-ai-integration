@@ -1,0 +1,29 @@
+{
+    "name": "Context Switch: Vendas → Suporte → Vendas",
+    "description": "Cenário holístico de troca de contexto. O cliente inicia uma consulta de vendas, interrompe com problema técnico urgente em outro veículo, e retorna à venda original. Avalia todos os agentes: RoutingAgent precisa reclassificar operational_context 3 vezes (BUDGET→SUPPORT→BUDGET) e invalidar/revalidar plano; StrategicAdvisor deve criar estratégia de vendas, depois adaptar para suporte; IncrementalPlanner deve preservar contexto de vendas ao retornar; CommunicationAgent precisa manter tom natural na transição sem repetir informações já dadas; SystemOperationsAgent deve executar diagnóstico do veículo com problema.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Reclassificar BUDGET→SUPPORT→BUDGET 3x", "Invalidar plano na troca", "Revalidar ao retornar"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Criar estratégia de vendas inicialmente", "Adaptar para suporte", "Retornar à vendas"]
+        },
+        "SystemOperationsAgent": {
+            "critical_checkpoints": ["Diagnóstico do veículo JKL4M56", "Sintetizar resultado técnico"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Transição natural sem repetir info", "Tom adequado a cada contexto"]
+        }
+    },
+    "session_id": "test-context-switch-full",
+    "contact_name": "Thiago Ribeiro",
+    "messages": [
+        {"text": "oi boa tarde to querendo colocar rastreador no meu carro", "wait": 90},
+        {"text": "fiat argo 2024, uso p trabalho na cidade", "wait": 90},
+        {"text": "perai, meu outro carro n ta atualizando faz 3 dias, placa JKL4M56. resolvo isso aqui?", "wait": 120},
+        {"text": "eh um gol, ja tem rastreador d vcs faz 1 ano", "wait": 120},
+        {"text": "ok entendi obg. voltando pro argo, qual plano melhor p cidade?", "wait": 90},
+        {"text": "qto fica p mes?", "wait": 90}
+    ]
+}

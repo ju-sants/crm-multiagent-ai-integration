@@ -1,0 +1,27 @@
+{
+    "name": "Sondagem Gradual: Intenção Vaga até Qualificação",
+    "description": "Cenário de cold start com mensagens vagas que se esclarecem gradualmente. Exercita a paciência do sistema e qualificação progressiva. Avalia: RoutingAgent não deve classificar prematuramente como BUDGET até ter contexto suficiente, eventually transicionar para BUDGET; StrategicAdvisor deve operar em modo QUALIFICATION, gerando key_questions_to_ask pertinentes sem assumir produto; IncrementalPlanner deve incorporar cada nova informação do cliente incrementalmente; CommunicationAgent deve fazer perguntas abertas naturais, sem parecer interrogário, acolhendo o cliente vago sem repetições.",
+    "complexity": "média",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["NÃO classificar BUDGET prematuramente", "Transicionar para BUDGET com contexto suficiente", "is_plan_acceptable=False sem plano"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Modo QUALIFICATION obrigatório", "key_questions pertinentes", "NÃO assumir produto"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Perguntas abertas naturais", "Sem interrogatório", "Acolher cliente vago"]
+        }
+    },
+    "session_id": "test-gradual-qualification",
+    "contact_name": "Lucas Martins",
+    "messages": [
+        {"text": "oi", "wait": 90},
+        {"text": "preciso de uma informacao", "wait": 90},
+        {"text": "aquele negocio q vcs fazem la", "wait": 90},
+        {"text": "eh p caminhao sabe, p saber onde ele ta", "wait": 90},
+        {"text": "mercedes 710, faço entrega", "wait": 90},
+        {"text": "rodo mais aki em goiania e regiao", "wait": 90},
+        {"text": "qto custa", "wait": 90}
+    ]
+}

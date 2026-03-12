@@ -12,7 +12,7 @@ from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.callbell_service import get_contact_messages, send_message
 from app.services.state_manager_service import StateManagerService
 from app.models.data_models import ConversationState
-from app.utils.funcs.funcs import distill_conversation_state
+from app.utils.funcs.funcs import distill_conversation_state, safe_inject, merge_state_fields
 
 SUMMARIZER_HISTORY_TOPIC_LIMIT = 15
 
@@ -75,13 +75,26 @@ def process_history(history: Any, contact_id: str) -> str:
     return history_normalized
 
 def raw_history_to_messages(history: list, contact_id: str) -> str:
-    """Converts raw history to a string of messages."""
+    """Converts raw history to a formatted string with timestamps for temporal context."""
     messages = []
     for message in history:
+        # Extract timestamp if available
+        created_at = message.get("createdAt", "")
+        time_prefix = ""
+        if created_at:
+            try:
+                ts = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
+                time_prefix = f"[{ts.strftime('%d/%m %H:%M')}] "
+            except (ValueError, TypeError):
+                pass
+
+        sender = "Agente IA" if message.get("status", "") == "sent" else "customer"
+
         if message.get("attachments"):
             attachments = message.get("attachments", [])
             if not attachments:
-                messages.append(f'{"Agente IA - " if message.get("status", "") == "sent" else "customer - "}' + f"'{message.get('text', '')}'")
+                if message.get("text"):
+                    messages.append(f"{time_prefix}{sender} - '{message.get('text', '')}'")
                 continue
 
             list_of_dicts = isinstance(attachments[0], dict)
@@ -93,19 +106,18 @@ def raw_history_to_messages(history: list, contact_id: str) -> str:
                     url = raw_url.split('uploads/')[1].split('?')[0] if 'uploads/' in raw_url else ''
 
                 if url:
-                        mapped_attachments = redis_client.hgetall(f"{contact_id}:attachments")
-                        if mapped_attachments:
-                            attachment_text = mapped_attachments.get(url, "")
-                            if attachment_text:
-                                message["text"] = attachment_text
-                                del message["attachments"]
-
-                                messages.append(f'{"Agente IA - " if message.get("status", "") == "sent" else "customer - "}' + f"'{message.get('text', '')}'")
+                    mapped_attachments = redis_client.hgetall(f"{contact_id}:attachments")
+                    if mapped_attachments:
+                        attachment_text = mapped_attachments.get(url, "")
+                        if attachment_text:
+                            message["text"] = attachment_text
+                            del message["attachments"]
+                            messages.append(f"{time_prefix}{sender} - '{message.get('text', '')}'")
         else:
             if message.get("text"):
-                messages.append(f'{"Agente IA - " if message.get("status", "") == "sent" else "customer - "}' + f"'{message.get('text', '')}'")
+                messages.append(f"{time_prefix}{sender} - '{message.get('text', '')}'")
 
-    return "\n".join([str(msg) for msg in messages])
+    return "\n".join(messages)
 
 @celery_app.task(name='enrichment.history_summarizer')
 def history_summarizer_task(previous_task_result=None, *, contact_id: str):
@@ -182,6 +194,7 @@ def history_summarizer_task(previous_task_result=None, *, contact_id: str):
         
         # Save details for each topic and check for noise
         for topic_detail in output.get('topic_details', []):
+            topic_detail['last_updated'] = datetime.now().isoformat()
             topic_id = topic_detail.get('topic_id')
             if topic_id:
                 details_key = f"history:topic_details:{contact_id}:{topic_id}"
@@ -269,13 +282,13 @@ def state_summarizer_task(longterm_history: dict, contact_id: str):
 
     conversation_state_distilled = distill_conversation_state(state, "StateSummarizerAgent")
 
-    shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
+    shorterm_history = safe_inject(redis_client.get(f"shorterm_history:{contact_id}"), "")
 
     inputs = {
         "longterm_history": json.dumps(longterm_history),
-        "shorterm_history": str(shorterm_history),
+        "shorterm_history": shorterm_history,
         "last_turn_state": json.dumps(conversation_state_distilled),
-        "client_message": str(redis_client.get(f"{contact_id}:last_processed_messages"))
+        "client_message": safe_inject(redis_client.get(f"{contact_id}:last_processed_messages"), "")
     }
     
     result = crew.kickoff(inputs=inputs)
@@ -292,9 +305,10 @@ def state_summarizer_task(longterm_history: dict, contact_id: str):
         if enriched_state.get("metadata"):
             enriched_state["metadata"]["current_turn_number"] = current_turn_number
 
-        with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+        with redis_client.lock(f"lock:state:{contact_id}", timeout=30):
             state, _ = state_manager.get_state(contact_id)
-            new_state = ConversationState(**{**state.model_dump(), **enriched_state})
+            merged = merge_state_fields(state.model_dump(), enriched_state)
+            new_state = ConversationState(**merged)
 
             state_manager.save_state(contact_id, new_state)
 
@@ -320,7 +334,7 @@ def profile_enhancer_task(longterm_history: dict, contact_id: str):
     existing_profile_raw = redis_client.get(f"{contact_id}:customer_profile")
     existing_profile = existing_profile_raw if existing_profile_raw else str({"client_360_blueprint": {"client_identity": {"contact_id": contact_id, "contact_name": state.metadata.contact_name}}})
 
-    shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
+    shorterm_history = safe_inject(redis_client.get(f"shorterm_history:{contact_id}"), "")
 
     last_turn_state.pop('strategic_plan', None)
     last_turn_state.pop('disclosure_checklist', None)
@@ -328,10 +342,10 @@ def profile_enhancer_task(longterm_history: dict, contact_id: str):
     inputs = {
         "contact_id": contact_id,
         "longterm_history": json.dumps(longterm_history),
-        "shorterm_history": str(shorterm_history),
+        "shorterm_history": shorterm_history,
         "last_turn_state": json.dumps(last_turn_state),
         "existing_profile": existing_profile,
-        "client_message": str(redis_client.get(f"{contact_id}:last_processed_messages"))
+        "client_message": safe_inject(redis_client.get(f"{contact_id}:last_processed_messages"), "")
     }
     
     result = crew.kickoff(inputs=inputs)
@@ -380,7 +394,7 @@ def trigger_post_processing(contact_id: str, send_message_task: bool = False, re
 
     if not lock_enrichment_pipeline:
         logger.info(f"[{contact_id}] - Enrichment pipeline already running. Skipping.")
-        redis_client.set("run_enrichment_pipeline_again", "true")
+        redis_client.set(f"run_enrichment_pipeline_again:{contact_id}", "true")
 
         if trigger_message_sending:
             logger.info(f"[{contact_id}] - Sending message to {phone_number}.")
@@ -424,13 +438,13 @@ def trigger_post_processing(contact_id: str, send_message_task: bool = False, re
         
         except Exception as e:
             logger.error(f"[{contact_id}] - Error during enrichment pipeline execution: {e}")
-            redis_client.set("run_enrichment_pipeline_again", "true")
+            redis_client.set(f"run_enrichment_pipeline_again:{contact_id}", "true")
             raise
         
         finally:
             redis_client.delete(f"lock_enrichment_pipeline:{contact_id}")
-            if redis_client.get("run_enrichment_pipeline_again"):
-                redis_client.delete("run_enrichment_pipeline_again")
+            if redis_client.get(f"run_enrichment_pipeline_again:{contact_id}"):
+                redis_client.delete(f"run_enrichment_pipeline_again:{contact_id}")
 
                 logger.info(f"[{contact_id}] - Enrichment pipeline re-triggered.")
                 trigger_post_processing(contact_id)

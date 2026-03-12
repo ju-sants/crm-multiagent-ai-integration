@@ -1,0 +1,472 @@
+routing_task:
+  description: |
+    Analise a `client_message` em relação ao `conversation_state` e determine:
+    1. Se o plano estratégico atual é válido ou precisa ser recriado
+    2. O contexto operacional adequado (BUDGET, SUPPORT, CUSTOMER_SERVICE, BUDGET_ACCEPTED)
+    3. Se a conversa está na etapa final de venda
+    4. Se o cliente prefere áudio
+
+    <INPUT_DATA>
+      - `conversation_state`: {conversation_state}
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "is_plan_acceptable": false,
+      "is_sales_final_step": false,
+      "action": "PROCEED_WITH_EXISTING_PLAN | INITIATE_NEW_STRATEGIC_PLAN",
+      "operational_context": "BUDGET | CUSTOMER_SERVICE | SUPPORT | BUDGET_ACCEPTED",
+      "identified_topic": "Descrição curta do tópico",
+      "prefers_audio": false
+    }
+
+develop_strategy_task:
+  description: |
+    Crie o `conversation_blueprint` seguindo o modo de operação adequado ao `operational_context`.
+
+    **Passos:**
+    1. Determine o modo: QUALIFICATION (dados faltam), PRESENTATION (dados disponíveis) ou RESOLUTION (suporte/atendimento)
+    2. Execute a pesquisa necessária na `knowledge_service_tool` (múltiplas chamadas iterativas se necessário)
+    3. Construa o blueprint com estratégia de apresentação, guidance de comunicação e payload de informações
+    4. Popule o `disclosure_checklist` com termos relevantes (status: "pending")
+
+    **Saída em Português do Brasil.**
+
+    <INPUT_DATA>
+      - `timestamp`: {timestamp}
+      - `turn`: {turn}
+      - `contact_id`: {contact_id}
+      - `operational_context`: {operational_context}
+      - `conversation_state`: {conversation_state}
+      - `profile_customer_task_output`: {profile_customer_task_output}
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "task_output": {
+        "conversation_blueprint": {
+          "customer_context_summary": {
+            "relevant_profile_insights": "<insights do perfil>",
+            "insights_from_current_session": "<insights da sessão>"
+          },
+          "product_presentation_strategy": {
+            "presentation_order": ["Plano A", "Plano B"],
+            "offers": [
+              { "plan_name": "Plano A", "sales_angle": "<argumentos de venda>" },
+              { "plan_name": "Plano B", "sales_angle": "<argumentos de venda>" }
+            ]
+          },
+          "communication_guidance": {
+            "tone_and_style": "<tom recomendado>",
+            "key_talking_points": ["<ponto 1>", "<ponto 2>"],
+            "key_questions_to_ask": ["<pergunta 1>"],
+            "next_step_preview": "<próximo passo esperado>"
+          },
+          "information_payload": {
+            "plan_name_data": {
+              "pricing": "<preços>",
+              "contract_terms": "<termos>",
+              "technical_limitations": "<limitações>"
+            }
+          }
+        }
+      },
+      "updated_state": {
+        "disclosure_checklist": [
+          { "topic": "<tópico>", "content": "<conteúdo>", "status": "pending" }
+        ]
+      }
+    }
+
+refine_strategy_task:
+  description: |
+    Refine o plano estratégico existente com base na nova `client_message` e nos dados atualizados.
+
+    **Passos:**
+    1. Identifique lacunas: o que o cliente perguntou que o plano não responde?
+    2. Pesquise na `knowledge_service_tool` para preencher as lacunas (chamadas iterativas)
+    3. Enriqueça o blueprint: adicione talking points, refine sales angles, complete o information_payload
+    4. Pode informações obsoletas: remova perguntas já respondidas, consolide pontos já compreendidos
+    5. Adicione itens ao `disclosure_checklist` se necessário (nunca remova existentes)
+
+    **JSON válido, em Português do Brasil.**
+
+    <INPUT_DATA>
+      - `turn`: {turn}
+      - `timestamp`: {timestamp}
+      - `identified_topic`: {identified_topic}
+      - `contact_id`: {contact_id}
+      - `operational_context`: {operational_context}
+      - `last_system_operation`: {last_system_operation}
+      - `conversation_state`: {conversation_state}
+      - `profile_customer_task_output`: {profile_customer_task_output}
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "task_output": {
+        "system_action_request": "<ação de sistema em linguagem natural ou null>",
+        "conversation_blueprint": {
+          "customer_context_summary": {
+            "relevant_profile_insights": "<insights do perfil>",
+            "insights_from_current_session": "<insights da sessão>"
+          },
+          "product_presentation_strategy": {
+            "presentation_order": ["Plano A", "Plano B"],
+            "offers": [
+              { "plan_name": "Plano A", "sales_angle": "<argumentos>" },
+              { "plan_name": "Plano B", "sales_angle": "<argumentos>" }
+            ]
+          },
+          "communication_guidance": {
+            "tone_and_style": "<tom>",
+            "key_talking_points": ["<ponto 1>"],
+            "key_questions_to_ask": ["<pergunta 1>"],
+            "next_step_preview": "<próximo passo>"
+          },
+          "information_payload": {
+            "plan_name_data": {
+              "pricing": "<preços>",
+              "contract_terms": "<termos>",
+              "technical_limitations": "<limitações>"
+            }
+          }
+        }
+      },
+      "updated_state": {
+        "disclosure_checklist": [
+          { "topic": "<tópico>", "content": "<conteúdo>", "status": "pending" }
+        ]
+      }
+    }
+
+execute_system_operations_task:
+  description: |
+    Execute a ação de sistema solicitada em `action_requested`.
+
+    **Passos:**
+    1. Traduza o pedido em uma query para a ferramenta
+    2. Valide que tem os parâmetros essenciais. Se faltam, retorne `INSUFFICIENT_DATA` com mensagem
+    3. Execute e sintetize os resultados em linguagem clara
+
+    <INPUT_DATA>
+      - `action_requested`: {action_requested}
+      - `contact_name`: {contact_name}
+      - `conversation_state`: {conversation_state}
+      - `customer_profile`: {customer_profile}
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "status": "ACTION_COMPLETE | INSUFFICIENT_DATA",
+      "synthesis": "<Síntese factual dos resultados em Português>",
+      "message_to_user": "<Mensagem ao cliente se INSUFFICIENT_DATA, senão null>",
+      "data_payload": { },
+      "follow_up_suggestions": ["<sugestão 1>"]
+    }
+
+communication_task:
+  description: |
+    Transforme o `strategic_plan` em uma sequência de mensagens naturais e persuasivas.
+
+    **Passos:**
+    1. Responda à necessidade imediata da `client_message` (se não é follow-up)
+    2. Avance proativamente: comunique o próximo item relevante do plano ou pergunte confirmação de fechamento
+    3. Se `is_follow_up=true`: inicie com reabertura gentil e contextual
+    4. Atualize o `disclosure_checklist` (marque como "communicated" o que foi abordado)
+    5. Preencha `plan_names` apenas se é primeira vez do catálogo (verifique `recently_sent_catalogs`)
+
+    **Não repita informações que o cliente já deu. Vá direto ao ponto. Frases curtas (máximo 4 mensagens, cada uma com ~160 caracteres). SEMPRE apresente o produto mais valioso PRIMEIRO — venda por valor (segurança, tranquilidade, praticidade), não por preço.**
+
+    <INPUT_DATA>
+      - `timestamp`: {timestamp}
+      - `recently_sent_catalogs`: {recently_sent_catalogs}
+      - `last_system_operation`: {last_system_operation}
+      - `conversation_state`: {conversation_state}
+      - `customer_profile`: {customer_profile}
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `strategic_plan`: {strategic_plan}
+      - `disclosure_checklist`: {disclosure_checklist}
+      - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "task_output": {
+        "request_human_intervention": false,
+        "messages_sequence": [
+          "Primeira mensagem respondendo ao cliente.",
+          "Segunda mensagem avançando proativamente.",
+          "Terceira mensagem com pergunta ou próximo passo."
+        ],
+        "plan_names": ["Nome do Plano"]
+      },
+      "updated_state": {
+        "products_discussed": [
+          { "plan_name": "Plano X", "details_provided": ["pricing"], "presented_at_turn": 4 }
+        ],
+        "disclosure_checklist": [
+          { "topic": "Natureza do Serviço", "content": "<conteúdo>", "status": "communicated" }
+        ]
+      }
+    }
+
+collect_registration_data_task:
+  description: |
+    Conduza a coleta de dados cadastrais com base na `client_message`.
+
+    **Passos:**
+    1. Extraia respostas do cliente e atualize `collected_data_so_far`
+    2. Identifique dados faltantes e solicite o próximo bloco
+    3. Se tudo coletado: `status: "COLLECTION_COMPLETE"`
+
+    <INPUT_DATA>
+      - `timestamp`: {timestamp}
+      - `conversation_state`: {conversation_state}
+      - `collected_data_so_far`: {collected_data_so_far}
+      - `plan_details`: {plan_details}
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "task_output": {
+        "status": "AWAITING_DOCUMENT_NUMBER | COLLECTION_COMPLETE",
+        "client_intent": "data_collection",
+        "collected_data": {
+          "tipo_cadastro": "<CPF ou CNPJ>",
+          "documento_numero": "<número>",
+          "nome_tomador_servico": "<nome>",
+          "endereco_completo": "<endereço>",
+          "cep": "<CEP>",
+          "veiculo_placa": "<placa>",
+          "veiculo_marca": "<marca>",
+          "veiculo_modelo": "<modelo>",
+          "telefone_principal": "<telefone>",
+          "email": "<email>",
+          "dia_vencimento_mensalidade": "<1|5|10|15|20|25>",
+          "plano_contratado": {
+            "nome_plano": "<nome>",
+            "valor_adesao": "<valor>",
+            "valor_mensalidade": "<valor>"
+          }
+        },
+        "next_message_to_send": "Perfeito! Agora, poderia me informar seu nome completo e CPF?",
+        "is_data_collection_complete": false
+      },
+      "updated_state": {
+        "entities_extracted": [
+          { "entity": "<nome da entidade>", "value": "<valor>", "turn": 5 }
+        ]
+      }
+    }
+
+summarize_history_task:
+  description: |
+    Atualize incrementalmente o `existing_summary` com as `new_messages`.
+
+    **Passos:**
+    1. Se `existing_summary` é null: crie estrutura de tópicos do zero
+    2. Para cada nova mensagem: classifique como CONTINUATION, NEW_TOPIC ou MERGE e aplique
+    3. Reescreva `full_details` que ultrapassem ~750 palavras para ser mais conciso
+    4. Garanta que `start_index`/`end_index` mapeiem para `full_raw_history`
+
+    <INPUT_DATA>
+      - `contact_id`: {contact_id}
+      - `existing_summary`: {existing_summary}
+      - `raw_history`: {raw_history}
+      - `new_messages`: {new_messages}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "topic_details": [
+        {
+          "topic_id": "<slug snake_case sem acentos, max 40 chars, ex: 'rastreamento_moto'>",
+          "title": "<título conciso>",
+          "summary": "<resumo breve>",
+          "full_details": "<narrativa detalhada>",
+          "start_index": 0,
+          "end_index": 5,
+          "quality_score": 0.85,
+          "is_noisy": false
+        }
+      ],
+      "sentiment_trend": "<tendência de sentimento>"
+    }
+
+clean_noisy_data_task:
+  description: |
+    Reprocesse o trecho de conversa marcado como ruidoso, produzindo versão limpa.
+    Use `full_raw_history` como contexto, foque no `raw_history_snippet`.
+
+    <INPUT_DATA>
+      - `contact_id`: {contact_id}
+      - `topic_id`: {topic_id}
+      - `full_raw_history`: {full_raw_history}
+      - `raw_history_snippet`: {raw_history_snippet}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "cleaned_summary": "<resumo limpo e conciso>",
+      "cleaned_details": "<narrativa clara e sem ruído>"
+    }
+
+summarize_state_task:
+  description: |
+    Analise o histórico e a `client_message` para atualizar o estado da conversa.
+
+    **Passos:**
+    1. Extraia entidades (nomes, veículos, dados) da `client_message` e histórico
+    2. Atualize: `last_turn_recap`, `identified_topic`, `user_sentiment_history`
+    3. Integre entidades (sem duplicatas), atualize `qualification_tracker` e `unresolved_objections`
+    4. Curadoria: deduplicar, formatar valores (telefone → só dígitos), remover entidades nulas
+
+    <INPUT_DATA>
+      - `last_turn_state`: {last_turn_state}
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "metadata": {
+        "contact_id": "<string>",
+        "current_turn_number": "<integer>",
+        "phone_number": "<string>",
+        "contact_name": "<string>"
+      },
+      "entities_extracted": [
+        { "entity": "nome", "value": "Juan" }
+      ],
+      "user_sentiment_history": [
+        { "sentiment": "positivo", "turn": 3 }
+      ],
+      "qualification_tracker": [
+        { "topic": "vehicle_type", "status": "collected", "value": "moto", "turn_collected": 2 }
+      ],
+      "last_turn_recap": {
+        "turn_number": 5,
+        "user_intent": "<intenção>",
+        "agent_action": "<ação>",
+        "key_info_exchanged": ["<info 1>"]
+      },
+      "unresolved_objections": [
+        { "objection": "<objeção>", "status": "raised", "turn_raised": 4 }
+      ]
+    }
+
+enhance_profile_task:
+  description: |
+    Crie ou atualize o dossiê estratégico do cliente (`client_360_blueprint`).
+
+    **Passos:**
+    1. Analise `existing_profile`, `longterm_history`, `last_turn_state`
+    2. Se o perfil está muito longo: resuma entradas antigas, mantenha essência
+    3. Infira motivações, frustrações e interesses
+    4. Defina objetivo imediato e pendências
+
+    **Saída em Português do Brasil.**
+
+    <INPUT_DATA>
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `last_turn_state`: {last_turn_state}
+      - `existing_profile`: {existing_profile}
+      - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "client_360_blueprint": {
+        "client_identity": {
+          "contact_id": "<id>",
+          "contact_name": "<nome>",
+          "client_name": "<nome>",
+          "client_type": "individual | business",
+          "phone_number": "<telefone>",
+          "communication_style": "<estilo>"
+        },
+        "the_story_so_far": {
+          "executive_summary": "<resumo narrativo da jornada do cliente>",
+          "interaction_timeline": [
+            { "date": "YYYY-MM-DD", "event": "<evento crucial>" }
+          ]
+        },
+        "clients_mindset": {
+          "primary_motivations": ["<motivação>"],
+          "known_frustrations": ["<frustração>"],
+          "key_interests": ["<interesse>"]
+        },
+        "current_mission": {
+          "immediate_goal": "<objetivo>",
+          "pending_quests": ["<pendência>"],
+          "information_gaps": ["<lacuna>"]
+        },
+        "strategic_playbook": {
+          "recommended_next_move": "<próxima ação recomendada>",
+          "conversation_path": ["<passo 1>", "<passo 2>"],
+          "potential_pitfalls": ["<armadilha a evitar>"],
+          "golden_opportunities": ["<oportunidade de ouro>"]
+        }
+      }
+    }
+
+follow_up_task:
+  description: |
+    Decida se é adequado enviar follow-up agora com base no perfil, histórico e tempo decorrido.
+
+    <INPUT_DATA>
+      - `contact_id`: {contact_id}
+      - `now_timestamp`: {now_timestamp}
+      - `last_message_timestamp`: {last_message_timestamp}
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `customer_profile`: {customer_profile}
+    </INPUT_DATA>
+  expected_output: |
+    { "send_follow_up": false }
+
+purchase_confirmation_task:
+  description: |
+    Detecte se o cliente aceitou a proposta. Analise `client_message` no contexto de `shorterm_history`.
+    Apenas confirme se houve pergunta de fechamento do agente + resposta afirmativa do cliente.
+
+    <INPUT_DATA>
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `client_message`: {client_message}
+    </INPUT_DATA>
+  expected_output: |
+    { "budget_accepted": false }
+
+verify_system_action_task:
+  description: |
+    Diagnostique se a `client_message` indica necessidade de ação de sistema.
+
+    **Passos:**
+    1. Identifique o sintoma (se houver). Se não há → retorne `null`
+    2. Formule hipóteses e selecione ações do catálogo (definido no backstory)
+    3. Verifique `history_of_system_actions` para evitar redundância
+    4. Construa a solicitação com `natural_language_request` + array de queries
+
+    <INPUT_DATA>
+      - `longterm_history`: {longterm_history}
+      - `shorterm_history`: {shorterm_history}
+      - `client_message`: {client_message}
+      - `history_of_system_actions`: {history_of_system_actions}
+    </INPUT_DATA>
+  expected_output: |
+    {
+      "system_action_request": {
+        "natural_language_request": "<descrição do diagnóstico e objetivo>",
+        "queries": ["GET_PAYMENT_HISTORY", "GET_VEHICLE_POSITIONS"]
+      }
+    }

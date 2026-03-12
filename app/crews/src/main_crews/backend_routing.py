@@ -46,10 +46,17 @@ def backend_routing_task(contact_id: str):
         if redis_client.get(f"doing_strategy:{contact_id}"):
             logger.info(f"[{contact_id}] - Strategy development in progress. Waiting for completion.")
 
-        while redis_client.get(f"refining_strategy:{contact_id}") or redis_client.get(f"doing_strategy:{contact_id}"):
-            time.sleep(1)  # Wait for 1 second
-            
-        logger.info(f"[{contact_id}] - Strategy development Completed. Routing to: communication_task")
+        waited = 0
+        while (redis_client.get(f"refining_strategy:{contact_id}") or redis_client.get(f"doing_strategy:{contact_id}")) and waited < 180:
+            time.sleep(1)
+            waited += 1
+
+        if waited >= 180:
+            logger.warning(f"[{contact_id}] - Strategy wait timed out after 180s. Proceeding with current state.")
+        else:
+            logger.info(f"[{contact_id}] - Strategy development Completed.")
+
+        logger.info(f"[{contact_id}] - Routing to: communication_task")
         next_task = communication_task.s(contact_id)
         
     # Default: Straight to Communication
@@ -59,9 +66,12 @@ def backend_routing_task(contact_id: str):
 
     if redis_client.get(f"doing_system_operations:{contact_id}"):
         logger.info(f"[{contact_id}] - Esperando a operação de sistema acabar")
-        # Espera qualquer operação de sistema terminar antes de iniciar a próxima task
-        while redis_client.get(f"doing_system_operations:{contact_id}"):
-            time.sleep(1)  # Wait for 1 second
+        waited = 0
+        while redis_client.get(f"doing_system_operations:{contact_id}") and waited < 180:
+            time.sleep(1)
+            waited += 1
+        if waited >= 180:
+            logger.warning(f"[{contact_id}] - System operations wait timed out after 180s. Proceeding.")
 
     if next_task:
         

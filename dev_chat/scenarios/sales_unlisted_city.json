@@ -1,0 +1,26 @@
+{
+    "name": "Cidade Não Listada: Viabilidade Técnica + Custo Extra",
+    "description": "Cenário de qualificação regional para cidade não listada no catálogo de técnicos. Cliente de cidade pequena que não está nas cidades com técnicos próprios nem terceirizados conhecidos. Exercita procedimento de viabilidade técnica. Avalia: RoutingAgent deve classificar como BUDGET e manter; StrategicAdvisor deve identificar necessidade de verificar viabilidade regional, buscar procedure_for_unlisted_cities via knowledge_service, informar que não é impossível mas requer análise interna; IncrementalPlanner deve incorporar informação de cidade e ajustar estratégia com custo de deslocamento como variável; CommunicationAgent deve ser transparente sobre custo adicional de técnico terceirizado (R$150 extra), prazo de envio de equipamento (7-10 dias úteis via Correios), sem prometer atendimento imediato nem inventar disponibilidade, tom consultivo.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Classificar BUDGET", "Manter consistente apesar de complicação logística"]
+        },
+        "StrategicAdvisor": {
+            "critical_checkpoints": ["Buscar procedure_for_unlisted_cities", "Informar análise de viabilidade necessária", "Custo terceirizado R$150 extra"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Transparência sobre custo extra", "Prazo 7-10 dias via Correios", "Sem inventar disponibilidade", "Solicitar nome exato da cidade"]
+        }
+    },
+    "session_id": "test-unlisted-city-feasibility",
+    "contact_name": "Leandro Silva",
+    "messages": [
+        {"text": "oi quero colocar rastreador no caminhao", "wait": 90},
+        {"text": "iveco daily, uso p frete", "wait": 90},
+        {"text": "moro em monte alegre de goias, interior d goias", "wait": 90},
+        {"text": "vcs instalam aki? ou tem q ir em outra cidade", "wait": 120},
+        {"text": "qto custaria a mais p causa da distancia?", "wait": 120},
+        {"text": "demora mt p instalar?", "wait": 90}
+    ]
+}

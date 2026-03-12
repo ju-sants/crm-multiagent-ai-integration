@@ -140,3 +140,124 @@ def distill_conversation_state(conversation_state: ConversationState, agent_name
 
     logger.debug(f"Estado destilado para o agente '{agent_name}': {list(distilled_state.keys())}")
     return distilled_state
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  SAFE INJECTION (P6)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def safe_inject(value, default="Não disponível"):
+    """Normalizes None/empty values to avoid injecting 'None' strings into agent prompts."""
+    if value is None:
+        return default
+    if isinstance(value, str) and value.strip().lower() in ("none", ""):
+        return default
+    return value
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  MERGE STATE FIELDS (P4)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Fields where items have identity keys and should be merged (not overwritten)
+_MERGE_BY_KEY = {
+    'entities_extracted': 'entity',
+    'products_discussed': 'plan_name',
+    'disclosure_checklist': 'topic',
+    'qualification_tracker': 'topic',
+    'unresolved_objections': 'objection',
+    'conversation_goals': 'goal',
+}
+
+# Fields that are append-only (new items added, never replaced)
+_APPEND_FIELDS = {'user_sentiment_history'}
+
+
+def merge_state_fields(current_state: dict, updates: dict) -> dict:
+    """Merge state updates semantically instead of full overwrite.
+
+    - List fields with identity keys: merge by key (update existing, add new)
+    - Append-only fields: only add new items
+    - All other fields: direct replacement
+    """
+    merged = dict(current_state)
+
+    for key, value in updates.items():
+        if key in _MERGE_BY_KEY and isinstance(value, list):
+            identity_key = _MERGE_BY_KEY[key]
+            existing = {}
+            for item in merged.get(key, []):
+                if isinstance(item, dict):
+                    existing[item.get(identity_key, id(item))] = item
+            for item in value:
+                if isinstance(item, dict):
+                    existing[item.get(identity_key, id(item))] = item
+            merged[key] = list(existing.values())
+        elif key in _APPEND_FIELDS and isinstance(value, list):
+            merged[key] = merged.get(key, []) + value
+        else:
+            merged[key] = value
+
+    return merged
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  LONGTERM CONTEXT BUILDER (T4 + P2)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def build_longterm_context(longterm_history: dict, max_tokens: int = 2000) -> str:
+    """Build longterm history context within a token budget, most relevant topics first.
+
+    Topics are sorted by last_updated (recency) then quality_score.
+    Includes timestamps for temporal awareness (P2).
+    """
+    topics = longterm_history.get("topic_details", [])
+    if not topics:
+        return ""
+
+    topics_sorted = sorted(
+        topics,
+        key=lambda t: (t.get('last_updated', ''), t.get('quality_score', 0.5)),
+        reverse=True,
+    )
+
+    parts = []
+    token_count = 0
+    for topic in topics_sorted:
+        entry = f"[{topic.get('topic_id', '?')}] {topic.get('title', 'N/A')}"
+        last_updated = topic.get('last_updated', '')
+        if last_updated:
+            entry += f" (atualizado: {last_updated[:16]})"
+        quality = topic.get('quality_score')
+        if quality is not None and quality < 0.7:
+            entry += f" [qualidade: {quality}]"
+        entry += f"\nResumo: {topic.get('summary', 'N/A')}"
+
+        # ~4 chars per token for Portuguese text
+        entry_tokens = len(entry) // 4
+        if token_count + entry_tokens > max_tokens:
+            break
+        parts.append(entry)
+        token_count += entry_tokens
+
+    return "\n\n".join(parts)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  PRE-ENRICHMENT LITE (P3)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def refresh_shorterm_history(contact_id: str) -> None:
+    """Eagerly appends current pending messages to shorterm_history before crews execute.
+
+    This ensures strategy/routing/communication agents see the current turn's
+    messages instead of stale data from the previous enrichment cycle.
+    """
+    current_messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
+    if not current_messages:
+        return
+
+    existing = redis_client.get(f"shorterm_history:{contact_id}") or ""
+    new_lines = "\n".join(f"customer - '{msg}'" for msg in current_messages)
+    updated = f"{existing}\n{new_lines}" if existing else new_lines
+    redis_client.set(f"shorterm_history:{contact_id}", updated)

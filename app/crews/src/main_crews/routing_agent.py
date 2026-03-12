@@ -17,7 +17,7 @@ from app.crews.src.main_crews.refine_strategy import refine_strategy_task
 from app.crews.src.main_crews.strategy import strategy_task
 from app.crews.src.main_crews.verify_system_action import verify_system_action_task
 from app.crews.src.main_crews.backend_routing import backend_routing_task
-from app.utils.funcs.funcs import distill_conversation_state
+from app.utils.funcs.funcs import distill_conversation_state, safe_inject, merge_state_fields, build_longterm_context, refresh_shorterm_history
 from app.utils.static import default_strategic_plan
 
 
@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 state_manager = StateManagerService()
 redis_client = get_redis()
 
-HISTORY_TOPIC_LIMIT = 10
+LONGTERM_TOKEN_BUDGET = 1500
 
 @celery_app.task(name='main_crews.pre_routing')
 def pre_routing_orchestrator(contact_id: str):
@@ -36,9 +36,12 @@ def pre_routing_orchestrator(contact_id: str):
     logger.info(f"[{contact_id}] - Orchestrating parallel backend_routing tasks and refinement.")
     state, _ = state_manager.get_state(contact_id)
 
+    # P3: Pre-enrichment lite — ensure shorterm_history includes current messages
+    refresh_shorterm_history(contact_id)
+
     if state.pending_system_operation:
         logger.info(f"[{contact_id}] - Continuing system operations flow. Routing to: system_operations_task")
-        with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+        with redis_client.lock(f"lock:state:{contact_id}", timeout=30):
             
             state, _ = state_manager.get_state(contact_id)
             state.system_action_request = state.pending_system_operation
@@ -85,18 +88,20 @@ def _run_routing_agent_crew(contact_id: str):
         task = create_strategy_agent_task(agent)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
 
-        shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
+        shorterm_history = safe_inject(redis_client.get(f"shorterm_history:{contact_id}"), "")
 
         messages = redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
-        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
-        history_messages = "\n\n".join(
-            [f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}" for topic in longterm_history.get("topic_details", [])[-HISTORY_TOPIC_LIMIT:]]
-        )
+        longterm_history_raw = json.loads(longterm_history_json) if longterm_history_json else {}
+        history_messages = build_longterm_context(longterm_history_raw, max_tokens=LONGTERM_TOKEN_BUDGET)
 
-        while redis_client.keys(f"transcribing:*:{contact_id}"):
+        waited = 0
+        while (redis_client.exists(f"transcribing:audio:{contact_id}") or redis_client.exists(f"transcribing:image:{contact_id}")) and waited < 120:
             logger.info(f"[{contact_id}] - Waiting for transcription to complete.")
-            time.sleep(1)
+            time.sleep(2)
+            waited += 2
+        if waited >= 120:
+            logger.warning(f"[{contact_id}] - Transcription wait timed out after 120s. Proceeding.")
 
         conversation_state_distilled = distill_conversation_state(state, "RoutingAgent")
 
@@ -104,16 +109,17 @@ def _run_routing_agent_crew(contact_id: str):
             "client_message": "\n".join(messages),
             "conversation_state": json.dumps(conversation_state_distilled),
             "longterm_history": history_messages,
-            "shorterm_history": str(shorterm_history) if shorterm_history else "",
+            "shorterm_history": shorterm_history,
         }
 
         result = crew.kickoff(inputs=inputs)
         json_response = parse_json_from_string(result.raw, update=False)
 
         if json_response:
-            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=30):
                 current_state, _ = state_manager.get_state(contact_id)
-                updated_state = ConversationState(**{**current_state.model_dump(), **json_response})
+                merged = merge_state_fields(current_state.model_dump(), json_response)
+                updated_state = ConversationState(**merged)
                 state_manager.save_state(contact_id, updated_state)
 
         logger.info(f"[{contact_id}] - Internal context analysis crew finished.")

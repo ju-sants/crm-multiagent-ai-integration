@@ -1,0 +1,25 @@
+{
+    "name": "Multi: Troca de Tópico Abrupta",
+    "description": "Cenário de troca de contexto clássico: vendas→suporte→vendas. Testa reroteamento e preservação de contexto. Avalia: RoutingAgent deve reclassificar BUDGET→SUPPORT→BUDGET invalidando plano na troca; StrategicAdvisor deve adaptar de vendas para resolução e voltar; IncrementalPlanner deve preservar contexto original ao retornar; CommunicationAgent deve manter naturalidade na transição sem repetir info.",
+    "complexity": "alta",
+    "evaluation_focus": {
+        "RoutingAgent": {
+            "critical_checkpoints": ["Reclassificar BUDGET→SUPPORT→BUDGET", "Invalidar plano na troca de contexto", "Revalidar plano no retorno"]
+        },
+        "IncrementalStrategicPlannerAgent": {
+            "critical_checkpoints": ["Preservar contexto de vendas ao retornar", "Não descartar plano anterior"]
+        },
+        "CommunicationAgent": {
+            "critical_checkpoints": ["Transição natural entre contextos", "Sem repetir informações já dadas"]
+        }
+    },
+    "session_id": "multi-topic-switch",
+    "contact_name": "Ana Paula",
+    "messages": [
+        {"text": "oi quero colocar rastreador no meu carro", "wait": 60},
+        {"text": "na vdd primeiro preciso d ajuda, meu rastreador atual parou de funcionar", "wait": 60},
+        {"text": "faz 2 dias ja, eh um gsm no meu hb20", "wait": 60},
+        {"text": "ok entendi. e sobre o rastreador novo seria p uma moto", "wait": 60},
+        {"text": "pcx 160 da honda", "wait": 60}
+    ]
+}

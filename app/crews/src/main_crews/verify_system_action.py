@@ -10,6 +10,7 @@ from app.services.state_manager_service import StateManagerService
 from app.utils.funcs.parse_llm_output import parse_json_from_string
 from app.services.redis_service import get_redis
 from app.crews.src.main_crews.system_operations import system_operations_task
+from app.utils.funcs.funcs import safe_inject, build_longterm_context
 
 logger = get_logger(__name__)
 state_manager = StateManagerService()
@@ -51,17 +52,14 @@ def verify_system_action_task(contact_id: str):
 
         shorterm_history = redis_client.get(f"shorterm_history:{contact_id}")
         longterm_history_json = redis_client.get(f"longterm_history:{contact_id}")
-        longterm_history = json.loads(longterm_history_json) if longterm_history_json else {}
-        history_messages = "\n\n".join([
-            f"Topic: {topic.get('title', 'N/A')}\nSummary: {topic.get('summary', 'N/A')}"
-            for topic in longterm_history.get("topic_details", [])[-5:]
-        ])
+        longterm_history_raw = json.loads(longterm_history_json) if longterm_history_json else {}
+        longterm_context = build_longterm_context(longterm_history_raw)
         
         inputs = {
             "client_message": "\n".join(redis_client.lrange(f'contacts_messages:waiting:{contact_id}', 0, -1)),
             "history_of_system_actions": json.dumps(system_actions_history),
-            "shorterm_history": str(shorterm_history),
-            "longterm_history": history_messages,
+            "shorterm_history": safe_inject(shorterm_history),
+            "longterm_history": longterm_context,
         }
 
         result = crew.kickoff(inputs=inputs)
@@ -71,7 +69,7 @@ def verify_system_action_task(contact_id: str):
             action_request = parsed_result.get("system_action_request")
             action_request_datetime = f"{action_request} | {datetime.now(timezone.utc)}"
             
-            with redis_client.lock(f"lock:state:{contact_id}", timeout=10):
+            with redis_client.lock(f"lock:state:{contact_id}", timeout=30):
                 state, _ = state_manager.get_state(contact_id)
                 state.system_action_request = str(action_request)
                 state_manager.save_state(contact_id, state)
